@@ -194,7 +194,9 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
     const prevBg = document.documentElement.style.backgroundColor;
     meta?.setAttribute('content', NAVY);
     document.documentElement.style.backgroundColor = NAVY;
+    document.body.classList.add('on-login');
     return () => {
+      document.body.classList.remove('on-login');
       if (prevMeta) meta?.setAttribute('content', prevMeta);
       document.documentElement.style.backgroundColor = prevBg;
     };

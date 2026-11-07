@@ -121,6 +121,12 @@
         background: #FFFFFF; border-bottom: 1px solid rgba(15,27,51,0.08);
         font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 16px; line-height: 1.25;
       }
+      /* on the sign-in screen the banner takes the color of the navy panel under it (and of the browser's top bar) */
+      body.on-login #install-banner { background: #0B192C; border-bottom-color: transparent; }
+      body.on-login #install-banner .ib-text { color: #9FB0CC; }
+      body.on-login #install-banner .ib-name { color: #FFFFFF; }
+      body.on-login #install-btn { background: rgba(255,255,255,0.12); color: #FFFFFF; }
+      body.on-login #install-btn:active { background: rgba(255,255,255,0.22); }
       #install-banner img { width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0; opacity: 0.9; }
       #install-banner .ib-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #66728C; }
       #install-banner .ib-name { font-weight: 600; color: #0F1B33; }
