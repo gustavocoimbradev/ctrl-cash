@@ -333,7 +333,7 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
           <View style={{ gap: spacing.xs }}>
             <Text style={s.title}>{creating ? 'Create your account' : step === 'exists' || step === 'google' ? 'Welcome back' : 'Welcome'}</Text>
             <Text style={[type.body, { color: c.textMuted, minHeight: 48 }]}>
-              {creating ? 'Choose a password to get started.' : step === 'exists' ? 'Enter your password to continue.' : step === 'google' ? 'This account signs in with Google.' : 'Enter your email to sign in or create your account.'}
+              {creating ? 'Choose a password to get started.' : step === 'exists' ? 'Enter your password to continue.' : step === 'google' ? '' : 'Enter your email to sign in or create your account.'}
             </Text>
           </View>
         </Reveal>
@@ -398,7 +398,6 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
           />
         </Reveal>
       )}
-      {step === 'google' && <Text style={[type.body, { color: c.textMuted }]}>This email signs in with Google. Opening it for you; if the window did not open, use Continue with Google.</Text>}
       {/* messages sit in the gap between the fields and the button (zero height, pulled up by the gap):
           the button stays close to the fields and showing a message moves nothing. One line only. */}
       <View pointerEvents="none" style={{ height: 0, marginTop: -gap, zIndex: 1 }}>
