@@ -350,7 +350,7 @@ const s = StyleSheet.create({
   days: { flexDirection: 'row', flexWrap: 'wrap', padding: spacing.xs, borderRadius: radius.control },
   dayCell: { width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 2 },
   day: { width: 44, height: 44, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
-  footer: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  footer: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   summary: { borderRadius: radius.control, padding: spacing.lg, gap: spacing.md },
   sumRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sumTotal: { borderTopWidth: 1, paddingTop: spacing.md },
