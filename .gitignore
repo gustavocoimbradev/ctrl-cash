@@ -65,7 +65,6 @@ GEMINI.md
 
 # exports and dumps hold real financial data: never in git
 /backups/
-*.sql
 *.sql.gz
 
 # development logs and local state
