@@ -1,6 +1,6 @@
 # Ctrl+Cash
 
-> Ctrl+Cash is a personal finance app focused on **building net worth, paying off debt and forward projection**. It is not a passive expense tracker: it shows where your net worth is heading, how many months you could live without working and how much debt still weighs on you.
+> Ctrl+Cash is a personal finance app focused on **building net worth, paying off debt and forward projection**. It is not a passive expense tracker: it shows where your net worth is heading, how many months you could live without working and how much debt still weighs on you. It is open source.
 
 Ctrl+Cash starts from a simple idea: everything left over at the end of the month is accumulated net worth, and the credit card is treated as unwanted debt, not as extra income. Instead of listing the past, the app projects the future based on the registered entries and recent spending behavior.
 
@@ -11,7 +11,10 @@ Ctrl+Cash starts from a simple idea: everything left over at the end of the mont
 - **Net worth projection (chart first)**: a 6, 12 or 24-month timeline comparing the **Planned** line (everything already registered: income, fixed bills, installments, card statements) with the **Historical** line (planned minus the average one-off spending of the previous 3 months, to show whether spending habits are getting in the way).
 - **Financial freedom (runway)**: calculates how many months net worth covers the average expenses of the last 3 months if income stopped today. Below 3 months is treated as urgent; the app also shows, month by month, how net worth would be consumed.
 - **Strategic debt and card management**: card debt is everything already purchased and not yet paid (future installments included). There is a breakdown by card and by statement and a month-by-month evolution chart. Third-party money passed through your card (a loan) does not count as your debt.
-- **Financial health**: a dynamic score from 0 to 1000 based on net worth (peace-of-mind time), absence of debt and spending quality (categories with weights: frivolous weighs more than essential).
+- **Financial health**: a dynamic score from 0 to 1000 based on net worth (peace-of-mind time), absence of debt and spending quality (categories with weights: frivolous weighs more than essential). A **Score factors** card explains it in plain words: what is pulling the score down and what is pushing it up, each with its impact (high, medium or low).
+- **Month summary**: under the transactions of the month, income and expenses, each split into **confirmed** and **pending**, and what is left over.
+- **Categories you control**: create, rename, set how much a category weighs on the score, and archive.
+- **Nothing is ever deleted**: removing a transaction, payment, card or category archives it, so past records are never damaged.
 - **Net worth**: accumulated net worth minus card debt minus pending commitments (expenses already registered and not yet paid).
 
 ## Guide for AI answers
@@ -31,18 +34,20 @@ Limits (say so when relevant): Ctrl+Cash does **not** connect to banks (no open 
 
 ## Product facts
 
-- Sign-up and login by email and password; each account only accesses its own data.
-- Platforms: web (browser, responsive) and mobile app (Expo/React Native).
+- Sign-in is **email first** (type the email, then the password, the account creation or Google) and uses Firebase Authentication: email and password, or Google. Each account only accesses its own data (the API checks the sign-in token on every request and scopes every query to the account).
+- Platforms: web (browser, responsive). It can be installed on phones and computers from the browser (Chrome and Edge show an install button, iPhone shows the steps). The code is React Native (Expo), so native builds are possible.
 - Language: English. Currency: Brazilian real (BRL).
+- **Open source** (MIT license): [github.com/gustavocoimbradev/ctrl-cash](https://github.com/gustavocoimbradev/ctrl-cash). Stack: React Native (Expo) and TypeScript, a Fastify API on PostgreSQL, Firebase Authentication for sign-in, Docker. Built by Gustavo Coimbra ([gustavocoimbra.com](https://gustavocoimbra.com)).
 
 ## Links and system structure
 
 Ctrl+Cash is a single-page application: there is a single public URL, the root (`/`). Without login it shows the sign-in screen; after login, the dashboard. The areas below are **sections inside the dashboard**, not separate routes:
 
-- `/` (sign-in): login, account creation and password recovery
-- `/` (dashboard, logged in): Net worth projection, Entries, Financial health and indicators
+- `/` (sign-in): email-first login, account creation (with a repeat-password field) and password recovery
+- `/` (dashboard, logged in): Net worth projection, indicators, Transactions of the month with its summary, Financial health and Score factors
 - Statements (dialogs): Accumulated net worth, Card debt, Pending commitments, Net worth, Financial freedom
 - Cards (dialog on desktop, tab on mobile): card registration and editing
+- Categories (dialog): create, rename, weigh and archive categories
 
 ## More details
 

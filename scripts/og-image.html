@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- Source of public/og-image.png (1200x630), the picture shown when the link is shared. Rendered by `make og-image`. -->
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { width: 1200px; height: 630px; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #fff;
+    background: linear-gradient(135deg, #0B192C 0%, #0E2240 100%); position: relative; }
+  .glow { position: absolute; inset: auto -200px -260px auto; width: 760px; height: 760px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(61,101,235,.35), rgba(61,101,235,0) 65%); }
+  .copy { position: absolute; left: 72px; top: 76px; width: 470px; }
+  .brand { display: flex; align-items: center; gap: 14px; font-size: 40px; font-weight: 700; }
+  .key { border: 3px solid #fff; border-radius: 14px; padding: 4px 16px; }
+  h1 { margin-top: 56px; font-size: 56px; line-height: 1.08; font-weight: 700; letter-spacing: -1px; }
+  p { margin-top: 28px; font-size: 26px; line-height: 1.4; color: #B4C3E2; font-weight: 400; }
+  .shot { position: absolute; left: 600px; top: 70px; width: 740px; border-radius: 22px; overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.12); background: #fff; }
+  .shot img { display: block; width: 100%; }
+  .fade { position: absolute; inset: auto 0 0 0; height: 120px; background: linear-gradient(to top, #0E2240, rgba(14,34,64,0)); }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="copy">
+    <div class="brand"><span class="key">Ctrl</span><span>+</span><span class="key">Cash</span></div>
+    <h1>Control your money. Don't let it control you.</h1>
+    <p>Net worth projection, cards as debt and a financial health score in plain words.</p>
+  </div>
+  <div class="shot"><img src="../docs/screenshots/dashboard.png" alt=""></div>
+  <div class="fade"></div>
+</body>
+</html>

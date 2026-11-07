@@ -9,8 +9,8 @@
     <meta name="apple-mobile-web-app-title" content="Ctrl+Cash" />
     <!-- iOS (installed): opaque status bar with dark text, over the white page -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <title>Ctrl+Cash: net worth manager and financial freedom</title>
-    <meta name="description" content="Project your net worth, pay off credit card debt and find out how many months you could live without working. Sign in and start building your future." />
+    <title>Ctrl+Cash: control your money, project your net worth</title>
+    <meta name="description" content="Project your net worth, treat credit cards as debt and get a financial health score explained in plain words. Control your money, don't let it control you." />
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <link rel="canonical" href="https://YOUR-DOMAIN/" />
     <meta name="application-name" content="Ctrl+Cash" />
@@ -22,17 +22,17 @@
     <meta property="og:locale" content="en_US" />
     <meta property="og:url" content="https://YOUR-DOMAIN/" />
     <meta property="og:title" content="Ctrl+Cash: control your money. Don't let it control you." />
-    <meta property="og:description" content="Net worth projection, debt payoff and financial freedom in one place. See how many months you could live without working." />
+    <meta property="og:description" content="Net worth projection, credit cards as debt and a financial health score explained in plain words. Open source." />
     <meta property="og:image" content="https://YOUR-DOMAIN/og-image.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Ctrl+Cash: control your money. Don't let it control you." />
+    <meta property="og:image:alt" content="Ctrl+Cash: control your money. Don't let it control you. The dashboard with the wealth projection and the financial health score." />
 
     <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Ctrl+Cash: control your money. Don't let it control you." />
-    <meta name="twitter:description" content="Net worth projection, debt payoff and financial freedom in one place." />
+    <meta name="twitter:description" content="Net worth projection, credit cards as debt and a financial health score explained in plain words." />
     <meta name="twitter:image" content="https://YOUR-DOMAIN/og-image.png" />
 
     <!-- For AI assistants: plain-text product summary -->
@@ -46,6 +46,8 @@
       "@id": "https://YOUR-DOMAIN/#organization",
       "name": "Ctrl+Cash",
       "url": "https://YOUR-DOMAIN/",
+      "founder": { "@type": "Person", "name": "Gustavo Coimbra", "url": "https://gustavocoimbra.com" },
+      "sameAs": ["https://github.com/gustavocoimbradev/ctrl-cash"],
       "logo": {
         "@type": "ImageObject",
         "url": "https://YOUR-DOMAIN/logo-512.png",
@@ -71,18 +73,24 @@
       "applicationCategory": "FinanceApplication",
       "operatingSystem": "Web (browser) and mobile devices",
       "inLanguage": "en-US",
-      "description": "Personal finance app focused on building net worth, paying off debt and forward projection. Shows the net worth projection (planned versus historical), financial freedom in months and a financial health score.",
+      "description": "Personal finance app built on one rule: what is left over in a month is wealth, and a credit card is debt. It projects net worth, shows how many months you could live without working and scores financial health from 0 to 1000, explaining in plain words what pulls the score down or up. Open source.",
+      "author": { "@type": "Person", "name": "Gustavo Coimbra", "url": "https://gustavocoimbra.com" },
+      "license": "https://opensource.org/licenses/MIT",
+      "sameAs": ["https://github.com/gustavocoimbradev/ctrl-cash"],
       "image": "https://YOUR-DOMAIN/og-image.png",
       "publisher": {
         "@id": "https://YOUR-DOMAIN/#organization"
       },
       "featureList": [
         "Net worth projection for 6, 12 and 24 months (planned versus historical)",
+        "Credit cards treated as debt: statements, installments, payments and the real amount owed",
+        "Financial health score from 0 to 1000, with the factors pulling it down and pushing it up, each with its impact",
         "Financial freedom: how many months you could live without working",
-        "Financial health: score from 0 to 1000",
-        "Credit card debt with statement breakdown and evolution chart",
-        "Pending commitments and net worth",
-        "Expense categories with weights to measure spending quality"
+        "Month summary that splits income and expenses into confirmed and pending",
+        "Custom expense and income categories that you can rename, weigh and archive",
+        "Nothing is ever deleted: removing something archives it",
+        "Email or Google sign-in, with each account seeing only its own data",
+        "Installable on phones and computers"
       ]
     }
   ]
@@ -174,16 +182,18 @@
   <body>
     <noscript>
       <main style="font-family:system-ui,sans-serif;max-width:720px;margin:48px auto;padding:0 24px;color:#0F1B33">
-        <h1>Ctrl+Cash: net worth manager and financial freedom</h1>
-        <p>Ctrl+Cash is not an expense tracker: it is a tool for building net worth, paying off debt and projecting the future. It requires JavaScript to run.</p>
+        <h1>Ctrl+Cash: control your money, project your net worth</h1>
+        <p>Ctrl+Cash is a personal finance app built on one rule: what is left over in a month is wealth, and a credit card is debt, not extra income. It requires JavaScript to run.</p>
         <h2>Net worth projection</h2>
-        <p>See how your net worth evolves over 6, 12 or 24 months: the planned line, based on what is already registered, and the historical line, which subtracts the one-off spending of the previous 3 months.</p>
-        <h2>Smart debt payoff</h2>
-        <p>Credit cards are treated as debt. Track how much you owe, which statement it falls on and how the debt shrinks month by month.</p>
+        <p>See how your net worth evolves over 6, 12 or 24 months: a planned line, from what is already registered, and a historical line that also subtracts your typical one-off spending of the last 3 months.</p>
+        <h2>Cards as debt</h2>
+        <p>Track what you owe, which statement it falls on, your installments and payments, and how the debt shrinks month by month. It is subtracted from your net worth.</p>
+        <h2>A financial health score you can read</h2>
+        <p>A score from 0 to 1000 built from your cushion in months of expenses, your debt and the quality of your spending, with a plain-language list of what is pulling it down and what is pushing it up.</p>
         <h2>Financial freedom</h2>
         <p>Find out how many months your net worth would cover your expenses if you stopped working today.</p>
         <h2>Ctrl+Cash vs. ordinary expense trackers</h2>
-        <p>Trackers record the past. Ctrl+Cash projects the future: net worth, pending commitments and a financial health score from 0 to 1000.</p>
+        <p>Trackers record the past. Ctrl+Cash projects the future. It is open source, and nothing you register is ever deleted, only archived.</p>
       </main>
     </noscript>
     <!-- Install banner: outside React, before #root (body is a flex column, so it pushes the app down) -->

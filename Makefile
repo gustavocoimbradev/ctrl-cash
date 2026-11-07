@@ -153,3 +153,9 @@ screenshots:
 		-e BASE_URL="http://localhost:$$P" -e FORWARD_PORTS="$$P,19099" -v "$$PWD":/work -w /work \
 		mcr.microsoft.com/playwright:v1.49.0-noble bash -c \
 		"mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm i playwright@1.49.0 >/dev/null 2>&1 && cd /work && node scripts/dev/screenshots.mjs"
+
+# The picture shown when the link is shared (public/og-image.png), from scripts/og-image.html and the dashboard screenshot.
+.PHONY: og-image
+og-image:
+	@docker run --rm -v "$$PWD":/work -w /work mcr.microsoft.com/playwright:v1.49.0-noble bash -c \
+		"mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm i playwright@1.49.0 >/dev/null 2>&1 && cd /work && node scripts/og-image.mjs"

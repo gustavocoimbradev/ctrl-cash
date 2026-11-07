@@ -17,11 +17,15 @@
 - **Financial freedom (runway)** = net worth (minimum 0) ÷ average monthly expenses of the last 3 months (cards included). Shown in days, months or years. Below 3 months indicates urgency.
 - **Net worth projection**: 6, 12 or 24 months from the current month. *Planned* = projected final balance of each month with what is already registered. *Historical* = planned minus expected one-off spending: the average one-off spending (expenses that are neither recurring nor installments) of the previous 3 months, discounting what was already posted in the month, accumulated month by month.
 - **Financial health**: score from 0 to 1000 (bands: Critical below 250, Warning below 500, Good below 750, Excellent from 750), with three factors: Net worth (40%: peace-of-mind time, full at 12 months), Debt-free (30%: drops to zero when debt reaches 2 months of expenses) and Healthy spending (30%: spending quality by category).
+- **Score factors**: a card that describes, in plain words, what is pulling the financial health score down and what is pushing it up, each with its impact (high, medium or low). Examples of what pulls it down: spending more than you earn this month, card debt, debts bigger than your wealth can cover, pending bills bigger than what you have saved, a short cushion, a heavy spending category, mostly one-off spending. Examples of what pushes it up: spending less than you earn, no card debt, a complete or solid cushion, well-chosen and planned spending.
+- **Month summary**: income and expenses of the displayed month, each split into confirmed and pending, and what is left over (income minus all expenses, confirmed or not). Refund and Loan are neutral and invoices count net of loans.
 - **Spending quality**: 1 − weighted average of category weights over the last 3 months. Planned spending (recurring or installment) weighs 60% of the category weight.
 
 ## Expense categories (weight 0 = essential, 1 = frivolous)
 
-Investments 0.05; Loan 0; Groceries, Bills, Health and Taxes 0.1; Butcher and Education 0.15; Refund and Bureaucracy 0.2; Car 0.4; Pets 0.45; Personal Care 0.5; Subscriptions 0.55; Debts and Other 0.6; Gifts 0.7; Leisure 1. Income categories: Salary, Freelance and Refund.
+Investments 0.05; Loan 0; Groceries, Bills, Health and Taxes 0.1; Butcher and Education 0.15; Refund and Paperwork 0.2; Car 0.4; Pets 0.45; Personal care 0.5; Subscriptions 0.55; Debts and Other 0.6; Gifts 0.7; Leisure 1. Income categories: Salary, Freelance and Refund.
+
+You can create your own categories (an impact level of Essential 0.1, Regular 0.45 or Discretionary 0.9 for expenses), rename any of them and **archive** the ones you stop using: an archived category is no longer offered for new transactions, but everything already recorded keeps it. Loan, Refund and Other are needed by the app: they can be renamed but not archived.
 
 ## Glossary
 
@@ -33,6 +37,7 @@ Investments 0.05; Loan 0; Groceries, Bills, Health and Taxes 0.1; Butcher and Ed
 ## FAQ
 
 - *Does Ctrl+Cash connect to my bank?* No. Entries are manual.
-- *Is it free?* Check the official website for current terms.
-- *Does it work on mobile?* Yes: responsive web interface and mobile app.
-- *Is my data private?* Each account only accesses its own data, with database security rules.
+- *Is it free?* The source is open under the MIT license and can be self-hosted. See the official website for the current terms of the hosted version.
+- *Does it work on mobile?* Yes: the web interface is responsive and can be installed on the home screen. The code is React Native, so native builds are possible.
+- *Is my data private?* Each account only accesses its own data: the API verifies the sign-in token on every request and scopes every query to the account. Sign-in (email and password, or Google) is handled by Firebase Authentication.
+- *Is anything ever deleted?* No. Removing a transaction, payment, card or category archives it, so what was already recorded is never damaged; archived cards and categories keep their history and can be restored.
