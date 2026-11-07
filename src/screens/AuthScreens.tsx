@@ -109,13 +109,16 @@ interface FieldProps extends TextInputProps {
   label: string;
   icon: keyof typeof Feather.glyphMap;
   error?: boolean;
+  /** error text shown on the label row, at the right (no extra height, so nothing moves or gets crowded) */
+  message?: string;
+  messageColor?: string;
   /** right-side button (e.g. show/hide password) */
   right?: React.ReactNode;
   inputRef?: React.Ref<React.ComponentRef<typeof TextInput>>;
 }
 
 /** Sign-in field: discreet icon, border that changes color and a slight glow on focus (160ms transition). */
-function AuthField({ label, icon, error, right, inputRef, ...rest }: FieldProps) {
+function AuthField({ label, icon, error, message, messageColor, right, inputRef, ...rest }: FieldProps) {
   const reduced = useReducedMotion();
   const focus = useRef(new Animated.Value(0)).current;
   const [focused, setFocused] = useState(false);
@@ -130,7 +133,10 @@ function AuthField({ label, icon, error, right, inputRef, ...rest }: FieldProps)
   const borderColor = focus.interpolate({ inputRange: [0, 1], outputRange: [error ? c.expense : 'rgba(15,27,51,0.12)', accent] });
   return (
     <View style={{ gap: spacing.sm }}>
-      <Text style={[type.label, { color: c.text }]}>{label}</Text>
+      <View style={s.labelRow}>
+        <Text style={[type.label, { color: c.text }]}>{label}</Text>
+        {message ? <Text numberOfLines={1} style={[type.body, { color: messageColor ?? c.expense, flexShrink: 1, textAlign: 'right' }]} accessibilityLiveRegion="polite">{message}</Text> : null}
+      </View>
       <Animated.View
         style={[
           s.field,
@@ -306,6 +312,12 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
   // The box keeps the size of its tallest step (email + password + repeat) and the content sits
   // centered inside it: no layout shift between steps, no big empty gaps between items.
   const gap = tight ? spacing.md : spacing.lg;
+  const emailErr = !!error && !email.trim();
+  const passwordErr = !!error && !password;
+  const confirmErr = !!error && (!confirm || confirm !== password);
+  // the message goes on the label row of the field it is about; one that is about none goes on the last visible field
+  const note = error || info;
+  const target: 'email' | 'password' | 'confirm' | null = !note ? null : emailErr ? 'email' : passwordErr ? 'password' : confirmErr ? 'confirm' : step === 'new' ? 'confirm' : step === 'exists' ? 'password' : 'email';
   const extra = fieldH + gap;
   const baseH = useRef(0);
   if (contentH > 0 && step !== 'google') baseH.current = contentH - (step === 'exists' ? extra : step === 'new' ? 2 * extra : 0);
@@ -353,7 +365,9 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
           keyboardType="email-address"
           autoComplete="email"
           maxLength={120}
-          error={!!error && !email.trim()}
+          error={emailErr}
+          message={target === 'email' ? note : undefined}
+          messageColor={error ? c.expense : BLUE}
         />
        </View>
       </Reveal>
@@ -373,7 +387,9 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
             onSubmitEditing={() => (creating ? confirmRef.current?.focus() : submit())}
             returnKeyType={creating ? 'next' : 'go'}
             maxLength={128}
-            error={!!error && !password}
+            error={passwordErr}
+            message={target === 'password' ? note : undefined}
+            messageColor={error ? c.expense : BLUE}
             right={
               <Pressable accessibilityRole="button" accessibilityLabel={show ? 'Hide password' : 'Show password'} onPress={() => setShow((v) => !v)} style={s.eye}>
                 <Feather name={show ? 'eye-off' : 'eye'} size={20} color={c.textMuted} />
@@ -396,16 +412,12 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
             autoCorrect={false}
             onSubmitEditing={submit}
             maxLength={128}
-            error={!!error && (!confirm || confirm !== password)}
+            error={confirmErr}
+            message={target === 'confirm' ? note : undefined}
+            messageColor={error ? c.expense : BLUE}
           />
         </Reveal>
       )}
-      {/* messages sit in the gap between the fields and the button (zero height, pulled up by the gap):
-          the button stays close to the fields and showing a message moves nothing. One line only. */}
-      <View pointerEvents="none" style={{ height: 0, marginTop: -gap, zIndex: 1 }}>
-        {error ? <Text numberOfLines={1} style={[type.body, s.message, { color: c.expense }]} accessibilityLiveRegion="polite">{error}</Text> : null}
-        {info ? <Text numberOfLines={1} style={[type.body, s.message, { color: BLUE }]} accessibilityLiveRegion="polite">{info}</Text> : null}
-      </View>
       <Reveal index={4} distance={6} duration={600}>
         <Pressable
           accessibilityRole="button"
@@ -568,5 +580,5 @@ const s = StyleSheet.create({
   googleBtn: { minHeight: 52, borderRadius: radius.control, borderWidth: 1.5, borderColor: 'rgba(15,27,51,0.14)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md },
   link: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   /** one-line message laid over the gap between the last field and the button */
-  message: { position: 'absolute', left: 0, right: 0, top: 0, lineHeight: 24 },
+  labelRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md },
 });
