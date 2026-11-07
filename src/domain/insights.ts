@@ -47,7 +47,14 @@ const IMPACT_RANK: Record<Impact, number> = { high: 0, medium: 1, low: 2 };
  */
 export function buildScoreFactors(i: InsightInput): ScoreFactor[] {
   const h = i.health;
-  if (!h || i.avgExpense <= 0) return [];
+  // no data yet: the score starts at its best, so what makes it up is shown as good (it changes as data comes in)
+  if (!h || i.avgExpense <= 0) {
+    return [
+      { id: 'start-debt', tone: 'positive', icon: 'shield', impact: 'high', title: 'You have no card debt', text: 'Nothing is owed on cards, so the Debt-free part of your score is complete.' },
+      { id: 'start-wealth', tone: 'positive', icon: 'trending-up', impact: 'high', title: 'A clean start', text: 'Your Wealth part grows as you leave money over each month; 12 months of expenses saved completes it.' },
+      { id: 'start-habits', tone: 'positive', icon: 'heart', impact: 'medium', title: 'Healthy spending so far', text: 'Your spending habits count as healthy until there is something to judge.' },
+    ];
+  }
   const out: ScoreFactor[] = [];
   const neg = (f: Omit<ScoreFactor, 'tone'>) => out.push({ ...f, tone: 'negative' });
   const pos = (f: Omit<ScoreFactor, 'tone'>) => out.push({ ...f, tone: 'positive' });
