@@ -53,7 +53,8 @@ interface Store {
   addReserveMove: (move: Omit<ReserveMove, 'id'>) => void;
   updateReserveMove: (id: string, patch: Partial<Pick<ReserveMove, 'amount' | 'date' | 'confirmed'>>) => void;
   archiveReserveMove: (id: string) => void;
-  saveCard: (card: Omit<CreditCard, 'id'> & { id?: string }) => void;
+  /** saves the card (creates it without an id) and returns its id */
+  saveCard: (card: Omit<CreditCard, 'id'> & { id?: string }) => string;
   /** archives the card: its history stays intact, it just stops being offered */
   archiveCard: (cardId: string) => void;
   restoreCard: (cardId: string) => void;
@@ -274,12 +275,14 @@ export function StoreProvider({ uid, children }: { uid: string; children: React.
   }, []);
 
   const saveCard = useCallback((card: Omit<CreditCard, 'id'> & { id?: string }) => {
+    const id = card.id ?? newId();
     setData((d) => {
-      if (card.id) {
-        return { ...d, cards: d.cards.map((c) => (c.id === card.id ? { ...c, ...card, id: c.id } : c)) };
+      if (d.cards.some((c) => c.id === id)) {
+        return { ...d, cards: d.cards.map((c) => (c.id === id ? { ...c, ...card, id: c.id } : c)) };
       }
-      return { ...d, cards: [...d.cards, { ...card, id: newId(), createdAt: Date.now() }] };
+      return { ...d, cards: [...d.cards, { ...card, id, createdAt: Date.now() }] };
     });
+    return id;
   }, []);
 
   // archiving a card keeps everything it ever did (purchases, installments, invoices, payments)

@@ -4,7 +4,8 @@ import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from
 import { Button } from '../components/Button';
 import { MoneyField, TextField } from '../components/Fields';
 import { Sheet } from '../components/Sheet';
-import { daysInMonth, parseISO, toISO, todayISO } from '../domain/dates';
+import { CARD_COLORS, openInvoiceKey } from '../domain/cards';
+import { addMonthsToKey, daysInMonth, monthLabel, parseISO, toISO, todayISO } from '../domain/dates';
 import { formatMoney } from '../domain/money';
 import { useStore } from '../store';
 import { radius, spacing, type, useColors } from '../theme';
@@ -41,10 +42,28 @@ const BILLS: Preset[] = [
   { id: 'health-plan', label: 'Health plan', icon: 'heart', category: 'health', day: 10 },
   { id: 'school', label: 'School or courses', icon: 'book', category: 'education', day: 10 },
   { id: 'gym', label: 'Gym', icon: 'activity', category: 'health', day: 10 },
-  { id: 'spotify', label: 'Spotify', icon: 'music', category: 'subscriptions', day: 10 },
-  { id: 'netflix', label: 'Netflix', icon: 'tv', category: 'subscriptions', day: 10 },
-  { id: 'youtube', label: 'YouTube Premium', icon: 'play-circle', category: 'subscriptions', day: 10 },
 ];
+
+/** Fixed charges that usually sit on a credit card. */
+const CARD_FIXED: Preset[] = [
+  { id: 'cf-netflix', label: 'Netflix', icon: 'tv', category: 'subscriptions', day: 10 },
+  { id: 'cf-spotify', label: 'Spotify', icon: 'music', category: 'subscriptions', day: 10 },
+  { id: 'cf-youtube', label: 'YouTube Premium', icon: 'play-circle', category: 'subscriptions', day: 10 },
+  { id: 'cf-prime', label: 'Prime Video', icon: 'film', category: 'subscriptions', day: 10 },
+  { id: 'cf-cloud', label: 'Cloud storage', icon: 'cloud', category: 'subscriptions', day: 10 },
+  { id: 'cf-gym', label: 'Gym', icon: 'activity', category: 'health', day: 10 },
+  { id: 'cf-phone', label: 'Phone', icon: 'smartphone', category: 'bills', day: 10 },
+  { id: 'cf-internet', label: 'Internet', icon: 'wifi', category: 'bills', day: 10 },
+];
+
+interface Installment {
+  id: string;
+  label: string;
+  /** cents per installment */
+  value: number;
+  /** installments still to pay, counting the one on the current invoice */
+  left: number;
+}
 
 interface Entry {
   cents: number;
@@ -138,6 +157,31 @@ function Tiles({ items, picked, onToggle, onAdd }: { items: Preset[]; picked: st
   );
 }
 
+/** Calendar-style day of the month, 1 to 31 in rows of seven. */
+function DayPicker({ day, onChange }: { day: number; onChange: (d: number) => void }) {
+  const c = useColors();
+  return (
+    <View style={s.days}>
+      {Array.from({ length: 31 }, (_, k) => k + 1).map((d) => {
+        const on = d === day;
+        return (
+          <View key={d} style={s.dayCell}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={`Day ${d}`}
+              onPress={() => onChange(d)}
+              style={[s.day, { backgroundColor: on ? c.primary : 'transparent' }, Platform.OS === 'web' && ({ cursor: 'pointer' } as object)]}
+            >
+              <Text style={[type.label, { color: on ? '#FFFFFF' : c.text }]}>{d}</Text>
+            </Pressable>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 /** Amount and day, on one screen. */
 function AmountAnswer({ entry, onChange }: { entry: Entry; onChange: (e: Entry) => void }) {
   const c = useColors();
@@ -146,25 +190,7 @@ function AmountAnswer({ entry, onChange }: { entry: Entry; onChange: (e: Entry) 
       <MoneyField label="Amount" cents={entry.cents} onChange={(cents) => onChange({ ...entry, cents })} />
       <View style={{ gap: spacing.sm }}>
         <Text style={[type.label, { color: c.text }]}>Which day of the month?</Text>
-        {/* calendar style: 1 to 31 in rows of seven, no weekdays */}
-        <View style={s.days}>
-          {Array.from({ length: 31 }, (_, k) => k + 1).map((d) => {
-            const on = d === entry.day;
-            return (
-              <View key={d} style={s.dayCell}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: on }}
-                  accessibilityLabel={`Day ${d}`}
-                  onPress={() => onChange({ ...entry, day: d })}
-                  style={[s.day, { backgroundColor: on ? c.primary : 'transparent' }, Platform.OS === 'web' && ({ cursor: 'pointer' } as object)]}
-                >
-                  <Text style={[type.label, { color: on ? '#FFFFFF' : c.text }]}>{d}</Text>
-                </Pressable>
-              </View>
-            );
-          })}
-        </View>
+        <DayPicker day={entry.day} onChange={(d) => onChange({ ...entry, day: d })} />
       </View>
     </View>
   );
@@ -174,7 +200,13 @@ type Step =
   | { kind: 'salary' }
   | { kind: 'income' }
   | { kind: 'bills' }
-  | { kind: 'amount'; preset: Preset; type: 'income' | 'expense' }
+  | { kind: 'amount'; preset: Preset; type: 'income' | 'expense'; card?: boolean }
+  | { kind: 'cardAsk' }
+  | { kind: 'cardInfo' }
+  | { kind: 'cardInvoice' }
+  | { kind: 'cardFixed' }
+  | { kind: 'cardInstall' }
+  | { kind: 'cardTotal' }
   | { kind: 'review' };
 
 /**
@@ -184,7 +216,7 @@ type Step =
  */
 export function Onboarding({ visible, onClose, onDone }: { visible: boolean; onClose: () => void; onDone: () => void }) {
   const c = useColors();
-  const { addTransaction } = useStore();
+  const { addTransaction, saveCard, data } = useStore();
   const [i, setI] = useState(0);
   const [entries, setEntries] = useState<Record<string, Entry>>({});
   const [salaryOn, setSalaryOn] = useState(true);
@@ -192,9 +224,23 @@ export function Onboarding({ visible, onClose, onDone }: { visible: boolean; onC
   const [billsPicked, setBillsPicked] = useState<string[]>([]);
   const [customIncome, setCustomIncome] = useState<Preset[]>([]);
   const [customBills, setCustomBills] = useState<Preset[]>([]);
+  // credit card (one, in the setup; more later): its data, the invoice we are talking about and what it holds
+  const [hasCard, setHasCard] = useState(false);
+  const [cardName, setCardName] = useState('');
+  const [cardLimit, setCardLimit] = useState(0);
+  const [cardDue, setCardDue] = useState(10);
+  const [invoiceKey, setInvoiceKey] = useState<string | null>(null);
+  const [cardFixedPicked, setCardFixedPicked] = useState<string[]>([]);
+  const [customCardFixed, setCustomCardFixed] = useState<Preset[]>([]);
+  const [installments, setInstallments] = useState<Installment[]>([]);
+  const [draft, setDraft] = useState({ label: '', value: 0, left: '' });
+  const [invoiceTotal, setInvoiceTotal] = useState(0);
 
   const incomeItems = [...OTHER_INCOME, ...customIncome];
   const billItems = [...BILLS, ...customBills];
+  const cardFixedItems = [...CARD_FIXED, ...customCardFixed];
+  /** the invoice we are talking about (due month, YYYY-MM): by default the one open today */
+  const invKey = invoiceKey ?? openInvoiceKey({ dueDay: cardDue } as never, todayISO());
   const entryOf = (p: Preset): Entry => entries[p.id] ?? { cents: 0, day: p.day };
 
   const steps = useMemo<Step[]>(() => {
@@ -204,9 +250,15 @@ export function Onboarding({ visible, onClose, onDone }: { visible: boolean; onC
     for (const p of [...OTHER_INCOME, ...customIncome]) if (incomePicked.includes(p.id)) list.push({ kind: 'amount', preset: p, type: 'income' });
     list.push({ kind: 'bills' });
     for (const p of [...BILLS, ...customBills]) if (billsPicked.includes(p.id)) list.push({ kind: 'amount', preset: p, type: 'expense' });
+    list.push({ kind: 'cardAsk' });
+    if (hasCard) {
+      list.push({ kind: 'cardInfo' }, { kind: 'cardInvoice' }, { kind: 'cardFixed' });
+      for (const p of [...CARD_FIXED, ...customCardFixed]) if (cardFixedPicked.includes(p.id)) list.push({ kind: 'amount', preset: p, type: 'expense', card: true });
+      list.push({ kind: 'cardInstall' }, { kind: 'cardTotal' });
+    }
     list.push({ kind: 'review' });
     return list;
-  }, [salaryOn, incomePicked, billsPicked, customIncome, customBills]);
+  }, [salaryOn, incomePicked, billsPicked, customIncome, customBills, hasCard, cardFixedPicked, customCardFixed]);
 
   const step = steps[Math.min(i, steps.length - 1)];
   const last = i >= steps.length - 1;
@@ -214,7 +266,7 @@ export function Onboarding({ visible, onClose, onDone }: { visible: boolean; onC
   /** everything that will be created */
   const picked = useMemo(() => {
     const out: { type: 'income' | 'expense'; preset: Preset; entry: Entry }[] = [];
-    for (const st of steps) if (st.kind === 'amount') {
+    for (const st of steps) if (st.kind === 'amount' && !st.card) {
       const e = entries[st.preset.id] ?? { cents: 0, day: st.preset.day };
       if (e.cents > 0) out.push({ type: st.type, preset: st.preset, entry: e });
     }
@@ -223,6 +275,11 @@ export function Onboarding({ visible, onClose, onDone }: { visible: boolean; onC
   const income = picked.filter((x) => x.type === 'income').reduce((sum, x) => sum + x.entry.cents, 0);
   const bills = picked.filter((x) => x.type === 'expense').reduce((sum, x) => sum + x.entry.cents, 0);
   const left = income - bills;
+
+  /** what the card items already add up to on the invoice, and the difference to what the person says it is */
+  const cardFixed = steps.flatMap((st) => (st.kind === 'amount' && st.card && (entries[st.preset.id]?.cents ?? 0) > 0 ? [{ preset: st.preset, entry: entries[st.preset.id] }] : []));
+  const knownOnInvoice = cardFixed.reduce((sum, x) => sum + x.entry.cents, 0) + installments.reduce((sum, x) => sum + x.value, 0);
+  const adjustment = invoiceTotal - knownOnInvoice;
 
   const toggle = (list: string[], set: (v: string[]) => void, id: string) => set(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   const addCustom = (label: string, kind: 'income' | 'expense') => {
@@ -237,8 +294,34 @@ export function Onboarding({ visible, onClose, onDone }: { visible: boolean; onC
     }
   };
 
+  const addCustomCard = (label: string) => {
+    const id = `cf-c-${label}-${Date.now()}`;
+    setCustomCardFixed((l) => [...l, { id, label, icon: 'plus-circle', category: 'subscriptions', day: 10 }]);
+    setCardFixedPicked((l) => [...l, id]);
+  };
+  const addInstallment = () => {
+    const left = Number(draft.left);
+    if (!draft.label.trim() || draft.value <= 0 || !(left >= 1)) return;
+    setInstallments((l) => [...l, { id: `i-${Date.now()}`, label: draft.label.trim(), value: draft.value, left: Math.min(left, 99) }]);
+    setDraft({ label: '', value: 0, left: '' });
+  };
+
   const finish = () => {
     const { y, m } = parseISO(todayISO());
+    const today = todayISO();
+    if (hasCard && cardName.trim()) {
+      const cardId = saveCard({ name: cardName.trim(), limit: cardLimit, dueDay: cardDue, color: CARD_COLORS.find((x) => !data.cards.some((cd) => cd.color === x.value))?.value ?? CARD_COLORS[0].value });
+      const onCard = { cardId, invoiceKey: invKey, date: today, confirmed: false };
+      for (const x of cardFixed) {
+        addTransaction({ ...onCard, type: 'expense', description: x.preset.label, amount: x.entry.cents, fixed: true, category: x.preset.category, installments: 1 });
+      }
+      for (const x of installments) {
+        addTransaction({ ...onCard, type: 'expense', description: x.label, amount: x.value * x.left, fixed: false, category: 'other', installments: x.left });
+      }
+      // the rest of the invoice: what the person has not told us one by one (more) or what overshoots (less, as a refund)
+      if (adjustment > 0) addTransaction({ ...onCard, type: 'expense', description: 'Other purchases', amount: adjustment, fixed: false, category: 'other', installments: 1 });
+      if (adjustment < 0) addTransaction({ ...onCard, type: 'income', description: 'Invoice adjustment', amount: -adjustment, fixed: false, category: 'refund', installments: 1 });
+    }
     for (const x of picked) {
       addTransaction({
         type: x.type,
@@ -255,7 +338,10 @@ export function Onboarding({ visible, onClose, onDone }: { visible: boolean; onC
   };
 
   /** the current amount screen has what it needs */
-  const needsAmount = step.kind === 'amount' && entryOf(step.preset).cents <= 0;
+  const needsAmount =
+    (step.kind === 'amount' && entryOf(step.preset).cents <= 0) ||
+    (step.kind === 'cardInfo' && (!cardName.trim() || cardLimit <= 0)) ||
+    (step.kind === 'cardTotal' && invoiceTotal <= 0);
   const next = () => setI((n) => Math.min(n + 1, steps.length - 1));
   const back = () => setI((n) => Math.max(n - 1, 0));
 
@@ -292,10 +378,109 @@ export function Onboarding({ visible, onClose, onDone }: { visible: boolean; onC
             <AmountAnswer entry={entryOf(step.preset)} onChange={(e) => setEntries((m) => ({ ...m, [step.preset.id]: e }))} />
           </Screen>
         );
+      case 'cardAsk':
+        return (
+          <Screen icon="credit-card" title="Do you use a credit card?" hint="We can set up your current invoice too, so you do not have to add it purchase by purchase.">
+            <View style={{ gap: spacing.md }}>
+              <Button label="Yes, I do" icon="check" onPress={() => { setHasCard(true); setI(i + 1); }} />
+              <Button label="No card" variant="secondary" onPress={() => { setHasCard(false); setI(i + 1); }} />
+            </View>
+          </Screen>
+        );
+      case 'cardInfo':
+        return (
+          <Screen icon="credit-card" title="Tell us about the card">
+            <View style={{ gap: spacing.lg }}>
+              <TextField label="Card name" value={cardName} onChangeText={setCardName} placeholder="e.g. Main card" maxLength={40} />
+              <MoneyField label="Limit" cents={cardLimit} onChange={setCardLimit} />
+              <View style={{ gap: spacing.sm }}>
+                <Text style={[type.label, { color: c.text }]}>Which day does the invoice fall due?</Text>
+                <DayPicker day={cardDue} onChange={setCardDue} />
+              </View>
+            </View>
+          </Screen>
+        );
+      case 'cardInvoice': {
+        const open = openInvoiceKey({ dueDay: cardDue } as never, todayISO());
+        const options = [addMonthsToKey(open, -1), open, addMonthsToKey(open, 1)];
+        return (
+          <Screen icon="calendar" title="Which invoice are we filling in?" hint={`The one you see in your bank app now. Pick the month it falls due, on day ${cardDue}.`}>
+            <View style={{ gap: spacing.md }}>
+              {options.map((k) => {
+                const on = k === invKey;
+                return (
+                  <Pressable
+                    key={k}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: on }}
+                    onPress={() => setInvoiceKey(k)}
+                    style={[s.option, { borderColor: on ? c.primary : 'transparent', backgroundColor: on ? 'rgba(45,85,217,0.08)' : c.surface }, Platform.OS === 'web' && ({ cursor: 'pointer' } as object)]}
+                  >
+                    <Text style={[type.label, { color: c.text, flex: 1 }]}>{monthLabel(k)}</Text>
+                    {k === open && <Text style={[type.body, { color: c.textMuted }]}>Open now</Text>}
+                    <Feather name={on ? 'check-circle' : 'circle'} size={22} color={on ? c.primary : c.textMuted} />
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Screen>
+        );
+      }
+      case 'cardFixed':
+        return (
+          <Screen icon="repeat" title="Any fixed charges on this card?" hint="Subscriptions and bills that repeat every month. We ask the amounts next.">
+            <Tiles items={cardFixedItems} picked={cardFixedPicked} onToggle={(id) => toggle(cardFixedPicked, setCardFixedPicked, id)} onAdd={addCustomCard} />
+          </Screen>
+        );
+      case 'cardInstall':
+        return (
+          <Screen icon="layers" title="Anything in installments?" hint="Add each purchase you are still paying off, counting the installment on the current invoice. Or just continue.">
+            <View style={{ gap: spacing.lg }}>
+              {installments.map((x) => (
+                <View key={x.id} style={[s.option, { backgroundColor: c.surface, borderColor: 'transparent' }]}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{x.label}</Text>
+                    <Text style={[type.body, { color: c.textMuted }]}>{formatMoney(x.value)} × {x.left} left</Text>
+                  </View>
+                  <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${x.label}`} onPress={() => setInstallments((l) => l.filter((y) => y.id !== x.id))} style={s.remove}>
+                    <Feather name="x" size={20} color={c.textMuted} />
+                  </Pressable>
+                </View>
+              ))}
+              <TextField label="What was it?" value={draft.label} onChangeText={(label) => setDraft((d) => ({ ...d, label }))} placeholder="e.g. Phone" maxLength={40} />
+              <MoneyField label="Installment value" cents={draft.value} onChange={(value) => setDraft((d) => ({ ...d, value }))} />
+              <TextField label="Installments left" value={draft.left} onChangeText={(t) => setDraft((d) => ({ ...d, left: t.replace(/\D/g, '') }))} keyboardType="number-pad" inputMode="numeric" maxLength={2} placeholder="e.g. 6" />
+              <Button label="Add this installment" icon="plus" variant="secondary" onPress={addInstallment} disabled={!draft.label.trim() || draft.value <= 0 || !(Number(draft.left) >= 1)} />
+            </View>
+          </Screen>
+        );
+      case 'cardTotal':
+        return (
+          <Screen icon="file-text" title="How much is the invoice?" hint={`The total of the invoice due in ${monthLabel(invKey)}, as your bank shows it.`}>
+            <View style={{ gap: spacing.lg }}>
+              <MoneyField label="Invoice total" cents={invoiceTotal} onChange={setInvoiceTotal} />
+              {knownOnInvoice > 0 && (
+                <View style={[s.summary, { backgroundColor: c.surface }]}>
+                  <View style={s.sumRow}>
+                    <Text style={[type.body, { color: c.textMuted }]}>Fixed and installments you added</Text>
+                    <Text style={[type.label, { color: c.text }]}>{formatMoney(knownOnInvoice)}</Text>
+                  </View>
+                  {invoiceTotal > 0 && (
+                    <View style={s.sumRow}>
+                      <Text style={[type.body, { color: c.textMuted, flex: 1 }]}>{adjustment >= 0 ? 'Added as other purchases' : 'Adjusted down (an installment may start later)'}</Text>
+                      <Text style={[type.label, { color: adjustment >= 0 ? c.expense : c.income }]}>{adjustment >= 0 ? '+' : '-'}{formatMoney(Math.abs(adjustment))}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+              {knownOnInvoice > 0 && <Button label="Use only what I added" variant="tertiary" onPress={() => setInvoiceTotal(knownOnInvoice)} />}
+            </View>
+          </Screen>
+        );
       case 'review':
         return (
-          <Screen icon="check-circle" title={picked.length ? 'Your month is ready' : 'All set'} hint={picked.length ? `${picked.length} ${picked.length === 1 ? 'item' : 'items'} will be added, pending until you confirm them.` : 'You can add everything later with the + button.'}>
-            {picked.length > 0 && (
+          <Screen icon="check-circle" title={picked.length || hasCard ? 'Your month is ready' : 'All set'} hint={picked.length || hasCard ? 'Everything is added as pending, until you confirm it.' : 'You can add everything later with the + button.'}>
+            {(picked.length > 0 || hasCard) && (
               <View style={[s.summary, { backgroundColor: c.surface }]}>
                 <View style={s.sumRow}>
                   <Text style={[type.body, { color: c.textMuted }]}>Income</Text>
@@ -305,6 +490,12 @@ export function Onboarding({ visible, onClose, onDone }: { visible: boolean; onC
                   <Text style={[type.body, { color: c.textMuted }]}>Fixed bills</Text>
                   <Text style={[type.label, { color: c.expense }]}>{formatMoney(bills)}</Text>
                 </View>
+                {hasCard && (
+                  <View style={s.sumRow}>
+                    <Text style={[type.body, { color: c.textMuted }]}>{cardName.trim() || 'Card'} invoice ({monthLabel(invKey)})</Text>
+                    <Text style={[type.label, { color: c.expense }]}>{formatMoney(invoiceTotal)}</Text>
+                  </View>
+                )}
                 <View style={[s.sumRow, s.sumTotal, { borderTopColor: c.border }]}>
                   <Text style={[type.label, { color: c.text }]}>{left >= 0 ? 'Left over' : 'Short'}</Text>
                   <Text style={[type.title, { color: left >= 0 ? c.primary : c.expense }]}>{formatMoney(Math.abs(left))}</Text>
@@ -316,11 +507,11 @@ export function Onboarding({ visible, onClose, onDone }: { visible: boolean; onC
     }
   })();
 
-  // the first screen answers with its own two buttons: no footer there
-  const footer = step.kind === 'salary' ? undefined : (
+  // the yes/no screens answer with their own two buttons: no footer there
+  const footer = step.kind === 'salary' || step.kind === 'cardAsk' ? undefined : (
     <View style={s.footer}>
       <Button label="Back" icon="arrow-left" variant="secondary" onPress={back} flex />
-      <Button label={last ? (picked.length ? 'Start' : 'Done') : 'Continue'} icon={last ? 'check' : 'arrow-right'} iconRight onPress={last ? finish : next} disabled={needsAmount} flex />
+      <Button label={last ? (picked.length || hasCard ? 'Start' : 'Done') : 'Continue'} icon={last ? 'check' : 'arrow-right'} iconRight onPress={last ? finish : next} disabled={needsAmount} flex />
     </View>
   );
 
@@ -346,6 +537,8 @@ const s = StyleSheet.create({
   answer: { width: '100%', marginTop: spacing.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'center' },
   tile: { minHeight: 92, borderRadius: radius.control, borderWidth: 2, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.md },
+  option: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 56, borderRadius: radius.control, borderWidth: 2, paddingHorizontal: spacing.lg },
+  remove: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   addRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.md },
   days: { flexDirection: 'row', flexWrap: 'wrap', padding: spacing.xs, borderRadius: radius.control },
   dayCell: { width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 2 },
