@@ -503,7 +503,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
           <View style={[s.txRow, s.summaryTotal, { borderTopColor: c.border }]}>
             <View style={[s.txMain, { minHeight: mobile ? 48 : 60 }]}>
               <View style={[s.titleRow, { flex: wide ? 5.7 : 1 }]}>
-                <Text style={[type.label, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>Left over this month</Text>
+                <Text style={[type.label, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{mobile ? 'Left over' : 'Left over this month'}</Text>
                 <HelpTip title="Left over this month" text="Income minus all of the month's expenses, confirmed or pending. It is what goes into your accumulated wealth." />
               </View>
               <Text style={[type.title, { color: summary.left < 0 ? c.expense : c.primary, fontSize: 22, flex: wide ? 1.5 : undefined, textAlign: 'right' }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>

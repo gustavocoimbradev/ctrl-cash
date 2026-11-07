@@ -71,6 +71,9 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
   /** diagonal labels need about 28px per column; with less, show every Nth (still the full MM/YYYY) */
   const labelEvery = Math.max(1, Math.ceil(28 / Math.max(step, 1)));
   const LABEL_W = 84;
+  // narrow charts (phones): steeper labels, so the first one does not stick out to the left of the card
+  const steep = w < 520;
+  const angle = steep ? -70 : -45;
   // the tooltip keeps the last point while fading out, instead of vanishing abruptly
   const tipSel = lastSel.current === null ? null : Math.min(lastSel.current, n - 1);
   const tipLeft = tipSel === null ? 0 : Math.min(Math.max(x(tipSel) - tipW / 2, 0), Math.max(w - tipW, 0));
@@ -156,7 +159,7 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
         </View>
       )}
       {/* X axis: full MM/YYYY labels, diagonal, below the chart; every Nth one only if the columns are too tight */}
-      <View style={{ height: 60, marginTop: spacing.xs }}>
+      <View style={{ height: steep ? 84 : 60, marginTop: spacing.xs }}>
         {labels.map((l, i) => {
           if (i % labelEvery !== 0) return null;
           return (
@@ -165,7 +168,7 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
               numberOfLines={1}
               style={[
                 { position: 'absolute', top: 4, left: x(i) - LABEL_W, width: LABEL_W, textAlign: 'right', fontFamily, fontSize: 16, lineHeight: 20, color: i === sel ? c.text : c.textMuted, fontWeight: i === sel ? '700' : '400' },
-                { transform: [{ rotate: '-45deg' }], transformOrigin: '100% 50%' } as object,
+                { transform: [{ rotate: `${angle}deg` }], transformOrigin: '100% 50%' } as object,
               ]}
             >
               {l}
