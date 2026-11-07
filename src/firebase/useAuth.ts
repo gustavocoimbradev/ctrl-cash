@@ -61,12 +61,13 @@ export function useAuth() {
      * Sign in with Google (web). If the account does not exist yet, Firebase **creates it automatically** on the first
      * access. Popup first; if the browser blocks it (common on phones), uses redirect.
      */
-    signInWithGoogle: async () => {
+    signInWithGoogle: async (loginHint?: string) => {
       if (Platform.OS !== 'web') throw Object.assign(new Error('google-native'), { code: 'auth/operation-not-supported-in-this-environment' });
       // dynamic import: the popup/redirect functions only exist in the SDK's web build
       const { signInWithPopup, signInWithRedirect } = await import('firebase/auth');
       const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
+      // with the email already typed, Google opens on that account; otherwise it lets the person choose
+      provider.setCustomParameters(loginHint ? { login_hint: loginHint } : { prompt: 'select_account' });
       try {
         await signInWithPopup(auth, provider);
       } catch (e) {

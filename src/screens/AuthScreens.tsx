@@ -165,7 +165,7 @@ interface LoginProps {
   onSignUp: (email: string, password: string) => Promise<void>;
   onReset: (email: string) => Promise<void>;
   /** sign in with Google (web): creates the account automatically if it does not exist yet */
-  onGoogle: () => Promise<void>;
+  onGoogle: (email?: string) => Promise<void>;
   /** whether the email already has an account (password, Google only) or is new */
   onCheckEmail: (email: string) => Promise<EmailStatus>;
 }
@@ -233,6 +233,8 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
       const found = await onCheckEmail(value);
       if (id !== request.current) return;
       setStep(found === 'password' ? 'exists' : found === 'google' ? 'google' : 'new');
+      // an email that belongs to a Google account signs in with Google right away, no extra click
+      if (found === 'google') void google(value);
     } catch (e) {
       if (id !== request.current) return;
       setStep('idle');
@@ -254,7 +256,7 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
     const value = email.trim();
     if (!EMAIL_RE.test(value)) return fail('Enter a valid email.');
     if (step === 'idle') return check(value, ++request.current);
-    if (step === 'google') return google();
+    if (step === 'google') return google(value);
     if (!password) return fail(creating ? 'Choose a password.' : 'Enter your password.');
     if (creating && confirm !== password) return fail(confirm ? 'The passwords do not match.' : 'Repeat the password to confirm it.');
     setBusy(true);
@@ -269,13 +271,13 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
     }
   };
 
-  const google = async () => {
+  const google = async (hint?: string) => {
     if (busy) return;
     setBusy(true);
     setError('');
     setInfo('');
     try {
-      await onGoogle();
+      await onGoogle(hint);
     } catch (e) {
       const msg = authMessage(e);
       if (msg) fail(msg); // closing the Google window is not an error
@@ -307,10 +309,24 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
   if (contentH > 0 && step !== 'google') baseH.current = contentH - (step === 'exists' ? extra : step === 'new' ? 2 * extra : 0);
   const boxMin = baseH.current > 0 ? baseH.current + 2 * extra : undefined;
 
+  // Phone: no fixed size, the white box follows its content and the height change is animated. (The desktop
+  // card keeps the size of its tallest step, above.)
+  const animH = useRef(new Animated.Value(0)).current;
+  const [measured, setMeasured] = useState(false);
+  useEffect(() => {
+    if (desktop || contentH <= 0) return;
+    if (!measured || reduced) {
+      animH.setValue(contentH);
+      setMeasured(true);
+    } else Animated.timing(animH, { toValue: contentH, duration: 260, easing: motion.ease, useNativeDriver: false }).start();
+  }, [contentH, desktop, reduced]);
+  const Box: any = desktop ? View : Animated.View;
+  const boxStyle = desktop ? { minHeight: boxMin, justifyContent: 'center' as const } : measured ? { height: animH, overflow: 'hidden' as const } : undefined;
+
   const form = (
     <Animated.View style={[s.form, desktop && s.formDesktop, { transform: [{ translateX: shake }] }]}>
-     <View style={{ minHeight: boxMin, justifyContent: 'center' }}>
-      <View style={[s.form, tight && { gap: spacing.md }]} onLayout={(e) => setContentH(e.nativeEvent.layout.height)}>
+     <Box style={boxStyle}>
+      <View style={[s.form, tight && { gap: spacing.md }, !desktop && measured && { position: 'absolute', left: 0, right: 0, top: 0 }]} onLayout={(e) => setContentH(e.nativeEvent.layout.height)}>
       {/* title and subtitle on desktop only: on mobile the blue panel already shows the brand and the button indicates the mode */}
       {desktop && (
         <Reveal index={1} distance={6} duration={600}>
@@ -382,7 +398,7 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
           />
         </Reveal>
       )}
-      {step === 'google' && <Text style={[type.body, { color: c.textMuted }]}>This email is linked to a Google account. Continue with Google to sign in.</Text>}
+      {step === 'google' && <Text style={[type.body, { color: c.textMuted }]}>This email signs in with Google. Opening it for you; if the window did not open, use Continue with Google.</Text>}
       {/* messages sit in the gap between the fields and the button (zero height, pulled up by the gap):
           the button stays close to the fields and showing a message moves nothing. One line only. */}
       <View pointerEvents="none" style={{ height: 0, marginTop: -gap, zIndex: 1 }}>
@@ -432,7 +448,7 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
               accessibilityRole="button"
               accessibilityLabel="Continue with Google"
               disabled={busy}
-              onPress={google}
+              onPress={() => google()}
               onHoverIn={() => setGHover(true)}
               onHoverOut={() => setGHover(false)}
               style={[
@@ -468,7 +484,7 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
         </Reveal>
       )}
       </View>
-     </View>
+     </Box>
     </Animated.View>
   );
 
