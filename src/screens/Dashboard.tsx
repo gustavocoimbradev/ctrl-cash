@@ -104,6 +104,8 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
   const today = todayISO();
   const wide = width >= 900;
   const { height: winH } = useWindowDimensions();
+  /** desktop side column: height of the health card, to give the factors card only what is left of the screen */
+  const [healthH, setHealthH] = useState(0);
   const cards = data.cards;
 
   useEffect(() => setChartSel(null), [horizon]);
@@ -542,9 +544,6 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
     cardUsed: activeCards.reduce((sum, x) => sum + (usedByCard[cards.indexOf(x)] ?? 0), 0),
   });
 
-  // desktop side column: the gauge shrinks as needed so health + score factors fit the screen without scrolling
-  // (the health card without the gauge is about 250px, the factors card about 120px plus 52px per factor)
-  const gaugeSize = !wide ? 220 : Math.max(130, Math.min(220, Math.round((winH - 116 - 250 - 120 - 52 * factorsList.length) / 0.6)));
   const healthCard = (
     <Card key="health">
       <View style={s.statHead}>
@@ -557,7 +556,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
         </View>
       </View>
       <View style={{ alignItems: 'center' }}>
-        <Gauge segments={[{ value: Math.max(health.score, 1), color: healthColor }]} total={1000} size={gaugeSize} gradient={health.score < 250 ? ['#F28BA3', '#E0446A'] : health.score < 500 ? ['#F5C16B', '#D9831F'] : ['#6F8FF5', '#2D55D9']}>
+        <Gauge segments={[{ value: Math.max(health.score, 1), color: healthColor }]} total={1000} size={220} gradient={health.score < 250 ? ['#F28BA3', '#E0446A'] : health.score < 500 ? ['#F5C16B', '#D9831F'] : ['#6F8FF5', '#2D55D9']}>
           <Counter value={health.score} style={[type.hero, { color: healthColor, lineHeight: 42 }]} />
           <Text style={[type.label, { color: healthColor }]}>{health.label}</Text>
         </Gauge>
@@ -703,9 +702,9 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
           </View>
           {/* sticky: the health card follows the page while the rest scrolls */}
           <View style={s.sideSticky}>
-            <Reveal index={1} style={{ flexShrink: 0 }}>{healthCard}</Reveal>
+            <Reveal index={1} style={{ flexShrink: 0 }}><View onLayout={(e) => setHealthH(e.nativeEvent.layout.height)}>{healthCard}</View></Reveal>
             {/* only the factors card scrolls (inside itself), and only when the screen is too short for both */}
-            <Reveal index={2} style={{ flexShrink: 1, minHeight: 0 }}><ScoreFactorsCard factors={factorsList} scroll /></Reveal>
+            <Reveal index={2} style={{ flexShrink: 1, minHeight: 0, ...(healthH > 0 ? { maxHeight: Math.max(160, winH - 61 - spacing.lg * 3 - healthH) } : null) }}><ScoreFactorsCard factors={factorsList} scroll /></Reveal>
           </View>
         </View>
       ) : (
@@ -780,7 +779,7 @@ const s = StyleSheet.create({
   /** card title followed by its "?" */
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minWidth: 0 },
   /** health + tips: pinned while the page scrolls; the column itself never scrolls (the tips card does, if needed) */
-  sideSticky: { width: 340, gap: spacing.lg, ...(Platform.OS === 'web' ? ({ position: 'sticky', top: spacing.lg, maxHeight: 'calc(100vh - 100px)' } as object) : null) },
+  sideSticky: { width: 340, gap: spacing.lg, ...(Platform.OS === 'web' ? ({ position: 'sticky', top: spacing.lg, maxHeight: 'calc(100vh - 93px)' } as object) : null) },
   figureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
   figureCell: { flexGrow: 1, flexBasis: '45%', minWidth: 260 },
   /** title on the left, month selector centered, + on the right */
