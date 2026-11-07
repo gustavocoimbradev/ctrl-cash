@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# A newer push to the same branch cancels the run that is still going.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Types, API tests and web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ctrlcash_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Install dependencies (app)
+        run: npm ci --no-audit --no-fund
+
+      - name: Type check (app)
+        run: npx tsc --noEmit
+
+      - name: Install dependencies (API)
+        run: npm ci --no-audit --no-fund
+        working-directory: backend
+
+      - name: Build the API
+        run: npm run build
+        working-directory: backend
+
+      - name: API tests (PostgreSQL)
+        run: npm test
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ctrlcash_test
+          FIREBASE_PROJECT_ID: test-project
+
+      - name: Build the web app
+        run: npx expo export --platform web
+        env:
+          CI: '1'

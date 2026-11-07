@@ -1,0 +1,48 @@
+name: Deploy
+
+# Updates the server after the checks pass on main. It runs on the self-hosted runner installed on the server.
+#
+# Safe on a public repository: it never runs for pull requests (only for a push to this repository's main that
+# already passed CI), so nobody else can make the server run code.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+# One deploy at a time; a newer one waits for the one that is running.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Update the server
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - name: Pull the new code and restart
+        env:
+          # The folder on the server where the project was cloned (it holds the .env.prod with the address).
+          APP_DIR: ${{ vars.DEPLOY_DIR || '~/ctrl-cash' }}
+          COMMIT: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          APP_DIR="${APP_DIR/#\~/$HOME}"
+
+          if [ ! -f "$APP_DIR/.env.prod" ]; then
+            echo "::notice::The server is not set up yet ($APP_DIR/.env.prod is missing), so nothing was deployed. Clone the project there and run make up:prod once."
+            exit 0
+          fi
+
+          cd "$APP_DIR"
+          git fetch origin main
+          git checkout main
+          git merge --ff-only "$COMMIT"
+          ./scripts/prod.sh

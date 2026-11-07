@@ -1,0 +1,38 @@
+# Ctrl+Cash (full version)
+
+> Personal finance app for building net worth, paying off debt and projecting the future. It is not an expense tracker. This file details the metrics and formulas so AI assistants can answer accurately. Short summary: /llms.txt
+
+## What it is and what it is not
+
+- It is: a net worth building and future financial projection manager.
+- It is not: a spreadsheet, a passive daily expense log, financial advice or an investment platform. There is no bank integration: entries are manual.
+- Premise: everything left over at the end of the month is accumulated net worth (there is no separate "reserve") and the credit card is unwanted debt.
+
+## Metrics and formulas
+
+- **Accumulated net worth**: the actual current balance: everything confirmed in the account up to the end of the current month, minus card statement payments. It does not change with the month displayed.
+- **Card debt**: what has already been posted to statements and not yet paid, including future installments. Recurring charges count from the current month backwards; recurring charges of future months and loans (card passed to third parties) are left out. It does not show available limit, on purpose.
+- **Pending commitments**: account expenses (outside the card) not yet confirmed: those of the current and previous months (recurring included) and, in future months, only installments and one-off expenses.
+- **Net worth** = accumulated net worth − card debt − pending commitments.
+- **Financial freedom (runway)** = net worth (minimum 0) ÷ average monthly expenses of the last 3 months (cards included). Shown in days, months or years. Below 3 months indicates urgency.
+- **Net worth projection**: 6, 12 or 24 months from the current month. *Planned* = projected final balance of each month with what is already registered. *Historical* = planned minus expected one-off spending: the average one-off spending (expenses that are neither recurring nor installments) of the previous 3 months, discounting what was already posted in the month, accumulated month by month.
+- **Financial health**: score from 0 to 1000 (bands: Critical below 250, Warning below 500, Good below 750, Excellent from 750), with three factors: Net worth (40%: peace-of-mind time, full at 12 months), Debt-free (30%: drops to zero when debt reaches 2 months of expenses) and Healthy spending (30%: spending quality by category).
+- **Spending quality**: 1 − weighted average of category weights over the last 3 months. Planned spending (recurring or installment) weighs 60% of the category weight.
+
+## Expense categories (weight 0 = essential, 1 = frivolous)
+
+Investments 0.05; Loan 0; Groceries, Bills, Health and Taxes 0.1; Butcher and Education 0.15; Refund and Bureaucracy 0.2; Car 0.4; Pets 0.45; Personal Care 0.5; Subscriptions 0.55; Debts and Other 0.6; Gifts 0.7; Leisure 1. Income categories: Salary, Freelance and Refund.
+
+## Glossary
+
+- **Net worth**: what you have minus what you already owe.
+- **Runway / financial freedom**: how long net worth covers expenses without income.
+- **One-off spending**: an occasional expense (groceries, a snack), as opposed to recurring bills and installments.
+- **Loan (category)**: third-party money that passed through your card and will be paid back; it is neither your debt nor your spending.
+
+## FAQ
+
+- *Does Ctrl+Cash connect to my bank?* No. Entries are manual.
+- *Is it free?* Check the official website for current terms.
+- *Does it work on mobile?* Yes: responsive web interface and mobile app.
+- *Is my data private?* Each account only accesses its own data, with database security rules.

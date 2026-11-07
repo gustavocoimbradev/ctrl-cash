@@ -1,0 +1,15 @@
+# Ctrl+Cash
+User-agent: *
+Allow: /
+
+# AI assistants and search engines are welcome
+User-agent: GPTBot
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://YOUR-DOMAIN/sitemap.xml

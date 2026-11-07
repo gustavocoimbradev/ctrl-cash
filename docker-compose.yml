@@ -1,0 +1,45 @@
+# Development (this machine): PostgreSQL and the API. `make up:dev` also starts the Firebase Auth emulator and the web
+# app (they run on the host, see scripts/dev.sh). Nothing here is the production setup: see docker-compose.prod.yml.
+name: ctrlcash-dev
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ctrlcash
+      POSTGRES_USER: ctrlcash
+      POSTGRES_PASSWORD: ctrlcash
+    # only on this machine, for tools like psql
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ctrlcash -d ctrlcash"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: backend
+    image: ctrlcash-api:dev
+    restart: unless-stopped
+    environment:
+      # the image defaults to production, where the emulator mode is forbidden on purpose
+      NODE_ENV: development
+      DATABASE_URL: postgres://ctrlcash:ctrlcash@postgres:5432/ctrlcash
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-moneey-bb0d8}
+      # development only: accept the unsigned tokens of the Firebase Auth emulator
+      FIREBASE_AUTH_EMULATOR: "1"
+      ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-8081},http://127.0.0.1:${WEB_PORT:-8081}
+      RUN_MIGRATIONS: "1"
+    ports:
+      - "127.0.0.1:3300:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:

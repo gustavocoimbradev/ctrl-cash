@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0B192C"/><stop offset="1" stop-color="#0E2240"/></linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3D65EB" stop-opacity="0"/><stop offset="1" stop-color="#3D65EB" stop-opacity="0.28"/></linearGradient>
+    <linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9DB4FF" stop-opacity="0.28"/><stop offset="1" stop-color="#9DB4FF" stop-opacity="0"/></linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect y="300" width="1200" height="330" fill="url(#glow)"/>
+  <path d="M 0 630 L 0 610 C 200 600 300 570 420 545 C 560 520 640 545 760 500 C 880 455 1000 430 1200 360 L 1200 630 Z" fill="url(#area)"/>
+  <path d="M 0 610 C 200 600 300 570 420 545 C 560 520 640 545 760 500 C 880 455 1000 430 1200 360" fill="none" stroke="#9DB4FF" stroke-opacity="0.55" stroke-width="5" stroke-linecap="round"/>
+  <rect x="80" y="88" width="148" height="68" rx="20" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+  <text x="154" y="139" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-size="52" font-weight="700" fill="#FFFFFF">Ctrl</text>
+  <text x="252" y="139" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-size="52" font-weight="700" fill="#FFFFFF">+</text>
+  <rect x="276" y="88" width="158" height="68" rx="20" fill="none" stroke="#FFFFFF" stroke-width="3"/>
+  <text x="355" y="139" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-size="52" font-weight="700" fill="#FFFFFF">Cash</text>
+  <text x="80" y="290" font-family="DejaVu Sans, Arial, sans-serif" font-size="62" font-weight="700" fill="#FFFFFF">Control your money.</text>
+  <text x="80" y="366" font-family="DejaVu Sans, Arial, sans-serif" font-size="62" font-weight="700" fill="#FFFFFF">Don't let it control you.</text>
+  <text x="80" y="440" font-family="DejaVu Sans, Arial, sans-serif" font-size="30" fill="#9FB0CC">Net worth projection · Debt · Financial freedom</text>
+</svg>

@@ -1,0 +1,72 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android
+
+# local secrets and settings (never versioned)
+.env
+.env.prod
+server/.env
+
+# Firebase: chave de serviço (admin) NUNCA entra no repositório
+*firebase-adminsdk*.json
+firebase-admin*.json
+service-account*.json
+.firebase/
+*-debug.log
+
+# Documents for AI assistants (instructions, guidelines, prompts): local only, never in the public repository
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+/guidelines/
+/prompts/
+.claude/
+.cursor/
+.cursorrules
+.aider*
+
+# exports and dumps hold real financial data: never in git
+/backups/
+*.sql
+*.sql.gz
+
+# development logs and local state
+.logs/
