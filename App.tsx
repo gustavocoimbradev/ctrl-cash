@@ -8,6 +8,8 @@ import { LoginScreen, Splash } from './src/screens/AuthScreens';
 import { CardsSheet } from './src/screens/CardsSheet';
 import { CategoriesSheet } from './src/screens/CategoriesSheet';
 import { Dashboard } from './src/screens/Dashboard';
+import { AccountSheet } from './src/screens/AccountSheet';
+import { Onboarding, markOnboardingSeen, onboardingSeen, resetOnboardingSeen } from './src/screens/Onboarding';
 import { FormPreset, TransactionForm } from './src/screens/TransactionForm';
 import { BottomBar, MobileTab } from './src/components/BottomBar';
 import { Brand } from './src/components/Brand';
@@ -18,9 +20,9 @@ import { StoreProvider, useStore } from './src/store';
 import { Transaction } from './src/types';
 import { desktopBreakpoint, maxContentWidth, minTouch, radius, spacing, type, useColors } from './src/theme';
 
-function Shell({ email, onSignOut }: { email: string; onSignOut: () => void }) {
+function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOut: () => void }) {
   const c = useColors();
-  const { ready, syncError } = useStore();
+  const { ready, syncError, data } = useStore();
   const { width } = useWindowDimensions();
   const desktop = width >= desktopBreakpoint;
   const [month, setMonth] = useState(currentMonthKey());
@@ -33,6 +35,17 @@ function Shell({ email, onSignOut }: { email: string; onSignOut: () => void }) {
   const [editingMonth, setEditingMonth] = useState<string | undefined>();
   const [preset, setPreset] = useState<FormPreset | undefined>();
   const name = email.split('@')[0] || 'Account';
+  // first access (nothing registered yet): the setup opens by itself and keeps coming back, on every visit, until it is
+  // finished. Closing it only hides it for this visit; finishing it (even with nothing added) is what ends it.
+  const [seen, setSeen] = useState(() => onboardingSeen(uid));
+  const [hidden, setHidden] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [setupRun, setSetupRun] = useState(0);
+  const fresh = data.transactions.length === 0 && data.cards.length === 0 && data.reserves.length === 0;
+  const finishOnboarding = () => {
+    markOnboardingSeen(uid);
+    setSeen(true);
+  };
 
   // web: the browser's top area (notch, status bar) follows the light top bar while signed in
   useEffect(() => {
@@ -49,9 +62,11 @@ function Shell({ email, onSignOut }: { email: string; onSignOut: () => void }) {
   }, [c.card]);
 
   const avatar = (
-    <View style={[s.avatar, { backgroundColor: c.surfaceAlt }]}>
-      <Text style={[type.label, { color: c.primary }]}>{name.charAt(0).toUpperCase()}</Text>
-    </View>
+    <Pressable accessibilityRole="button" accessibilityLabel="Account settings" onPress={() => setAccountOpen(true)} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+      <View style={[s.avatar, { backgroundColor: c.surfaceAlt }]}>
+        <Text style={[type.label, { color: c.primary }]}>{name.charAt(0).toUpperCase()}</Text>
+      </View>
+    </Pressable>
   );
 
   return (
@@ -63,7 +78,7 @@ function Shell({ email, onSignOut }: { email: string; onSignOut: () => void }) {
         {desktop ? (
           <View style={s.topInner}>
             <View style={s.brandRow}>
-              <Brand size={22} color={c.text} />
+              <Brand size={18} color={c.text} />
             </View>
             <View style={{ flex: 1 }} />
             <Pressable
@@ -93,9 +108,9 @@ function Shell({ email, onSignOut }: { email: string; onSignOut: () => void }) {
           // mobile: avatar with greeting on the left and sign out on the right (cards is a bottom bar tab)
           <View style={s.topInner}>
             {avatar}
-            <View style={{ flex: 1, minWidth: 0 }}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Account settings" onPress={() => setAccountOpen(true)} style={{ flex: 1, minWidth: 0 }}>
               <Text style={[type.label, { color: c.text, lineHeight: 22 }]} numberOfLines={1}>{name}</Text>
-            </View>
+            </Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="Categories" onPress={() => setCategoriesOpen(true)} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}>
               <Feather name="tag" size={20} color={c.textMuted} />
             </Pressable>
@@ -106,7 +121,7 @@ function Shell({ email, onSignOut }: { email: string; onSignOut: () => void }) {
         )}
       </View>
       </Reveal>
-      <ScrollView contentContainerStyle={[s.content, desktop ? { padding: spacing.xxl } : { paddingTop: spacing.lg, paddingBottom: 120 }]}>
+      <ScrollView contentContainerStyle={[s.content, desktop ? { padding: spacing.xxl, paddingTop: spacing.lg } : { paddingTop: spacing.lg, paddingBottom: 120 }]}>
         <View style={s.inner}>
           {syncError ? (
             <View style={[s.banner, { borderColor: c.expense }]}>
@@ -157,6 +172,20 @@ function Shell({ email, onSignOut }: { email: string; onSignOut: () => void }) {
           }}
         />
       )}
+      <Onboarding key={setupRun} visible={ready && fresh && !seen && !hidden && !accountOpen} onClose={() => setHidden(true)} onDone={finishOnboarding} />
+      <AccountSheet
+        visible={accountOpen}
+        email={email}
+        onClose={() => setAccountOpen(false)}
+        onCleared={() => {
+          // a fresh account: the quick setup is owed again
+          resetOnboardingSeen(uid);
+          setSeen(false);
+          setHidden(false);
+          setSetupRun((n) => n + 1);
+          setAccountOpen(false);
+        }}
+      />
       <CardsSheet visible={cardsOpen} onClose={() => setCardsOpen(false)} />
       <CategoriesSheet visible={categoriesOpen} onClose={() => setCategoriesOpen(false)} />
       <TransactionForm visible={formOpen} transaction={editing} occurrenceMonth={editingMonth} preset={preset} onClose={() => setFormOpen(false)} />
@@ -171,7 +200,7 @@ export default function App() {
   return (
     <StoreProvider uid={state.uid}>
       <HelpProvider>
-        <Shell email={state.email} onSignOut={signOut} />
+        <Shell uid={state.uid} email={state.email} onSignOut={signOut} />
       </HelpProvider>
     </StoreProvider>
   );

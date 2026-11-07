@@ -118,7 +118,7 @@
         display: none; flex-shrink: 0; align-items: center; gap: 10px;
         padding: 0 12px; padding-top: env(safe-area-inset-top);
         min-height: 48px;
-        background: #FFFFFF; border-bottom: 1px solid rgba(15,27,51,0.08);
+        background: #2D55D9; border-bottom: 1px solid transparent;
         font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 16px; line-height: 1.25;
       }
       /* on the sign-in screen the banner takes the color of the navy panel under it (and of the browser's top bar) */
@@ -128,12 +128,12 @@
       body.on-login #install-btn { background: rgba(255,255,255,0.12); color: #FFFFFF; }
       body.on-login #install-btn:active { background: rgba(255,255,255,0.22); }
       #install-banner img { width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0; opacity: 0.9; }
-      #install-banner .ib-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #66728C; }
-      #install-banner .ib-name { font-weight: 600; color: #0F1B33; }
+      #install-banner .ib-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #DCE5FF; }
+      #install-banner .ib-name { font-weight: 600; color: #FFFFFF; }
       #install-banner button { font: inherit; border: 0; cursor: pointer; background: none; }
       /* looks like a button (soft accent fill, not a loud solid one); the 44px target comes from the banner height */
-      #install-btn { min-height: 40px; padding: 0 16px; border-radius: 10px; background: rgba(45,85,217,0.10); color: #2D55D9; font-weight: 600; }
-      #install-btn:active { background: rgba(45,85,217,0.20); }
+      #install-btn { min-height: 40px; padding: 0 16px; border-radius: 10px; background: rgba(255,255,255,0.18); color: #FFFFFF; font-weight: 600; }
+      #install-btn:active { background: rgba(255,255,255,0.28); }
       /* iPhone guide dialog */
       #ios-guide { display: none; position: fixed; inset: 0; z-index: 99999; align-items: center; justify-content: center; font-family: Inter, system-ui, -apple-system, sans-serif; }
       #ios-guide .bg { position: absolute; inset: 0; background: rgba(11,25,44,0.45); }
@@ -232,14 +232,31 @@
 
         var banner = document.getElementById('install-banner');
         var deferred = null;
+        // computers have room for a card inside the app instead of a bar: the app reads this (window.ctrlInstall)
+        function isDesktop() { return window.matchMedia && window.matchMedia('(min-width: 900px)').matches; }
+        window.ctrlInstall = {
+          ready: false,
+          run: function () {
+            if (!deferred) return;
+            deferred.prompt();
+            deferred.userChoice.then(function () { deferred = null; hide(); });
+          }
+        };
+        // the browser's top bar follows the banner (blue while it is there, white without it)
+        function setBar(color) { var m = document.querySelector('meta[name="theme-color"]'); if (m && !document.body.classList.contains('on-login')) m.setAttribute('content', color); }
+        function setReady(v) { window.ctrlInstall.ready = v; window.dispatchEvent(new Event('installready')); }
         // the React app listens to this to re-measure its height (it shrinks by the banner height)
         function notify() { window.dispatchEvent(new Event('installbanner')); }
         function show() {
+          if (isDesktop()) { setReady(true); return; }
           banner.style.display = 'flex';
+          setBar('#2D55D9');
           document.body.classList.add('install-banner-on');
           notify();
         }
         function hide() {
+          setReady(false);
+          setBar('#FFFFFF');
           banner.style.display = 'none';
           document.body.classList.remove('install-banner-on');
           notify();
@@ -252,11 +269,7 @@
             deferred = e;
             show();
           });
-          document.getElementById('install-btn').addEventListener('click', function () {
-            if (!deferred) return;
-            deferred.prompt();
-            deferred.userChoice.then(function () { deferred = null; hide(); });
-          });
+          document.getElementById('install-btn').addEventListener('click', window.ctrlInstall.run);
         } else {
           // iPhone (Safari): no direct install, the button opens the step by step guide
           var guide = document.getElementById('ios-guide');

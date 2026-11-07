@@ -1,6 +1,7 @@
+import { InstallCard } from '../components/InstallCard';
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Card } from '../components/Card';
 import { ChartLegend, Gauge, ProjectionChart } from '../components/Charts';
 import { CheckButton, PillToggle } from '../components/Controls';
@@ -102,6 +103,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
   const toggleSeries = (i: number) => setHiddenSeries((h) => (h.includes(i) ? h.filter((x) => x !== i) : h.length >= 1 ? h : [...h, i]));
   const today = todayISO();
   const wide = width >= 900;
+  const { height: winH } = useWindowDimensions();
   const cards = data.cards;
 
   useEffect(() => setChartSel(null), [horizon]);
@@ -517,41 +519,14 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
     </Card>
   );
 
-  const health = financialHealth(runway, debtTotal, avgExpense, quality);
-  const healthColor = !health ? c.textMuted : health.score < 250 ? c.expense : health.score < 500 ? c.warning : c.primary;
-  const factors = health
-    ? [
-        { label: 'Wealth', v: health.saved / 40 },
-        { label: 'Debt-free', v: health.debt / 30 },
-        { label: 'Healthy spending', v: health.habits / 30 },
-      ]
-    : [];
-  const healthCard = (
-    <Card key="health">
-      <View style={s.statHead}>
-        <View style={[s.statTile, { backgroundColor: c.surface }]}>
-          <Feather name="heart" size={22} color={c.primary} />
-        </View>
-        <View style={[s.titleRow, { flex: 1 }]}>
-          <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>Financial health</Text>
-          <HelpTip title="Financial health" text={HEALTH_HELP} />
-        </View>
-      </View>
-      <View style={{ alignItems: 'center' }}>
-        <Gauge segments={health ? [{ value: Math.max(health.score, 1), color: healthColor }] : []} total={1000} size={220} gradient={health ? (health.score < 250 ? ['#F28BA3', '#E0446A'] : health.score < 500 ? ['#F5C16B', '#D9831F'] : ['#6F8FF5', '#2D55D9']) : undefined}>
-          {health ? <Counter value={health.score} style={[type.hero, { color: healthColor, lineHeight: 42 }]} /> : <Text style={[type.hero, { color: healthColor, lineHeight: 42 }]}>—</Text>}
-          <Text style={[type.label, { color: healthColor }]}>{health ? health.label : 'No data'}</Text>
-        </Gauge>
-      </View>
-      {factors.map((f) => (
-        <View key={f.label} style={s.factor}>
-          <Text style={[type.body, { color: c.textMuted, width: 150 }]} numberOfLines={1}>{f.label}</Text>
-          <AnimatedBar ratio={f.v} color={f.v < 0.34 ? c.expense : f.v < 0.67 ? c.warning : c.primary} />
-        </View>
-      ))}
-    </Card>
-  );
-
+  // no data yet: start from the best (full score and full bars), so it begins with a good feeling
+  const health = financialHealth(runway, debtTotal, avgExpense, quality) ?? { score: 1000, saved: 40, debt: 30, habits: 30, label: 'Excellent' };
+  const healthColor = health.score < 250 ? c.expense : health.score < 500 ? c.warning : c.primary;
+  const factors = [
+    { label: 'Wealth', v: health.saved / 40 },
+    { label: 'Debt-free', v: health.debt / 30 },
+    { label: 'Healthy spending', v: health.habits / 30 },
+  ];
   // what makes up the score (pulling it down / pushing it up), from the same numbers the score uses
   const activeCards = cards.filter((x) => !x.archivedAt);
   const factorsList = buildScoreFactors({
@@ -566,6 +541,36 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
     cardLimit: activeCards.reduce((sum, x) => sum + x.limit, 0),
     cardUsed: activeCards.reduce((sum, x) => sum + (usedByCard[cards.indexOf(x)] ?? 0), 0),
   });
+
+  // desktop side column: the gauge shrinks as needed so health + score factors fit the screen without scrolling
+  // (the health card without the gauge is about 250px, the factors card about 120px plus 52px per factor)
+  const gaugeSize = !wide ? 220 : Math.max(130, Math.min(220, Math.round((winH - 116 - 250 - 120 - 52 * factorsList.length) / 0.6)));
+  const healthCard = (
+    <Card key="health">
+      <View style={s.statHead}>
+        <View style={[s.statTile, { backgroundColor: c.surface }]}>
+          <Feather name="heart" size={22} color={c.primary} />
+        </View>
+        <View style={[s.titleRow, { flex: 1 }]}>
+          <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>Financial health</Text>
+          <HelpTip title="Financial health" text={HEALTH_HELP} />
+        </View>
+      </View>
+      <View style={{ alignItems: 'center' }}>
+        <Gauge segments={[{ value: Math.max(health.score, 1), color: healthColor }]} total={1000} size={gaugeSize} gradient={health.score < 250 ? ['#F28BA3', '#E0446A'] : health.score < 500 ? ['#F5C16B', '#D9831F'] : ['#6F8FF5', '#2D55D9']}>
+          <Counter value={health.score} style={[type.hero, { color: healthColor, lineHeight: 42 }]} />
+          <Text style={[type.label, { color: healthColor }]}>{health.label}</Text>
+        </Gauge>
+      </View>
+      {factors.map((f) => (
+        <View key={f.label} style={s.factor}>
+          <Text style={[type.body, { color: c.textMuted, width: 150 }]} numberOfLines={1}>{f.label}</Text>
+          <AnimatedBar ratio={f.v} color={f.v < 0.34 ? c.expense : f.v < 0.67 ? c.warning : c.primary} />
+        </View>
+      ))}
+    </Card>
+  );
+
   // phone: collapsed into one line that opens a dialog (the Summary tab stays short)
   const tipsCard = <ScoreFactorsCard factors={factorsList} collapsed />;
 
@@ -691,6 +696,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       ) : wide ? (
         <View style={s.cols}>
           <View style={{ flex: 1, minWidth: 0, gap: spacing.lg }}>
+            <InstallCard />
             <Reveal index={1}>{chartCard}</Reveal>
             {figureGrid}
             <Reveal index={3}>{table}</Reveal>

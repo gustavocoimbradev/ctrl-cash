@@ -42,6 +42,8 @@ interface Store {
   toggleConfirmed: (transactionId: string, monthKey: string) => void;
   /** archives the transaction (soft delete); installments are archived as a group */
   archiveTransaction: (transactionId: string) => void;
+  /** archives absolutely everything (transactions, payments, reserves and their moves, cards, categories): a fresh start. Nothing is deleted. */
+  clearAll: () => void;
   restoreTransaction: (transactionId: string) => void;
   addPayment: (payment: Omit<InvoicePayment, 'id'>) => void;
   archivePayment: (paymentId: string) => void;
@@ -216,6 +218,18 @@ export function StoreProvider({ uid, children }: { uid: string; children: React.
       return setArchived((t) => (group ? t.installment?.groupId === group : t.id === id), Date.now())(d);
     });
   }, []);
+  const clearAll = useCallback(() => {
+    const at = Date.now();
+    const mark = <T extends { archivedAt?: number }>(list: T[]): T[] => list.map((x) => (x.archivedAt ? x : { ...x, archivedAt: at }));
+    setData((d) => ({
+      transactions: mark(d.transactions),
+      payments: mark(d.payments),
+      reserves: mark(d.reserves),
+      reserveMoves: mark(d.reserveMoves),
+      cards: mark(d.cards),
+      categories: mark(d.categories),
+    }));
+  }, []);
   const restoreTransaction = useCallback((id: string) => {
     setData((d) => {
       const group = d.transactions.find((t) => t.id === id)?.installment?.groupId;
@@ -309,8 +323,8 @@ export function StoreProvider({ uid, children }: { uid: string; children: React.
   const restoreCategory = useCallback((kind: 'expense' | 'income', slug: string) => setCategoryArchived(kind, slug, undefined), [setCategoryArchived]);
 
   const value = useMemo(
-    () => ({ ready, syncError, data, archived, addTransaction, updateTransaction, updateFixed, toggleConfirmed, archiveTransaction, restoreTransaction, addPayment, archivePayment, saveReserve, archiveReserve, addReserveMove, updateReserveMove, archiveReserveMove, saveCard, archiveCard, restoreCard, saveCategory, archiveCategory, restoreCategory }),
-    [ready, syncError, data, archived, addTransaction, updateTransaction, updateFixed, toggleConfirmed, archiveTransaction, restoreTransaction, addPayment, archivePayment, saveReserve, archiveReserve, addReserveMove, updateReserveMove, archiveReserveMove, saveCard, archiveCard, restoreCard, saveCategory, archiveCategory, restoreCategory],
+    () => ({ ready, syncError, data, archived, addTransaction, updateTransaction, updateFixed, toggleConfirmed, archiveTransaction, clearAll, restoreTransaction, addPayment, archivePayment, saveReserve, archiveReserve, addReserveMove, updateReserveMove, archiveReserveMove, saveCard, archiveCard, restoreCard, saveCategory, archiveCategory, restoreCategory }),
+    [ready, syncError, data, archived, addTransaction, updateTransaction, updateFixed, toggleConfirmed, archiveTransaction, clearAll, restoreTransaction, addPayment, archivePayment, saveReserve, archiveReserve, addReserveMove, updateReserveMove, archiveReserveMove, saveCard, archiveCard, restoreCard, saveCategory, archiveCategory, restoreCategory],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

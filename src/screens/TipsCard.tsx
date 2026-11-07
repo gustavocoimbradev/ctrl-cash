@@ -48,6 +48,37 @@ function FactorGroups({ factors }: { factors: ScoreFactor[] }) {
   );
 }
 
+/** One line per factor (tap to read the detail): fits the desktop side column without scrolling. */
+function CompactList({ factors }: { factors: ScoreFactor[] }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const order = [...factors.filter((x) => x.tone === 'negative'), ...factors.filter((x) => x.tone === 'positive')];
+  return (
+    <View style={{ gap: spacing.xs }}>
+      {order.map((x) => {
+        const tone = TONE[x.tone];
+        const open = openId === x.id;
+        return (
+          <Pressable key={x.id} accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpenId(open ? null : x.id)} style={({ pressed }) => [s.row, { opacity: pressed ? 0.7 : 1 }]}>
+            <View style={s.rowHead}>
+              <View style={[s.rowTile, { backgroundColor: tone.tint }]}>
+                <Feather name={x.icon as keyof typeof Feather.glyphMap} size={16} color={tone.color} />
+              </View>
+              <Text style={[type.body, { color: c.text, flex: 1, fontWeight: '600' }]} numberOfLines={open ? 3 : 1}>{x.title}</Text>
+              <Feather name={open ? 'chevron-up' : 'chevron-down'} size={18} color={c.textMuted} />
+            </View>
+            {open && (
+              <View style={{ paddingLeft: 40, gap: 4, paddingBottom: spacing.xs }}>
+                <Text style={[type.body, { color: c.textMuted }]}>{x.text}</Text>
+                <Text style={[type.body, { color: tone.color, fontWeight: '600' }]}>{IMPACT[x.impact]}</Text>
+              </View>
+            )}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 const HELP = 'What is pushing your financial health score up or down right now, and how much each factor weighs.';
 
 /**
@@ -99,7 +130,7 @@ export function ScoreFactorsCard({ factors, scroll, collapsed }: { factors: Scor
         </View>
       </View>
       <View style={[{ gap: spacing.lg }, scroll && ({ flexShrink: 1, minHeight: 0, overflowY: 'auto', paddingRight: 4 } as object)]}>
-        <FactorGroups factors={factors} />
+        {scroll ? <CompactList factors={factors} /> : <FactorGroups factors={factors} />}
       </View>
     </Card>
   );
@@ -107,6 +138,9 @@ export function ScoreFactorsCard({ factors, scroll, collapsed }: { factors: Scor
 
 const s = {
   head: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: spacing.md },
+  row: { borderRadius: radius.control - 4, paddingVertical: 4 },
+  rowHead: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: spacing.sm, minHeight: 36 },
+  rowTile: { width: 32, height: 32, borderRadius: 16, alignItems: 'center' as const, justifyContent: 'center' as const },
   tile: { width: 52, height: 52, borderRadius: 26, alignItems: 'center' as const, justifyContent: 'center' as const },
   item: { flexDirection: 'row' as const, gap: spacing.md, alignItems: 'flex-start' as const },
   itemTile: { width: 36, height: 36, borderRadius: radius.control - 4, alignItems: 'center' as const, justifyContent: 'center' as const, marginTop: 2 },
