@@ -7,10 +7,10 @@ import { useSocial } from './SocialProvider';
 import { Pill, PersonRow } from './parts';
 
 /**
- * Find people from the header: a search field with a dropdown of results. Tapping a person opens the profile page;
+ * Find people from the header (by name): a search field with a dropdown of results. Tapping a person opens the profile page;
  * the result row also has Follow. Without a profile of your own the dropdown points to creating one first.
  */
-export function PeopleSearch({ onOpenProfile, autoFocus, onDone }: { onOpenProfile: (handle: string | 'me') => void; autoFocus?: boolean; onDone?: () => void }) {
+export function PeopleSearch({ onOpenProfile, autoFocus, onDone }: { onOpenProfile: (id: string | 'me') => void; autoFocus?: boolean; onDone?: () => void }) {
   const c = useColors();
   const { profile, follow, unfollow } = useSocial();
   const [q, setQ] = useState('');
@@ -40,16 +40,16 @@ export function PeopleSearch({ onOpenProfile, autoFocus, onDone }: { onOpenProfi
     setFocused(false);
     input.current?.blur();
   };
-  const go = (handle: string | 'me') => {
+  const go = (id: string | 'me') => {
     close();
     setQ('');
-    onOpenProfile(handle);
+    onOpenProfile(id);
     onDone?.();
   };
   const toggle = async (p: Person) => {
-    setBusy(p.handle);
+    setBusy(p.id);
     try {
-      await (p.relation.following ? unfollow(p.handle) : follow(p.handle));
+      await (p.relation.following ? unfollow(p.id) : follow(p.id));
       setResults((await socialApi.search(term)).people);
     } finally {
       setBusy(null);
@@ -85,18 +85,18 @@ export function PeopleSearch({ onOpenProfile, autoFocus, onDone }: { onOpenProfi
       {open ? (
         <View style={[s.drop, glow('#1E2950', 30, 0.5), { backgroundColor: c.card, borderColor: c.border }]}>
           {results === null ? <Text style={[type.body, s.note, { color: c.textMuted }]}>Searching...</Text> : null}
-          {results !== null && results.length === 0 ? <Text style={[type.body, s.note, { color: c.textMuted }]}>Nobody found. Check the name or @handle.</Text> : null}
+          {results !== null && results.length === 0 ? <Text style={[type.body, s.note, { color: c.textMuted }]}>Nobody found. Check the name and try again.</Text> : null}
           {results?.map((p) => (
             <PersonRow
-              key={p.handle}
+              key={p.id}
               person={p}
-              onPress={() => go(p.handle)}
+              onPress={() => go(p.id)}
               right={
                 profile ? (
                   <Pill
                     label={p.relation.following ? 'Following' : p.relation.followsMe ? 'Follow back' : 'Follow'}
                     primary={!p.relation.following}
-                    disabled={busy === p.handle}
+                    disabled={busy === p.id}
                     onPress={() => void toggle(p)}
                   />
                 ) : undefined

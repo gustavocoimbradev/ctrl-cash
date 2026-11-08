@@ -16,7 +16,7 @@ const HEIGHT = 560;
  * It lists the conversations and the people, and shows one conversation at a time. Profiles are pages, so tapping a
  * person goes there. On the phone the pill sits above the bottom bar and the window takes the whole screen.
  */
-export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenProfile: (handle: string | 'me') => void }) {
+export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenProfile: (id: string | 'me') => void }) {
   const c = useColors();
   const { loaded, profile, conversations, following, followers, unread, chat, openChat, closeChat, chatList, refresh } = useSocial();
   const { height: winH } = useWindowDimensions();
@@ -44,7 +44,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chat.open]);
 
-  const peer = chat.with ? [...conversations.map((x) => x.with), ...following, ...followers].find((p) => p.handle === chat.with) : undefined;
+  const peer = chat.with ? [...conversations.map((x) => x.with), ...following, ...followers].find((p) => p.id === chat.with) : undefined;
   const latest = conversations[0]?.with;
   const place = mobile ? { right: spacing.lg, bottom: 88 } : { right: spacing.xl, bottom: spacing.xl };
   const height = Math.min(HEIGHT, winH - 96);
@@ -85,7 +85,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
             ) : null}
           </View>
           <Text style={[type.label, { color: c.text }]}>Messages</Text>
-          {latest ? <Avatar name={latest.displayName} handle={latest.handle} color={latest.color} size={32} /> : null}
+          {latest ? <Avatar name={latest.displayName} id={latest.id} color={latest.color} size={32} /> : null}
         </Pressable>
       ) : null}
 
@@ -106,8 +106,8 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
                   <Feather name="arrow-left" size={22} color={c.text} />
                 </Pressable>
                 <Pressable accessibilityRole="button" onPress={() => chat.with && onOpenProfile(chat.with)} style={s.who}>
-                  {peer ? <Avatar name={peer.displayName} handle={peer.handle} color={peer.color} size={36} /> : null}
-                  <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{peer?.displayName ?? `@${chat.with}`}</Text>
+                  {peer ? <Avatar name={peer.displayName} id={peer.id} color={peer.color} size={36} /> : null}
+                  <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{peer?.displayName ?? 'Conversation'}</Text>
                 </Pressable>
               </>
             ) : (
@@ -125,7 +125,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
             </Pressable>
           </View>
           {profile && chat.with ? (
-            <Thread key={chat.with} handle={chat.with} />
+            <Thread key={chat.with} id={chat.with} />
           ) : (
             <ScrollView contentContainerStyle={s.body} keyboardShouldPersistTaps="handled">
               {body()}

@@ -18,14 +18,14 @@ interface Social {
   received: Person[];
   /** fresh lists (the chat polls faster while it is open) */
   refresh: () => Promise<void>;
-  saveProfile: (p: { handle: string; displayName: string; bio?: string; color?: string }) => Promise<void>;
-  follow: (handle: string) => Promise<void>;
-  unfollow: (handle: string) => Promise<void>;
-  share: (handle: string) => Promise<void>;
-  revoke: (handle: string) => Promise<void>;
+  saveProfile: (p: { displayName: string; color?: string }) => Promise<void>;
+  follow: (id: string) => Promise<void>;
+  unfollow: (id: string) => Promise<void>;
+  share: (id: string) => Promise<void>;
+  revoke: (id: string) => Promise<void>;
   /** the floating chat: open or collapsed, and which conversation it shows (null = the list) */
   chat: { open: boolean; with: string | null };
-  openChat: (handle?: string) => void;
+  openChat: (id?: string) => void;
   closeChat: () => void;
   /** back from a conversation to the list */
   chatList: () => void;
@@ -98,7 +98,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     if (!ready || given.length === 0) return;
     const timer = setTimeout(() => {
       const summary = buildSummary(data);
-      const fingerprint = JSON.stringify({ m: summary.months, c: summary.categories });
+      const fingerprint = JSON.stringify({ s: summary.spent, v: summary.saved, m: summary.months, c: summary.categories });
       if (fingerprint === lastPublished.current) return;
       socialApi.publishSummary(summary).then(() => { lastPublished.current = fingerprint; }).catch(() => {});
     }, PUBLISH_DELAY_MS);
@@ -123,7 +123,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
       share: then(async (h: string) => { await socialApi.share(h); lastPublished.current = ''; }),
       revoke: then(async (h: string) => { await socialApi.revoke(h); }),
       chat,
-      openChat: (handle?: string) => setChat((c) => ({ open: true, with: handle ?? c.with })),
+      openChat: (id?: string) => setChat((c) => ({ open: true, with: id ?? c.with })),
       closeChat: () => setChat((c) => ({ ...c, open: false })),
       chatList: () => setChat((c) => ({ ...c, with: null })),
     }),

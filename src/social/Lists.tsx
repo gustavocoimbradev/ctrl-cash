@@ -7,7 +7,7 @@ import { Empty, PersonRow } from './parts';
 const preview = (mine: boolean, body: string) => `${mine ? 'You: ' : ''}${body.replace(/\s+/g, ' ')}`;
 
 /** The conversations, newest first, with what is unread. */
-export function ChatsList({ onOpen }: { onOpen: (handle: string) => void }) {
+export function ChatsList({ onOpen }: { onOpen: (id: string) => void }) {
   const c = useColors();
   const { conversations } = useSocial();
   if (conversations.length === 0) {
@@ -19,10 +19,10 @@ export function ChatsList({ onOpen }: { onOpen: (handle: string) => void }) {
     <View style={{ gap: spacing.xs }}>
       {conversations.map((cv) => (
         <PersonRow
-          key={cv.with.handle}
+          key={cv.with.id}
           person={cv.with}
           subtitle={preview(cv.last.mine, cv.last.body)}
-          onPress={() => onOpen(cv.with.handle)}
+          onPress={() => onOpen(cv.with.id)}
           right={
             cv.unread > 0 ? (
               <View style={{ minWidth: 24, height: 24, paddingHorizontal: 7, borderRadius: 12, backgroundColor: c.primary, alignItems: 'center', justifyContent: 'center' }}>

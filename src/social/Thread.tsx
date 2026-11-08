@@ -20,7 +20,7 @@ const dayOf = (ms: number) => {
 };
 
 /** The conversation with one person: bubbles, day separators and a composer. Polls while it is open. */
-export function Thread({ handle }: { handle: string }) {
+export function Thread({ id }: { id: string }) {
   const c = useColors();
   const { refresh } = useSocial();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -36,7 +36,7 @@ export function Thread({ handle }: { handle: string }) {
 
   const load = useCallback(async (first: boolean) => {
     try {
-      const res = await socialApi.messages(handle, first ? undefined : last.current || undefined);
+      const res = await socialApi.messages(id, first ? undefined : last.current || undefined);
       if (!alive.current) return;
       setCanSend(res.canSend);
       if (first) setMessages(res.messages);
@@ -45,12 +45,12 @@ export function Thread({ handle }: { handle: string }) {
       setLoaded(true);
       // what the other person wrote has been seen now
       if (res.messages.some((m) => !m.mine && m.readAt === null)) {
-        void socialApi.markRead(handle).then(() => refresh()).catch(() => {});
+        void socialApi.markRead(id).then(() => refresh()).catch(() => {});
       }
     } catch {
       if (alive.current) setLoaded(true);
     }
-  }, [handle, refresh]);
+  }, [id, refresh]);
 
   useEffect(() => {
     last.current = 0;
@@ -59,7 +59,7 @@ export function Thread({ handle }: { handle: string }) {
     void load(true);
     const timer = setInterval(() => void load(false), POLL_MS);
     return () => clearInterval(timer);
-  }, [handle, load]);
+  }, [id, load]);
 
   useEffect(() => {
     const t = setTimeout(() => scroller.current?.scrollToEnd({ animated: true }), 50);
@@ -72,7 +72,7 @@ export function Thread({ handle }: { handle: string }) {
     setSending(true);
     setError('');
     try {
-      const res = await socialApi.send(handle, body);
+      const res = await socialApi.send(id, body);
       setText('');
       last.current = Math.max(last.current, res.message.createdAt);
       setMessages((m) => [...m, res.message]);

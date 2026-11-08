@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { currentMonthKey } from './src/domain/dates';
 import { useAuth } from './src/firebase/useAuth';
@@ -17,13 +17,26 @@ import { HelpProvider } from './src/components/HelpTip';
 import { Reveal } from './src/components/Reveal';
 import { Skeleton } from './src/components/Motion';
 import { StoreProvider, useStore } from './src/store';
-import { SocialProvider } from './src/social/SocialProvider';
+import { SocialProvider, useSocial } from './src/social/SocialProvider';
 import { ChatDock } from './src/social/ChatDock';
 import { PeopleSearch } from './src/social/PeopleSearch';
 import { SideRail } from './src/components/SideRail';
 import { ProfilePage } from './src/social/ProfilePage';
 import { Transaction } from './src/types';
 import { desktopBreakpoint, maxContentWidth, minTouch, radius, spacing, type, useColors } from './src/theme';
+
+type Page = { name: 'dashboard' } | { name: 'profile'; id: string | 'me' };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The page the address asks for: `/` is the dashboard, `/profile/<uuid>` somebody's profile and `/profile` your own. */
+function pageFromUrl(): Page {
+  if (Platform.OS !== 'web') return { name: 'dashboard' };
+  const m = /^\/profile(?:\/([^/]+))?\/?$/.exec(window.location.pathname);
+  if (!m) return { name: 'dashboard' };
+  if (!m[1]) return { name: 'profile', id: 'me' };
+  return UUID.test(m[1]) ? { name: 'profile', id: m[1].toLowerCase() } : { name: 'profile', id: m[1] };
+}
 
 /** desktop: room on the left for the floating side menu; the top bar uses the same insets as the page, so both line up */
 const DESKTOP_LEFT = 104;
@@ -50,8 +63,29 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   const [accountOpen, setAccountOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   /** the page on screen: the dashboard, or a profile (yours or somebody else's) */
-  const [page, setPage] = useState<{ name: 'dashboard' } | { name: 'profile'; handle: string | 'me' }>({ name: 'dashboard' });
+  const [page, setPage] = useState<Page>(pageFromUrl);
+  const { profile: myProfile } = useSocial();
+  const myId = myProfile?.id;
+  const urlSynced = useRef(false);
   const toDashboard = () => setPage({ name: 'dashboard' });
+
+  // the address follows the page (a profile is /profile/<its uuid>) and the browser's Back and Forward follow the address
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const target = page.name === 'dashboard' ? '/' : page.id === 'me' ? (myId ? `/profile/${myId}` : '/profile') : `/profile/${page.id}`;
+    if (window.location.pathname !== target) {
+      // the first sync and the "me" shortcut replace the entry, so Back does not land on an address that redirects
+      if (!urlSynced.current || page.name === 'profile' && page.id === 'me') window.history.replaceState(null, '', target);
+      else window.history.pushState(null, '', target);
+    }
+    urlSynced.current = true;
+  }, [page, myId]);
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const onPop = () => setPage(pageFromUrl());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
   const [setupRun, setSetupRun] = useState(0);
   const fresh = data.transactions.length === 0 && data.cards.length === 0 && data.reserves.length === 0;
   const finishOnboarding = () => {
@@ -96,10 +130,9 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
             </View>
             {/* people search, centered in the header */}
             <View style={s.topCenter}>
-              <PeopleSearch onOpenProfile={(h) => setPage({ name: 'profile', handle: h })} />
+              <PeopleSearch onOpenProfile={(h) => setPage({ name: 'profile', id: h })} />
             </View>
             <View style={[s.topSide, { justifyContent: 'flex-end' }]}>
-              {avatar}
               <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={onSignOut} style={({ pressed, hovered }: any) => [s.iconBtn, { backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}>
                 <Feather name="log-out" size={20} color={c.textMuted} />
               </Pressable>
@@ -115,7 +148,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
             <Pressable accessibilityRole="button" accessibilityLabel="Search people" onPress={() => setSearchOpen((v) => !v)} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: searchOpen ? `${c.primary}1A` : c.surface, opacity: pressed ? 0.7 : 1 }]}>
               <Feather name="search" size={20} color={searchOpen ? c.primary : c.textMuted} />
             </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={() => setPage({ name: 'profile', handle: 'me' })} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={() => setPage({ name: 'profile', id: 'me' })} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}>
               <Feather name="user" size={20} color={c.textMuted} />
             </Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="Categories" onPress={() => setCategoriesOpen(true)} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}>
@@ -128,7 +161,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
         )}
         {!desktop && searchOpen ? (
           <View style={s.mobileSearch}>
-            <PeopleSearch autoFocus onDone={() => setSearchOpen(false)} onOpenProfile={(h) => setPage({ name: 'profile', handle: h })} />
+            <PeopleSearch autoFocus onDone={() => setSearchOpen(false)} onOpenProfile={(h) => setPage({ name: 'profile', id: h })} />
           </View>
         ) : null}
       </View>
@@ -139,7 +172,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
             { key: 'home', icon: 'home', label: 'Dashboard', onPress: toDashboard, active: page.name === 'dashboard' },
             { key: 'cards', icon: 'credit-card', label: 'Cards', onPress: () => setCardsOpen(true) },
             { key: 'categories', icon: 'tag', label: 'Categories', onPress: () => setCategoriesOpen(true) },
-            { key: 'profile', icon: 'user', label: 'Profile', onPress: () => setPage({ name: 'profile', handle: 'me' }), active: page.name === 'profile' && page.handle === 'me' },
+            { key: 'profile', icon: 'user', label: 'Profile', onPress: () => setPage({ name: 'profile', id: 'me' }), active: page.name === 'profile' && page.id === 'me' },
           ]}
         />
       ) : null}
@@ -157,7 +190,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
             </View>
           ) : null}
           {ready && page.name === 'profile' ? (
-            <ProfilePage handle={page.handle} email={email} onBack={toDashboard} onOpen={(h) => setPage({ name: 'profile', handle: h })} />
+            <ProfilePage id={page.id} email={email} onEditAccount={() => setAccountOpen(true)} onBack={toDashboard} onOpen={(h) => setPage({ name: 'profile', id: h })} />
           ) : null}
           {ready && page.name === 'dashboard' ? (
             <Dashboard
@@ -211,7 +244,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
           setAccountOpen(false);
         }}
       />
-      {ready ? <ChatDock mobile={!desktop} onOpenProfile={(h) => setPage({ name: 'profile', handle: h })} /> : null}
+      {ready ? <ChatDock mobile={!desktop} onOpenProfile={(h) => setPage({ name: 'profile', id: h })} /> : null}
       <CardsSheet visible={cardsOpen} onClose={() => setCardsOpen(false)} />
       <CategoriesSheet visible={categoriesOpen} onClose={() => setCategoriesOpen(false)} />
       <TransactionForm visible={formOpen} transaction={editing} occurrenceMonth={editingMonth} preset={preset} onClose={() => setFormOpen(false)} />
