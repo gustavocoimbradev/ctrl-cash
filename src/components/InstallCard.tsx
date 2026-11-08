@@ -1,4 +1,3 @@
-import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { radius, spacing, type } from '../theme';
@@ -43,19 +42,18 @@ export function InstallCard() {
   return (
     <View style={s.bar}>
       <Text style={[type.body, s.text]} numberOfLines={1}>Install Ctrl+Cash to open it like an app.</Text>
-      <Pressable accessibilityRole="button" onPress={() => installer()?.run()} style={({ hovered }: any) => [s.btn, { backgroundColor: hovered ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.18)' }]}>
-        <Text style={[type.label, { color: '#FFFFFF' }]}>Install</Text>
+      <Pressable accessibilityRole="button" onPress={close} style={({ hovered }: any) => [s.btn, { backgroundColor: hovered ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.18)' }]}>
+        <Text style={[type.label, { color: '#FFFFFF' }]}>Not now</Text>
       </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Not now" onPress={close} style={s.close}>
-        <Feather name="x" size={18} color="#DCE5FF" />
+      <Pressable accessibilityRole="button" onPress={() => installer()?.run()} style={({ hovered }: any) => [s.btn, { backgroundColor: hovered ? '#E8EEFF' : '#FFFFFF' }]}>
+        <Text style={[type.label, { color: '#2D55D9' }]}>Install</Text>
       </Pressable>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  bar: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: '#2D55D9', borderRadius: radius.control, paddingLeft: spacing.lg, paddingRight: spacing.xs, minHeight: 52 },
+  bar: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: '#2D55D9', borderRadius: radius.control, paddingLeft: spacing.lg, paddingRight: spacing.sm, minHeight: 52 },
   text: { flex: 1, minWidth: 0, color: '#FFFFFF' },
-  btn: { minHeight: 36, paddingHorizontal: spacing.lg, borderRadius: radius.control - 4, alignItems: 'center', justifyContent: 'center' },
-  close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  btn: { minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radius.control - 4, alignItems: 'center', justifyContent: 'center' },
 });
