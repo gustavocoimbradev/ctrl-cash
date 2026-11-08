@@ -6,6 +6,7 @@
 import { openInvoiceKey } from '../../src/domain/cards';
 import { addMonthsToKey, currentMonthKey, daysInMonth, todayISO, toISO } from '../../src/domain/dates';
 import { NewTransactionInput, createTransactions } from '../../src/domain/transactions';
+import { buildSummary } from '../../src/domain/summary';
 import { CategoryRecord, CreditCard, InvoicePayment, Transaction } from '../../src/types';
 
 const AUTH_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST;
@@ -116,14 +117,63 @@ for (const card of [cardA, cardB]) {
 const categories: CategoryRecord[] = [{ id: 'coffee', slug: 'coffee', kind: 'expense', name: 'Coffee shops', weight: 0.45, createdAt: 1_700_000_000_000 }];
 
 /** Signs in to the Auth emulator (creating the demo account the first time) and returns the ID token. */
-async function demoToken(): Promise<string> {
+async function tokenFor(email: string): Promise<string> {
   const base = `http://${AUTH_HOST}/identitytoolkit.googleapis.com/v1/accounts`;
-  const body = JSON.stringify({ email: EMAIL, password: PASSWORD, returnSecureToken: true });
+  const body = JSON.stringify({ email, password: PASSWORD, returnSecureToken: true });
   const headers = { 'Content-Type': 'application/json' };
   let res = await fetch(`${base}:signUp?key=demo`, { method: 'POST', headers, body });
   if (!res.ok) res = await fetch(`${base}:signInWithPassword?key=demo`, { method: 'POST', headers, body });
   if (!res.ok) throw new Error(`Auth emulator answered ${res.status}`);
   return ((await res.json()) as { idToken: string }).idToken;
+}
+
+const demoToken = () => tokenFor(EMAIL);
+
+/** One call to the local API as somebody. */
+async function api<T>(token: string, path: string, method = 'GET', body?: unknown): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(`${method} ${path} answered ${res.status}: ${await res.text()}`);
+  return (await res.json()) as T;
+}
+
+/** The social side: two accounts that follow each other, a short chat and a summary shared both ways. */
+async function seedSocial(demo: string, data: Parameters<typeof buildSummary>[0]) {
+  const maria = await tokenFor('maria@ctrlcash.dev');
+  await api(demo, '/profile', 'PUT', { handle: 'demo', displayName: 'Demo', bio: 'Trying to keep more than I spend.', color: '#2D55D9' });
+  await api(maria, '/profile', 'PUT', { handle: 'maria', displayName: 'Maria Costa', bio: 'Saving for a trip, one month at a time.', color: '#8B5CF6' });
+  await api(demo, '/follow', 'POST', { handle: 'maria' });
+  await api(maria, '/follow', 'POST', { handle: 'demo' });
+  await api(demo, '/shares', 'POST', { handle: 'maria' });
+  await api(maria, '/shares', 'POST', { handle: 'demo' });
+  await api(demo, '/summary', 'PUT', buildSummary(data));
+  // Maria's summary, handmade: a steady salary, a few months of savings and one tight month
+  const current = currentMonthKey();
+  const left = [140000, 95000, 120000, -18000, 160000, 110000, 90000, 130000, 70000, 150000, 125000, 105000];
+  const months = left.map((l, i) => ({ key: addMonthsToKey(current, i - 11), income: 520000, expense: 520000 - l, left: l }));
+  await api(maria, '/summary', 'PUT', {
+    version: 1,
+    generatedAt: Date.now(),
+    months,
+    categories: [
+      { slug: 'bills', label: 'Bills', amount: 1_720_000 },
+      { slug: 'groceries', label: 'Groceries', amount: 1_050_000 },
+      { slug: 'leisure', label: 'Leisure', amount: 610_000 },
+      { slug: 'car', label: 'Car', amount: 480_000 },
+      { slug: 'health', label: 'Health', amount: 330_000 },
+      { slug: 'subscriptions', label: 'Subscriptions', amount: 160_000 },
+    ],
+  });
+  // a short chat, only the first time
+  const thread = await api<{ messages: unknown[] }>(demo, '/messages/maria');
+  if (thread.messages.length === 0) {
+    await api(maria, '/messages', 'POST', { to: 'demo', body: 'Hey! I just shared my monthly summary with you.' });
+    await api(demo, '/messages', 'POST', { to: 'maria', body: 'Nice, thanks! Mine is on my profile too.' });
+    await api(maria, '/messages', 'POST', { to: 'demo', body: 'How is the saving going this month?' });
+  }
 }
 
 async function main() {
@@ -134,7 +184,8 @@ async function main() {
     body: JSON.stringify({ transactions: txs, cards: [cardA, cardB], payments, categories }),
   });
   if (!res.ok) throw new Error(`The API answered ${res.status}: ${await res.text()}`);
-  console.log(`Demo account ready: ${EMAIL} / ${PASSWORD}  (${txs.length} transactions, 2 cards, ${payments.length} payments)`);
+  await seedSocial(token, { transactions: txs, cards: [cardA, cardB], payments, categories, reserves: [], reserveMoves: [] });
+  console.log(`Demo account ready: ${EMAIL} / ${PASSWORD}  (${txs.length} transactions, 2 cards, ${payments.length} payments, and a friend: @maria)`);
 }
 
 main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1); });
