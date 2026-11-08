@@ -67,6 +67,38 @@ export function useTween(target: number, duration: number = motion.slow): number
   return value;
 }
 
+/**
+ * Like `useTween`, for a list of numbers (the slices of a chart): the first render grows them from 0 and every
+ * change afterwards animates from what is on screen to the new values, so a chart never restarts from nothing.
+ */
+export function useTweenList(targets: number[], duration: number = motion.slow): number[] {
+  const reduced = useReducedMotion();
+  const sig = targets.join('|');
+  const [values, setValues] = useState<number[]>(() => (reduced ? targets : targets.map(() => 0)));
+  const from = useRef<number[]>(values);
+  useEffect(() => {
+    if (reduced) {
+      from.current = targets;
+      setValues(targets);
+      return;
+    }
+    const start = Date.now();
+    const origin = targets.map((_, i) => from.current[i] ?? 0);
+    let id = 0;
+    const step = () => {
+      const p = Math.min((Date.now() - start) / duration, 1);
+      const next = targets.map((t, i) => origin[i] + (t - origin[i]) * easeOutCubic(p));
+      from.current = next;
+      setValues(next);
+      if (p < 1) id = requestAnimationFrame(step);
+    };
+    id = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sig, duration, reduced]);
+  return values;
+}
+
 /** Progress from 0 to 1 that restarts whenever `sig` changes (chart drawing). */
 export function useProgress(sig: string, duration: number = motion.slow): number {
   const reduced = useReducedMotion();

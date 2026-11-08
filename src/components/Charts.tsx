@@ -3,7 +3,7 @@ import { Animated, Platform, Pressable, Text, View } from 'react-native';
 import Svg, { Circle, ClipPath, Defs, G, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { formatMoney } from '../domain/money';
 import { colors as c, fontFamily, radius, spacing, type } from '../theme';
-import { motion, useProgress, useReducedMotion } from '../theme/motion';
+import { motion, useProgress, useReducedMotion, useTweenList } from '../theme/motion';
 
 /** Smooth curve (Catmull-Rom → Bézier) through the points. */
 function smooth(pts: { x: number; y: number }[]): string {
@@ -207,8 +207,8 @@ export function Gauge({ segments, total, size = 240, gradient, children }: Gauge
   const h = size / 2 + stroke;
   let from = 180;
   const gap = 3;
-  /** arc that draws on enter and when the values change */
-  const grow = useProgress(`gauge-${segments.map((s) => Math.round(s.value)).join('-')}-${total}`);
+  /** the arc grows from 0 on enter and, when the values change, moves from where it is to the new value */
+  const shown = useTweenList(segments.map((s) => s.value));
   return (
     <View style={{ width: size, height: h, alignItems: 'center' }}>
       <Svg width={size} height={h}>
@@ -223,7 +223,7 @@ export function Gauge({ segments, total, size = 240, gradient, children }: Gauge
         <Path d={arc(cx, cy, r, 180, 360)} stroke={c.surfaceAlt} strokeWidth={stroke} strokeLinecap="round" fill="none" />
         {total > 0 &&
           segments.map((sg, i) => {
-            const sweep = Math.min(180 * (sg.value / total) * grow, 180 - (from - 180));
+            const sweep = Math.min(180 * ((shown[i] ?? 0) / total), 180 - (from - 180));
             if (sweep <= 0.5) return null;
             const a0 = from;
             const a1 = from + Math.max(sweep - gap, 0.5);
