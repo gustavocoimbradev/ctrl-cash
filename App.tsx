@@ -59,7 +59,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   const [menuOpen, setMenuOpen] = useState(false);
   /** the page on screen: the dashboard, or a profile (yours or somebody else's) */
   const [page, setPage] = useState<Page>(pageFromUrl);
-  const { profile: myProfile } = useSocial();
+  const { profile: myProfile, unread, openChat } = useSocial();
   const myId = myProfile?.code;
   const urlSynced = useRef(false);
   const toDashboard = () => setPage({ name: 'dashboard' });
@@ -132,13 +132,24 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
             </View>
           </View>
         ) : (
-          // phone: the brand on the left and the menu (a panel with everything that is not on the bottom bar) on the right
+          // phone: the menu on the left (a panel with what is not on the bottom bar) and the chat on the right
           <View style={s.topInner}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Dashboard" onPress={toDashboard} style={[s.brandRow, { flex: 1 }]}>
-              <Brand size={18} color={c.text} />
-            </Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="Open menu" onPress={() => setMenuOpen(true)} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}>
               <Feather name="menu" size={22} color={c.textMuted} />
+            </Pressable>
+            <View style={{ flex: 1 }} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={unread > 0 ? `Messages, ${unread} unread` : 'Messages'}
+              onPress={() => openChat()}
+              style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}
+            >
+              <Feather name="message-circle" size={22} color={c.textMuted} />
+              {unread > 0 ? (
+                <View style={[s.badge, { backgroundColor: c.expense, borderColor: c.card }]}>
+                  <Text style={s.badgeText}>{unread > 9 ? '9+' : unread}</Text>
+                </View>
+              ) : null}
             </Pressable>
           </View>
         )}
@@ -217,6 +228,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
       />
       {ready ? <ChatDock mobile={!desktop} onOpenProfile={(h) => setPage({ name: 'profile', id: h })} /> : null}
       <MenuDrawer
+        side="left"
         visible={menuOpen}
         onClose={() => setMenuOpen(false)}
         header={
@@ -266,6 +278,8 @@ const s = StyleSheet.create({
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   topBtn: { minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: 'rgba(15,27,51,0.10)' },
   iconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: 2, right: 0, minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { color: '#FFFFFF', fontSize: 12, lineHeight: 14, fontWeight: '700' },
   avatarBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   banner: { borderWidth: 1, borderRadius: radius.control, padding: spacing.md, marginBottom: spacing.lg },

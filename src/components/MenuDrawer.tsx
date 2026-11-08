@@ -13,10 +13,10 @@ export interface MenuItem {
 }
 
 /**
- * The phone's menu: a panel that slides in from the right with the places that are not on the bottom bar. Tapping an item
+ * The phone's menu: a panel that slides in from a side edge with the places that are not on the bottom bar. Tapping an item
  * closes the panel and goes there; the dimmed area (or the X) closes it too.
  */
-export function MenuDrawer({ visible, onClose, header, items }: { visible: boolean; onClose: () => void; header?: React.ReactNode; items: MenuItem[] }) {
+export function MenuDrawer({ visible, onClose, header, items, side = 'right' }: { visible: boolean; onClose: () => void; header?: React.ReactNode; items: MenuItem[]; /** the edge it slides in from */ side?: 'left' | 'right' }) {
   const { width } = useWindowDimensions();
   const reduced = useReducedMotion();
   const enter = useRef(new Animated.Value(0)).current;
@@ -48,7 +48,7 @@ export function MenuDrawer({ visible, onClose, header, items }: { visible: boole
         <Pressable accessibilityLabel="Close menu" style={StyleSheet.absoluteFill} onPress={onClose}>
           <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.overlay, opacity: enter }, Platform.OS === 'web' && ({ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' } as object)]} />
         </Pressable>
-        <Animated.View style={[s.panel, glow('#1E2950', 40, 0.5), { width: panelW, opacity: enter.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 1, 1] }), transform: [{ translateX: enter.interpolate({ inputRange: [0, 1], outputRange: [panelW * 0.35, 0] }) }] }]}>
+        <Animated.View style={[s.panel, side === 'left' ? s.panelLeft : s.panelRight, glow('#1E2950', 40, 0.5), { width: panelW, opacity: enter.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 1, 1] }), transform: [{ translateX: enter.interpolate({ inputRange: [0, 1], outputRange: [panelW * 0.35 * (side === 'left' ? -1 : 1), 0] }) }] }]}>
           <View style={s.head}>
             <View style={{ flex: 1, minWidth: 0 }}>{header}</View>
             <Pressable accessibilityRole="button" accessibilityLabel="Close menu" onPress={onClose} style={s.close}>
@@ -80,7 +80,9 @@ export function MenuDrawer({ visible, onClose, header, items }: { visible: boole
 }
 
 const s = StyleSheet.create({
-  panel: { position: 'absolute', top: 0, bottom: 0, right: 0, backgroundColor: c.card, borderTopLeftRadius: radius.card, borderBottomLeftRadius: radius.card, overflow: 'hidden' },
+  panel: { position: 'absolute', top: 0, bottom: 0, backgroundColor: c.card, overflow: 'hidden' },
+  panelRight: { right: 0, borderTopLeftRadius: radius.card, borderBottomLeftRadius: radius.card },
+  panelLeft: { left: 0, borderTopRightRadius: radius.card, borderBottomRightRadius: radius.card },
   head: { flexDirection: 'row', alignItems: 'center', minHeight: 72, paddingLeft: spacing.xl - 4, paddingRight: spacing.sm, borderBottomWidth: 1, borderBottomColor: c.border },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   item: { minHeight: 56, borderRadius: radius.control, paddingHorizontal: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.md },

@@ -95,7 +95,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
   return (
     <>
       {/* collapsed: the pill */}
-      {!chat.open && !mounted ? (
+      {!mobile && !chat.open && !mounted ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={unread > 0 ? `Messages, ${unread} unread` : 'Messages'}
