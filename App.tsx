@@ -19,6 +19,8 @@ import { Skeleton } from './src/components/Motion';
 import { StoreProvider, useStore } from './src/store';
 import { SocialProvider } from './src/social/SocialProvider';
 import { ChatDock } from './src/social/ChatDock';
+import { PeopleSearch } from './src/social/PeopleSearch';
+import { SideRail } from './src/components/SideRail';
 import { ProfilePage } from './src/social/ProfilePage';
 import { Transaction } from './src/types';
 import { desktopBreakpoint, maxContentWidth, minTouch, radius, spacing, type, useColors } from './src/theme';
@@ -43,6 +45,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   const [seen, setSeen] = useState(() => onboardingSeen(uid));
   const [hidden, setHidden] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   /** the page on screen: the dashboard, or a profile (yours or somebody else's) */
   const [page, setPage] = useState<{ name: 'dashboard' } | { name: 'profile'; handle: string | 'me' }>({ name: 'dashboard' });
   const toDashboard = () => setPage({ name: 'dashboard' });
@@ -79,45 +82,25 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
     <View style={[s.root, { backgroundColor: c.bg }]}>
       <StatusBar style="dark" />
       {/* fixed top bar: brand, cards, avatar and sign out */}
-      <Reveal distance={-12} duration={320}>
+      <Reveal distance={-12} duration={320} style={{ zIndex: 10 }}>
       <View style={[s.topBar, { backgroundColor: c.card, borderBottomColor: c.border }]}>
         {desktop ? (
           <View style={s.topInner}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Dashboard" onPress={toDashboard} style={s.brandRow}>
-              <Brand size={18} color={c.text} />
-            </Pressable>
-            <View style={{ flex: 1 }} />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Cards"
-              onPress={() => setCardsOpen(true)}
-              style={({ pressed, hovered }: any) => [s.topBtn, { backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}
-            >
-              <Feather name="credit-card" size={20} color={c.textMuted} />
-              <Text style={[type.label, { color: c.textMuted }]}>Cards</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Categories"
-              onPress={() => setCategoriesOpen(true)}
-              style={({ pressed, hovered }: any) => [s.topBtn, { backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}
-            >
-              <Feather name="tag" size={20} color={c.textMuted} />
-              <Text style={[type.label, { color: c.textMuted }]}>Categories</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Profile"
-              onPress={() => setPage({ name: 'profile', handle: 'me' })}
-              style={({ pressed, hovered }: any) => [s.topBtn, { backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}
-            >
-              <Feather name="user" size={20} color={c.textMuted} />
-              <Text style={[type.label, { color: c.textMuted }]}>Profile</Text>
-            </Pressable>
-            {avatar}
-            <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={onSignOut} style={({ pressed, hovered }: any) => [s.iconBtn, { backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}>
-              <Feather name="log-out" size={20} color={c.textMuted} />
-            </Pressable>
+            <View style={s.topSide}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Dashboard" onPress={toDashboard} style={s.brandRow}>
+                <Brand size={18} color={c.text} />
+              </Pressable>
+            </View>
+            {/* people search, centered in the header */}
+            <View style={s.topCenter}>
+              <PeopleSearch onOpenProfile={(h) => setPage({ name: 'profile', handle: h })} />
+            </View>
+            <View style={[s.topSide, { justifyContent: 'flex-end' }]}>
+              {avatar}
+              <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={onSignOut} style={({ pressed, hovered }: any) => [s.iconBtn, { backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}>
+                <Feather name="log-out" size={20} color={c.textMuted} />
+              </Pressable>
+            </View>
           </View>
         ) : (
           // mobile: avatar with greeting on the left and sign out on the right (cards is a bottom bar tab)
@@ -125,6 +108,9 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
             {avatar}
             <Pressable accessibilityRole="button" accessibilityLabel="Account settings" onPress={() => setAccountOpen(true)} style={{ flex: 1, minWidth: 0 }}>
               <Text style={[type.label, { color: c.text, lineHeight: 22 }]} numberOfLines={1}>{name}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Search people" onPress={() => setSearchOpen((v) => !v)} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: searchOpen ? `${c.primary}1A` : c.surface, opacity: pressed ? 0.7 : 1 }]}>
+              <Feather name="search" size={20} color={searchOpen ? c.primary : c.textMuted} />
             </Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={() => setPage({ name: 'profile', handle: 'me' })} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}>
               <Feather name="user" size={20} color={c.textMuted} />
@@ -137,9 +123,24 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
             </Pressable>
           </View>
         )}
+        {!desktop && searchOpen ? (
+          <View style={s.mobileSearch}>
+            <PeopleSearch autoFocus onDone={() => setSearchOpen(false)} onOpenProfile={(h) => setPage({ name: 'profile', handle: h })} />
+          </View>
+        ) : null}
       </View>
       </Reveal>
-      <ScrollView contentContainerStyle={[s.content, desktop ? { padding: spacing.xxl, paddingTop: spacing.lg } : { paddingTop: spacing.lg, paddingBottom: 120 }]}>
+      {desktop ? (
+        <SideRail
+          items={[
+            { key: 'home', icon: 'home', label: 'Dashboard', onPress: toDashboard, active: page.name === 'dashboard' },
+            { key: 'cards', icon: 'credit-card', label: 'Cards', onPress: () => setCardsOpen(true) },
+            { key: 'categories', icon: 'tag', label: 'Categories', onPress: () => setCategoriesOpen(true) },
+            { key: 'profile', icon: 'user', label: 'Profile', onPress: () => setPage({ name: 'profile', handle: 'me' }), active: page.name === 'profile' && page.handle === 'me' },
+          ]}
+        />
+      ) : null}
+      <ScrollView contentContainerStyle={[s.content, desktop ? { padding: spacing.xxl, paddingTop: spacing.lg, paddingLeft: 104 } : { paddingTop: spacing.lg, paddingBottom: 120 }]}>
         <View style={s.inner}>
           {syncError ? (
             <View style={[s.banner, { borderColor: c.expense }]}>
@@ -235,6 +236,9 @@ const s = StyleSheet.create({
   /** fixed top bar (outside the scroll), navy blue */
   topBar: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, borderBottomWidth: 1 },
   topInner: { width: '100%', maxWidth: maxContentWidth, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 52 },
+  topSide: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  topCenter: { width: '100%', maxWidth: 520, flexShrink: 1 },
+  mobileSearch: { paddingBottom: spacing.sm },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   topBtn: { minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: 'rgba(15,27,51,0.10)' },
   iconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },

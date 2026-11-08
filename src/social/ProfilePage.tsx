@@ -102,7 +102,7 @@ function ConnectionsCard({ onOpen }: { onOpen: (h: string) => void }) {
   return (
     <Card>
       <Text style={[type.title, { color: c.text }]}>Connections</Text>
-      {list('Following', following, 'You are not following anyone yet. Find people in the chat.')}
+      {list('Following', following, 'You are not following anyone yet. Find people with the search at the top.')}
       {list('Followers', followers, 'Nobody follows you yet.')}
     </Card>
   );

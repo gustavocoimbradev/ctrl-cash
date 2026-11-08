@@ -1,15 +1,12 @@
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { PillToggle } from '../components/Controls';
 import { desktopBreakpoint, glow, radius, spacing, type, useColors } from '../theme';
 import { motion, useReducedMotion } from '../theme/motion';
-import { ChatsList, PeopleTab } from './Lists';
+import { ChatsList } from './Lists';
 import { useSocial } from './SocialProvider';
 import { Thread } from './Thread';
 import { Avatar, Pill } from './parts';
-
-type Tab = 'chats' | 'people';
 
 const WIDTH = 380;
 const HEIGHT = 560;
@@ -26,7 +23,6 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
   const reduced = useReducedMotion();
   const enter = useRef(new Animated.Value(0)).current;
   const [mounted, setMounted] = useState(chat.open);
-  const [tab, setTab] = useState<Tab>('chats');
 
   useEffect(() => {
     if (chat.open) {
@@ -67,12 +63,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
         </View>
       );
     }
-    return (
-      <View style={{ gap: spacing.lg }}>
-        <PillToggle<Tab> stretch value={tab} onChange={setTab} options={[{ value: 'chats', label: 'Chats' }, { value: 'people', label: 'People' }]} />
-        {tab === 'chats' ? <ChatsList onOpen={(h) => openChat(h)} onFind={() => setTab('people')} /> : <PeopleTab onOpen={(h) => onOpenProfile(h)} />}
-      </View>
-    );
+    return <ChatsList onOpen={(h) => openChat(h)} />;
   };
 
   return (
