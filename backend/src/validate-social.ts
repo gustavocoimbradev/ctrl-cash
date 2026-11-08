@@ -49,14 +49,19 @@ export function parseIdBody(input: unknown, key = 'id'): string {
   return parseId(d[key], key);
 }
 
+export const PHOTO_MAX = 60000;
+const PHOTO_RE = /^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/;
+
 export interface ProfileInput {
   displayName: string;
   color: string | null;
+  /** `undefined`: the key was absent (keep the stored photo); `null`: clear it; a string: set it */
+  photo: string | null | undefined;
 }
 
 export function parseProfile(input: unknown): ProfileInput {
   const d = obj(input, 'the body');
-  onlyKeys(d, ['displayName', 'color'], ['displayName']);
+  onlyKeys(d, ['displayName', 'color', 'photo'], ['displayName']);
   const displayName = str(d.displayName, 'displayName', 1, 40);
   if (displayName.trim().length === 0) fail('"displayName" cannot be blank');
   let color: string | null = null;
@@ -64,7 +69,14 @@ export function parseProfile(input: unknown): ProfileInput {
     if (typeof d.color !== 'string' || !/^#[0-9A-Fa-f]{6}$/.test(d.color)) fail('"color" must be a color as #RRGGBB');
     color = d.color as string;
   }
-  return { displayName: displayName.trim(), color };
+  let photo: string | null | undefined;
+  if (has(d, 'photo') && d.photo !== undefined) {
+    if (d.photo === null) photo = null;
+    else if (typeof d.photo !== 'string' || (d.photo as string).length > PHOTO_MAX) fail(`"photo" must be a JPEG data URL of at most ${PHOTO_MAX} characters`);
+    else if (!PHOTO_RE.test(d.photo as string)) fail('"photo" must be a data:image/jpeg;base64 URL');
+    else photo = d.photo as string;
+  }
+  return { displayName: displayName.trim(), color, photo };
 }
 
 export function parseMessage(input: unknown): { to: string; body: string } {

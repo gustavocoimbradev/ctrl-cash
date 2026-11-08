@@ -17,6 +17,8 @@ interface Person {
   id: string;
   displayName: string;
   color: string | null;
+  /** a small JPEG data URL, or null */
+  photo: string | null;
   relation: { following: boolean; followsMe: boolean; mutual: boolean };
 }
 
@@ -25,18 +27,19 @@ const toPerson = (r: Row): Person => ({
   id: r.public_id,
   displayName: r.display_name,
   color: r.color ?? null,
+  photo: r.photo ?? null,
   relation: { following: !!r.following, followsMe: !!r.follows_me, mutual: !!r.following && !!r.follows_me },
 });
 
 /** Profile columns plus how `$1` (the caller) and the person follow each other. Callers append joins and filters. */
-const CARD_COLUMNS = `p.user_id, p.public_id, p.display_name, p.color,
+const CARD_COLUMNS = `p.user_id, p.public_id, p.display_name, p.color, p.photo,
   exists (select 1 from follows f where f.follower_id = $1 and f.followee_id = p.user_id and f.archived_at_ms is null) as following,
   exists (select 1 from follows f where f.follower_id = p.user_id and f.followee_id = $1 and f.archived_at_ms is null) as follows_me`;
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (m) => `\\${m}`);
 
 async function profileById(db: Db, id: string): Promise<Row | null> {
-  const res = await db.query('select user_id, public_id, display_name, color from profiles where public_id = $1::uuid', [id]);
+  const res = await db.query('select user_id, public_id, display_name, color, photo from profiles where public_id = $1::uuid', [id]);
   return res.rows[0] ?? null;
 }
 
@@ -112,11 +115,11 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
 
   // ---- profile
   route('GET', '/api/profile', async (req) => {
-    const res = await pool.query('select public_id, display_name, color from profiles where user_id = $1', [req.uid]);
+    const res = await pool.query('select public_id, display_name, color, photo from profiles where user_id = $1', [req.uid]);
     const r = res.rows[0];
     const c = await counts(pool, req.uid);
     return {
-      profile: r ? { id: r.public_id, displayName: r.display_name, color: r.color ?? null } : null,
+      profile: r ? { id: r.public_id, displayName: r.display_name, color: r.color ?? null, photo: r.photo ?? null } : null,
       followers: c.followers,
       following: c.following,
     };
@@ -124,15 +127,18 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
 
   route('PUT', '/api/profile', async (req, reply) => {
     const p = parseProfile(req.body);
-    // the public id is assigned once, by the table's default, and never changes on an update
+    // the public id is assigned once, by the table's default, and never changes on an update;
+    // the photo column is only touched when the body carries the key (`$5`), otherwise the stored photo stays
+    const photoGiven = p.photo !== undefined;
     const res = await pool.query(
-      `insert into profiles (user_id, display_name, color, created_at_ms) values ($1, $2, $3, $4)
-       on conflict (user_id) do update set display_name = excluded.display_name, color = excluded.color, updated_at = now()
-       returning public_id, display_name, color`,
-      [req.uid, p.displayName, p.color, Date.now()],
+      `insert into profiles (user_id, display_name, color, photo, created_at_ms) values ($1, $2, $3, $4, $6)
+       on conflict (user_id) do update set display_name = excluded.display_name, color = excluded.color,
+         photo = case when $5::boolean then excluded.photo else profiles.photo end, updated_at = now()
+       returning public_id, display_name, color, photo`,
+      [req.uid, p.displayName, p.color, photoGiven ? p.photo : null, photoGiven, Date.now()],
     );
     const r = res.rows[0];
-    return { profile: { id: r.public_id, displayName: r.display_name, color: r.color ?? null } };
+    return { profile: { id: r.public_id, displayName: r.display_name, color: r.color ?? null, photo: r.photo ?? null } };
   });
 
   // ---- people

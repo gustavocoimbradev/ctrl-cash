@@ -81,10 +81,10 @@ test('profile: empty, create, update, read back and validation', async () => {
   assert.equal(created.status, 200);
   const id = created.body.profile.id as string;
   assert.match(id, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
-  assert.deepEqual(created.body.profile, { id, displayName: 'Ana Lima', color: '#2D55D9' });
+  assert.deepEqual(created.body.profile, { id, displayName: 'Ana Lima', color: '#2D55D9', photo: null });
   const again = await call(uid, 'PUT', '/api/profile', { displayName: 'Ana' });
-  assert.deepEqual(again.body.profile, { id, displayName: 'Ana', color: null });
-  assert.deepEqual((await call(uid, 'GET', '/api/profile')).body.profile, { id, displayName: 'Ana', color: null });
+  assert.deepEqual(again.body.profile, { id, displayName: 'Ana', color: null, photo: null });
+  assert.deepEqual((await call(uid, 'GET', '/api/profile')).body.profile, { id, displayName: 'Ana', color: null, photo: null });
 
   for (const bad of [
     {}, { displayName: '' }, { displayName: '   ' }, { displayName: 'x'.repeat(41) }, { displayName: 'x', color: 'red' },
@@ -108,6 +108,79 @@ test('profile: the public id is stable across edits, is not the Firebase uid, an
   // the old columns are never written
   const row = (await pool.query('select handle, bio from profiles where user_id = $1', [a.uid])).rows[0];
   assert.deepEqual(row, { handle: null, bio: null });
+});
+
+const JPEG = (n = 40) => `data:image/jpeg;base64,${'/9j/4AAQSkZJRg'.repeat(n).slice(0, n * 4)}==`;
+
+test('profile photo: set, replace, keep when absent, clear', async () => {
+  const uid = user();
+  const first = JPEG(40);
+  const created = await call(uid, 'PUT', '/api/profile', { displayName: 'Ana', photo: first });
+  assert.equal(created.status, 200);
+  assert.equal(created.body.profile.photo, first);
+  assert.equal((await call(uid, 'GET', '/api/profile')).body.profile.photo, first);
+  // editing the name (or color) without the key keeps the photo
+  assert.equal((await call(uid, 'PUT', '/api/profile', { displayName: 'Ana B', color: '#111111' })).body.profile.photo, first);
+  assert.equal((await call(uid, 'GET', '/api/profile')).body.profile.photo, first);
+  const second = JPEG(80);
+  assert.equal((await call(uid, 'PUT', '/api/profile', { displayName: 'Ana B', photo: second })).body.profile.photo, second);
+  assert.equal((await call(uid, 'PUT', '/api/profile', { displayName: 'Ana B', photo: undefined })).body.profile.photo, second);
+  const cleared = await call(uid, 'PUT', '/api/profile', { displayName: 'Ana B', photo: null });
+  assert.equal(cleared.body.profile.photo, null);
+  assert.equal((await call(uid, 'GET', '/api/profile')).body.profile.photo, null);
+  // a first profile without the key starts with no photo; the biggest allowed one is accepted
+  assert.equal((await call(user(), 'PUT', '/api/profile', { displayName: 'New' })).body.profile.photo, null);
+  const max = `data:image/jpeg;base64,${'A'.repeat(60000 - 23)}`;
+  assert.equal(max.length, 60000);
+  assert.equal((await call(uid, 'PUT', '/api/profile', { displayName: 'Ana B', photo: max })).status, 200);
+});
+
+test('profile photo: only small JPEG data URLs are accepted', async () => {
+  const uid = user();
+  const bads: unknown[] = [
+    'data:image/png;base64,iVBORw0KGgo=', 'data:image/jpg;base64,/9j/4AAQ', 'data:image/jpeg;base64,', 'data:image/jpeg;base64,=', 'data:image/jpeg,/9j/4AAQ',
+    'data:image/jpeg;base64,/9j/4AAQ$$$', 'data:image/jpeg;base64,/9j/ 4AAQ', 'data:image/jpeg;base64,/9j/4AAQ\n', 'data:image/jpeg;base64,/9j/4=AAQ',
+    'data:image/jpeg;base64,\u0000AAAA', ' data:image/jpeg;base64,/9j/4AAQ', 'https://example.com/me.jpg', '<script>alert(1)</script>', '', 'x',
+    `data:image/jpeg;base64,${'A'.repeat(60000)}`, 5, true, {}, [], ['data:image/jpeg;base64,/9j/4AAQ'],
+  ];
+  for (const photo of bads) {
+    const r = await call(uid, 'PUT', '/api/profile', { displayName: 'Ana', photo });
+    assert.equal(r.status, 400, JSON.stringify(photo)?.slice(0, 60));
+    assert.equal(r.body.error, 'invalid');
+  }
+  // nothing was stored by the failed attempts
+  assert.deepEqual((await call(uid, 'GET', '/api/profile')).body.profile, null);
+  assert.equal((await call(uid, 'PUT', '/api/profile', { displayName: 'Ana', photo: JPEG(), extra: 1 })).status, 400);
+  // the database itself refuses anything else too
+  await call(uid, 'PUT', '/api/profile', { displayName: 'Ana' });
+  await assert.rejects(pool.query("update profiles set photo = 'data:image/png;base64,AAAA' where user_id = $1", [uid]));
+  await assert.rejects(pool.query("update profiles set photo = 'data:image/jpeg;base64,' || repeat('A', 60000) where user_id = $1", [uid]));
+});
+
+test('profile photo: shows up on every card other people see', async () => {
+  const photo = JPEG(50);
+  const a = user();
+  const created = await call(a, 'PUT', '/api/profile', { displayName: 'Photogenic Ana', photo });
+  const aId = created.body.profile.id as string;
+  const b = await person('Plain Bob');
+  const tag = 'Photogenic';
+  assert.equal((await call(b.uid, 'GET', `/api/people?q=${tag}`)).body.people[0].photo, photo);
+  assert.equal((await call(b.uid, 'GET', `/api/people/${aId}`)).body.person.photo, photo);
+  assert.equal((await call(a, 'POST', '/api/follow', { id: b.id })).status, 200);
+  assert.equal((await call(b.uid, 'POST', '/api/follow', { id: aId })).status, 200);
+  assert.equal((await call(b.uid, 'GET', '/api/follows')).body.following[0].photo, photo);
+  assert.equal((await call(b.uid, 'GET', '/api/follows')).body.followers[0].photo, photo);
+  assert.equal((await call(a, 'POST', '/api/messages', { to: b.id, body: 'hi' })).status, 201);
+  assert.equal((await call(b.uid, 'GET', '/api/conversations')).body.conversations[0].with.photo, photo);
+  assert.equal((await call(a, 'POST', '/api/shares', { id: b.id })).status, 200);
+  assert.equal((await call(b.uid, 'GET', '/api/shares')).body.received[0].photo, photo);
+  assert.equal((await call(a, 'GET', '/api/shares')).body.given[0].photo, null);
+  // someone without a photo has null on their cards
+  assert.equal((await call(a, 'GET', `/api/people/${b.id}`)).body.person.photo, null);
+  assert.equal((await call(a, 'GET', '/api/follows')).body.following[0].photo, null);
+  // clearing it clears it for everybody
+  await call(a, 'PUT', '/api/profile', { displayName: 'Photogenic Ana', photo: null });
+  assert.equal((await call(b.uid, 'GET', `/api/people/${aId}`)).body.person.photo, null);
 });
 
 test('ids in paths and bodies must be uuids', async () => {
@@ -138,7 +211,7 @@ test('search: by name only, needs 2 characters, excludes me, escapes wildcards',
   // a name that starts with the text comes first, then the rest; never me
   assert.deepEqual(found.map((p: any) => p.id), [p2.id, p1.id]);
   assert.deepEqual(found[0].relation, { following: false, followsMe: false, mutual: false });
-  assert.deepEqual(Object.keys(found[0]).sort(), ['color', 'displayName', 'id', 'relation']);
+  assert.deepEqual(Object.keys(found[0]).sort(), ['color', 'displayName', 'id', 'photo', 'relation']);
   assert.deepEqual((await call(me.uid, 'GET', '/api/people?q=%25%25')).body, { people: [] });
   assert.deepEqual((await call(me.uid, 'GET', '/api/people?q=__')).body, { people: [] });
   // an id is not searchable
