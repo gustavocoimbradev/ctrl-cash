@@ -5,6 +5,9 @@ import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from
 import { Card } from '../components/Card';
 import { ChartLegend, Gauge, ProjectionChart } from '../components/Charts';
 import { CheckButton, PillToggle } from '../components/Controls';
+import { Button } from '../components/Button';
+import { MoneyField } from '../components/Fields';
+import { Sheet } from '../components/Sheet';
 import { AnimatedBar, Counter, Money } from '../components/Motion';
 import { Reveal } from '../components/Reveal';
 import { Fade } from '../components/Fade';
@@ -91,7 +94,10 @@ const shortDate = (iso: string) => {
 };
 
 export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange, onAdd, onEdit, onPayInvoice, onOpenCards }: Props) {
-  const { data, toggleConfirmed, archivePayment } = useStore();
+  const { data, toggleConfirmed, archivePayment, addTransaction } = useStore();
+  // left over adjustment: the dialog, and the amount the person says they really have
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [adjustTo, setAdjustTo] = useState(0);
   const balanceNow = useCurrentBalance();
   const [width, setWidth] = useState(0);
   const [horizon, setHorizon] = useState<(typeof HORIZONS)[number]>(12);
@@ -462,12 +468,48 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
           <View style={[s.resultRow, { backgroundColor: c.card, borderTopColor: c.border }]}>
             <Text style={[type.title, { color: c.text }]}>Left over</Text>
             <View style={s.resultValue}>
-              <Text style={[type.title, { color: summary.leftNow < 0 ? c.expense : c.primary, fontSize: 22 }]} numberOfLines={1}>{formatMoney(summary.leftNow)}</Text>
+              <View style={s.resultAmount}>
+                <Pressable
+                  onPress={() => { setAdjustTo(summary.leftNow); setAdjustOpen(true); }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Adjust left over"
+                  hitSlop={8}
+                  style={({ hovered, pressed }: { hovered?: boolean; pressed: boolean }) => [s.adjustButton, { opacity: pressed ? 0.5 : hovered ? 0.8 : 0.45 }]}
+                >
+                  <Feather name="edit-2" size={16} color={c.textMuted} />
+                </Pressable>
+                <Text style={[type.title, { color: summary.leftNow < 0 ? c.expense : c.primary, fontSize: 22 }]} numberOfLines={1}>{formatMoney(summary.leftNow)}</Text>
+              </View>
               <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{formatMoney(summary.left)} when everything is paid</Text>
             </View>
           </View>
         </View>
       )}
+      <Sheet visible={adjustOpen} title="Adjust left over" onClose={() => setAdjustOpen(false)}>
+        <Text style={[type.body, { color: c.text }]}>
+          Type what you really have left over now. The difference is recorded as a corrective transaction, so nothing already registered changes.
+        </Text>
+        <MoneyField label="Left over now" cents={adjustTo} onChange={setAdjustTo} />
+        <Text style={[type.body, { color: c.textMuted }]}>
+          {adjustTo === summary.leftNow
+            ? `Already ${formatMoney(summary.leftNow)}: nothing to adjust.`
+            : `Now ${formatMoney(summary.leftNow)}. A ${adjustTo > summary.leftNow ? 'income' : 'expense'} of ${formatMoney(Math.abs(adjustTo - summary.leftNow))} named "Left over adjustment" will be added.`}
+        </Text>
+        <Button
+          label="Adjust"
+          icon="check"
+          disabled={adjustTo === summary.leftNow}
+          onPress={() => {
+            const diff = adjustTo - summary.leftNow;
+            if (diff === 0) return;
+            // dated today while looking at the current month, otherwise on the last day of the month on screen
+            const date = monthKey(today) === month ? today : endOfMonth(month);
+            addTransaction({ type: diff > 0 ? 'income' : 'expense', description: 'Left over adjustment', amount: Math.abs(diff), date, confirmed: true, fixed: false, category: 'adjustment', installments: 1 });
+            setAdjustOpen(false);
+          }}
+        />
+        <Button label="Cancel" variant="tertiary" onPress={() => setAdjustOpen(false)} />
+      </Sheet>
     </Card>
   );
 
@@ -750,6 +792,8 @@ const s = StyleSheet.create({
   summaryPair: { flexDirection: 'row', gap: spacing.lg, paddingHorizontal: spacing.xl - 4, paddingTop: spacing.md, paddingBottom: spacing.md },
   summaryCol: { flex: 1, minWidth: 0, gap: 4 },
   resultRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, borderTopWidth: 1, paddingHorizontal: spacing.xl - 4, paddingVertical: spacing.md },
+  resultAmount: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  adjustButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   resultValue: { alignItems: 'flex-end', flexShrink: 1, minWidth: 0 },
   
   summaryStack: { flexDirection: 'column', gap: spacing.md },
