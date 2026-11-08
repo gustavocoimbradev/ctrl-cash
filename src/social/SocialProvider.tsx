@@ -16,15 +16,19 @@ interface Social {
   /** people I share my summary with, and people sharing theirs with me */
   given: Person[];
   received: Person[];
-  /** the panel asks for fresh lists when it opens (and while it stays open) */
+  /** fresh lists (the chat polls faster while it is open) */
   refresh: () => Promise<void>;
   saveProfile: (p: { handle: string; displayName: string; bio?: string; color?: string }) => Promise<void>;
   follow: (handle: string) => Promise<void>;
   unfollow: (handle: string) => Promise<void>;
   share: (handle: string) => Promise<void>;
   revoke: (handle: string) => Promise<void>;
-  /** the panel being open makes the lists poll faster */
-  setPanelOpen: (open: boolean) => void;
+  /** the floating chat: open or collapsed, and which conversation it shows (null = the list) */
+  chat: { open: boolean; with: string | null };
+  openChat: (handle?: string) => void;
+  closeChat: () => void;
+  /** back from a conversation to the list */
+  chatList: () => void;
 }
 
 const Ctx = createContext<Social | null>(null);
@@ -45,7 +49,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   const [followers, setFollowers] = useState<Person[]>([]);
   const [given, setGiven] = useState<Person[]>([]);
   const [received, setReceived] = useState<Person[]>([]);
-  const [open, setOpen] = useState(false);
+  const [chat, setChat] = useState<{ open: boolean; with: string | null }>({ open: false, with: null });
+  const open = chat.open;
   const alive = useRef(true);
   useEffect(() => () => { alive.current = false; }, []);
 
@@ -117,9 +122,12 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
       unfollow: then(async (h: string) => { await socialApi.unfollow(h); }),
       share: then(async (h: string) => { await socialApi.share(h); lastPublished.current = ''; }),
       revoke: then(async (h: string) => { await socialApi.revoke(h); }),
-      setPanelOpen: setOpen,
+      chat,
+      openChat: (handle?: string) => setChat((c) => ({ open: true, with: handle ?? c.with })),
+      closeChat: () => setChat((c) => ({ ...c, open: false })),
+      chatList: () => setChat((c) => ({ ...c, with: null })),
     }),
-    [loaded, profile, counts, conversations, unread, following, followers, given, received, refresh, then],
+    [loaded, profile, counts, conversations, unread, following, followers, given, received, chat, refresh, then],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
