@@ -13,7 +13,7 @@ export function ChatsList({ onOpen, onNew }: { onOpen: (code: string) => void; o
   if (conversations.length === 0) {
     return (
       <View style={{ alignItems: 'center' }}>
-        <Empty icon="message-circle" text="No conversations yet. Start one with the other person's code." />
+        <Empty icon="heart" text="No conversations yet. Start one with the other person's code." />
         <Pill label="New chat" icon="plus" primary onPress={onNew} />
       </View>
     );

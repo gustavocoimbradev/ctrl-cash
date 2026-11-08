@@ -144,7 +144,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
               onPress={() => openChat()}
               style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}
             >
-              <Feather name="message-circle" size={22} color={c.textMuted} />
+              <Feather name="heart" size={22} color={c.textMuted} />
               {unread > 0 ? (
                 <View style={[s.badge, { backgroundColor: c.expense, borderColor: c.card }]}>
                   <Text style={s.badgeText}>{unread > 9 ? '9+' : unread}</Text>

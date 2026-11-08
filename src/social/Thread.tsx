@@ -88,7 +88,7 @@ export function Thread({ id }: { id: string }) {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView ref={scroller} style={{ flex: 1 }} contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
-        {loaded && messages.length === 0 ? <Empty icon="message-circle" text="No messages yet. Say hi!" /> : null}
+        {loaded && messages.length === 0 ? <Empty icon="heart" text="No messages yet. Say hi!" /> : null}
         {messages.map((m) => {
           const day = dayOf(m.createdAt);
           const showDay = day !== lastDay;

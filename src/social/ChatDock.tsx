@@ -84,7 +84,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
           <CodeInput value={finder.text} onChange={finder.setText} autoFocus />
           <FoundPerson
             lookup={finder.lookup}
-            actions={(p) => <Pill label="Start chat" icon="message-circle" primary onPress={() => { setComposing(false); finder.clear(); openChat(p.code); }} />}
+            actions={(p) => <Pill label="Start chat" icon="heart" primary onPress={() => { setComposing(false); finder.clear(); openChat(p.code); }} />}
           />
         </View>
       );
@@ -103,7 +103,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
           style={({ pressed, hovered }: any) => [s.pill, place, glow('#1E2950', 28, 0.5), { backgroundColor: c.card, borderColor: c.border, opacity: pressed ? 0.85 : 1, transform: [{ translateY: hovered ? -2 : 0 }] }, Platform.OS === 'web' && ({ transitionProperty: 'transform', transitionDuration: '150ms' } as object)]}
         >
           <View>
-            <Feather name="message-circle" size={24} color={c.text} />
+            <Feather name="heart" size={24} color={c.text} />
             {unread > 0 ? (
               <View style={[s.badge, { backgroundColor: c.expense, borderColor: c.card }]}>
                 <Text style={s.badgeText}>{unread > 9 ? '9+' : unread}</Text>

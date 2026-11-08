@@ -238,7 +238,7 @@ function OtherProfile({ code }: { code: string }) {
         photo={person.photo}
         actions={
           <>
-            <Pill label="Message" icon="message-circle" primary grow={narrow} onPress={() => openChat(code)} />
+            <Pill label="Message" icon="heart" primary grow={narrow} onPress={() => openChat(code)} />
             <Pill label={person.sharedWithThem ? 'Stop sharing' : 'Share my data'} icon="share-2" danger={person.sharedWithThem} grow={narrow} disabled={busy} onPress={toggle} />
           </>
         }
