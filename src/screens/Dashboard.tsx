@@ -429,7 +429,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       )}
       </View>
       {visibleGroups.length > 0 && (
-        // month summary, inside the card: Income, Expenses and Left over share one format (stacked on the phone):
+        // month summary, inside the card: Income and Expenses share one format (stacked on the phone):
         // the confirmed amount big on the left, the pending one (clock) on the right and a thin confirmed/total bar.
         // The totals live in the "?" help.
         <View style={[s.summary, { borderTopColor: c.border }, mobile && s.summaryMobile]}>
@@ -437,7 +437,6 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
             {[
               { label: 'Income', confirmed: summary.income.confirmed, pending: summary.income.pending, color: c.income, help: 'Everything you earn this month. The big amount already came in; the clock is still expected. Refunds and loans are not counted.', total: summary.income.total },
               { label: 'Expenses', confirmed: summary.expense.confirmed, pending: summary.expense.pending, color: c.expense, help: "All of this month's expenses, card invoices due this month included. The big amount already happened; the clock is still to pay.", total: summary.expense.total },
-              { label: 'Left over', confirmed: summary.leftNow, pending: summary.left - summary.leftNow, color: summary.leftNow < 0 ? c.expense : c.primary, help: 'Income minus expenses. The big amount is what you really have left right now; the clock is what is still to change once everything pending happens. It is what goes into your accumulated wealth.', total: summary.left },
             ].map((x) => {
               const ratio = x.total > 0 ? Math.min(1, Math.max(0, x.confirmed / x.total)) : 0;
               return (
