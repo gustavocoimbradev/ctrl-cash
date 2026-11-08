@@ -20,8 +20,9 @@ const user = () => {
   seenUids.add(uid);
   return uid;
 };
-/** a well-formed public id that belongs to nobody */
-const NOBODY = '00000000-0000-4000-8000-000000000000';
+/** a well-formed code that belongs to nobody (a digits-only code is not handed out as "ZZZZZZ") */
+const NOBODY = 'ZZZZZZ';
+const CODE = /^[0-9A-HJ-NP-Z]{6}$/;
 
 async function call(uid: string, method: 'GET' | 'POST' | 'PUT', url: string, payload?: unknown) {
   const r = await app.inject({ method, url, headers: bearer(uid), payload: payload as object | undefined });
@@ -34,16 +35,11 @@ async function person(name = 'Ana') {
   const uid = user();
   const r = await call(uid, 'PUT', '/api/profile', { displayName: name });
   assert.equal(r.status, 200);
-  return { uid, id: r.body.profile.id as string };
+  return { uid, code: r.body.profile.code as string };
 }
-const follow = (a: { uid: string }, b: { id: string }) => call(a.uid, 'POST', '/api/follow', { id: b.id });
-async function friends(name1 = 'Ana', name2 = 'Bob') {
-  const a = await person(name1);
-  const b = await person(name2);
-  assert.equal((await follow(a, b)).status, 200);
-  assert.equal((await follow(b, a)).status, 200);
-  return { a, b };
-}
+const send = (from: { uid: string }, to: { code: string }, body: unknown) => call(from.uid, 'POST', '/api/messages', { to: to.code, body });
+const share = (from: { uid: string }, to: { code: string }) => call(from.uid, 'POST', '/api/shares', { code: to.code });
+const readSummary = (viewer: { uid: string }, owner: { code: string }) => call(viewer.uid, 'GET', `/api/people/${owner.code}/summary`);
 
 const summary = (over: Record<string, unknown> = {}) => ({
   version: 2,
@@ -58,12 +54,20 @@ const summary = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+test('summary: incomeRel (income relative to the average month) is optional, a plain percentage and bounded', async () => {
+  const a = await person('Ana');
+  const month = (over: Record<string, unknown>) => summary({ months: [{ key: '2026-10', spent: 60, saved: 40, categories: [], ...over }] });
+  assert.equal((await call(a.uid, 'PUT', '/api/summary', month({ incomeRel: 112.5 }))).status, 200);
+  assert.deepEqual((await readSummary(a, a)).body.summary.months[0].incomeRel, 112.5);
+  assert.equal((await call(a.uid, 'PUT', '/api/summary', month({}))).status, 200);
+  for (const bad of [-1, 10001, '100', null, Infinity]) assert.equal((await call(a.uid, 'PUT', '/api/summary', month({ incomeRel: bad }))).status, 400);
+});
+
 test('every social route needs a token', async () => {
   const routes: [string, string][] = [
-    ['GET', '/api/profile'], ['PUT', '/api/profile'], ['GET', '/api/people?q=ab'], ['GET', '/api/people/abc'],
-    ['POST', '/api/follow'], ['POST', '/api/unfollow'], ['GET', '/api/follows'], ['GET', '/api/conversations'],
-    ['GET', '/api/messages/abc'], ['POST', '/api/messages'], ['POST', '/api/messages/read'], ['GET', '/api/unread'],
-    ['GET', '/api/shares'], ['POST', '/api/shares'], ['POST', '/api/shares/revoke'], ['PUT', '/api/summary'], ['GET', '/api/people/abc/summary'],
+    ['GET', '/api/profile'], ['PUT', '/api/profile'], ['GET', '/api/people/482913'], ['GET', '/api/conversations'],
+    ['GET', '/api/messages/482913'], ['POST', '/api/messages'], ['POST', '/api/messages/read'], ['GET', '/api/unread'],
+    ['GET', '/api/shares'], ['POST', '/api/shares'], ['POST', '/api/shares/revoke'], ['PUT', '/api/summary'], ['GET', '/api/people/482913/summary'],
   ];
   for (const [method, url] of routes) {
     for (const headers of [{}, { authorization: 'Bearer nope' }]) {
@@ -74,21 +78,32 @@ test('every social route needs a token', async () => {
   }
 });
 
-test('profile: empty, create, update, read back and validation', async () => {
+test('the follow and search routes are gone', async () => {
+  const a = await person();
+  for (const [method, url, payload] of [
+    ['POST', '/api/follow', { code: NOBODY }], ['POST', '/api/unfollow', { code: NOBODY }], ['GET', '/api/follows', undefined],
+    ['GET', '/api/people?q=ana', undefined], ['GET', '/api/people', undefined],
+  ] as const) {
+    const r = await call(a.uid, method, url, payload);
+    assert.equal(r.status, 404, `${method} ${url}`);
+  }
+});
+
+test('profile: empty, create with a code, update, read back and validation', async () => {
   const uid = user();
-  assert.deepEqual((await call(uid, 'GET', '/api/profile')).body, { profile: null, followers: 0, following: 0 });
+  assert.deepEqual((await call(uid, 'GET', '/api/profile')).body, { profile: null });
   const created = await call(uid, 'PUT', '/api/profile', { displayName: '  Ana Lima ', color: '#2D55D9' });
   assert.equal(created.status, 200);
-  const id = created.body.profile.id as string;
-  assert.match(id, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
-  assert.deepEqual(created.body.profile, { id, displayName: 'Ana Lima', color: '#2D55D9', photo: null });
+  const code = created.body.profile.code as string;
+  assert.match(code, CODE);
+  assert.deepEqual(created.body.profile, { code, displayName: 'Ana Lima', color: '#2D55D9', photo: null });
   const again = await call(uid, 'PUT', '/api/profile', { displayName: 'Ana' });
-  assert.deepEqual(again.body.profile, { id, displayName: 'Ana', color: null, photo: null });
-  assert.deepEqual((await call(uid, 'GET', '/api/profile')).body.profile, { id, displayName: 'Ana', color: null, photo: null });
+  assert.deepEqual(again.body.profile, { code, displayName: 'Ana', color: null, photo: null });
+  assert.deepEqual((await call(uid, 'GET', '/api/profile')).body, { profile: { code, displayName: 'Ana', color: null, photo: null } });
 
   for (const bad of [
     {}, { displayName: '' }, { displayName: '   ' }, { displayName: 'x'.repeat(41) }, { displayName: 'x', color: 'red' },
-    { displayName: 'x', extra: 1 }, { displayName: 'x', handle: 'ana_lima' }, { displayName: 'x', bio: 'hello' },
+    { displayName: 'x', extra: 1 }, { displayName: 'x', handle: 'ana_lima' }, { displayName: 'x', bio: 'hello' }, { displayName: 'x', code: '123456' },
     { displayName: 'x\u0000y' }, { displayName: 5 },
   ]) {
     const r = await call(uid, 'PUT', '/api/profile', bad);
@@ -98,16 +113,48 @@ test('profile: empty, create, update, read back and validation', async () => {
   assert.equal((await call(uid, 'PUT', '/api/profile', [1])).status, 400);
 });
 
-test('profile: the public id is stable across edits, is not the Firebase uid, and two people can share a name', async () => {
+test('profile: the code is stable across edits, is never the Firebase uid, and two people can share a name', async () => {
   const a = await person('Same Name');
   const b = await person('Same Name');
-  assert.notEqual(a.id, b.id);
-  assert.notEqual(a.id, a.uid);
+  assert.notEqual(a.code, b.code);
+  assert.notEqual(a.code, a.uid);
   for (let i = 0; i < 3; i++) await call(a.uid, 'PUT', '/api/profile', { displayName: `Renamed ${i}`, color: '#000000' });
-  assert.equal((await call(a.uid, 'GET', '/api/profile')).body.profile.id, a.id);
+  assert.equal((await call(a.uid, 'GET', '/api/profile')).body.profile.code, a.code);
   // the old columns are never written
   const row = (await pool.query('select handle, bio from profiles where user_id = $1', [a.uid])).rows[0];
   assert.deepEqual(row, { handle: null, bio: null });
+  // codes are random, not sequential: many new profiles never get consecutive codes, and digits-only codes come first
+  const codes: string[] = [];
+  for (let i = 0; i < 12; i++) codes.push((await person()).code);
+  assert.equal(new Set(codes).size, 12);
+  assert.ok(codes.every((c) => /^[0-9]{6}$/.test(c)), 'there is plenty of room in the digits-only tier');
+  assert.ok(codes.every((c, i) => i === 0 || Math.abs(Number(c) - Number(codes[i - 1])) > 1));
+});
+
+test('profile: a legacy profile without a code gets one the first time it is loaded, and keeps it', async () => {
+  const uid = user();
+  // a row as it was before codes existed
+  await pool.query("insert into profiles (user_id, display_name, created_at_ms) values ($1, 'Old Timer', 1)", [uid]);
+  assert.equal((await pool.query('select code from profiles where user_id = $1', [uid])).rows[0].code, null);
+  const first = await call(uid, 'GET', '/api/profile');
+  const code = first.body.profile.code as string;
+  assert.match(code, CODE);
+  assert.equal((await call(uid, 'GET', '/api/profile')).body.profile.code, code);
+  assert.equal((await pool.query('select code from profiles where user_id = $1', [uid])).rows[0].code, code);
+  // and a legacy profile that saves its profile (PUT) gets one too
+  const uid2 = user();
+  await pool.query("insert into profiles (user_id, display_name, created_at_ms) values ($1, 'Older', 1)", [uid2]);
+  const put = await call(uid2, 'PUT', '/api/profile', { displayName: 'Older' });
+  assert.match(put.body.profile.code, CODE);
+  assert.equal((await call(uid2, 'GET', '/api/profile')).body.profile.code, put.body.profile.code);
+});
+
+test('profile: the database refuses a malformed or repeated code', async () => {
+  const a = await person();
+  const b = await person();
+  await assert.rejects(pool.query("update profiles set code = 'abc123' where user_id = $1", [a.uid]));
+  await assert.rejects(pool.query("update profiles set code = 'ABCDEI' where user_id = $1", [a.uid]));
+  await assert.rejects(pool.query('update profiles set code = $2 where user_id = $1', [a.uid, b.code]));
 });
 
 const JPEG = (n = 40) => `data:image/jpeg;base64,${'/9j/4AAQSkZJRg'.repeat(n).slice(0, n * 4)}==`;
@@ -128,7 +175,6 @@ test('profile photo: set, replace, keep when absent, clear', async () => {
   const cleared = await call(uid, 'PUT', '/api/profile', { displayName: 'Ana B', photo: null });
   assert.equal(cleared.body.profile.photo, null);
   assert.equal((await call(uid, 'GET', '/api/profile')).body.profile.photo, null);
-  // a first profile without the key starts with no photo; the biggest allowed one is accepted
   assert.equal((await call(user(), 'PUT', '/api/profile', { displayName: 'New' })).body.profile.photo, null);
   const max = `data:image/jpeg;base64,${'A'.repeat(60000 - 23)}`;
   assert.equal(max.length, 60000);
@@ -148,151 +194,49 @@ test('profile photo: only small JPEG data URLs are accepted', async () => {
     assert.equal(r.status, 400, JSON.stringify(photo)?.slice(0, 60));
     assert.equal(r.body.error, 'invalid');
   }
-  // nothing was stored by the failed attempts
   assert.deepEqual((await call(uid, 'GET', '/api/profile')).body.profile, null);
   assert.equal((await call(uid, 'PUT', '/api/profile', { displayName: 'Ana', photo: JPEG(), extra: 1 })).status, 400);
-  // the database itself refuses anything else too
   await call(uid, 'PUT', '/api/profile', { displayName: 'Ana' });
   await assert.rejects(pool.query("update profiles set photo = 'data:image/png;base64,AAAA' where user_id = $1", [uid]));
   await assert.rejects(pool.query("update profiles set photo = 'data:image/jpeg;base64,' || repeat('A', 60000) where user_id = $1", [uid]));
 });
 
-test('profile photo: shows up on every card other people see', async () => {
-  const photo = JPEG(50);
-  const a = user();
-  const created = await call(a, 'PUT', '/api/profile', { displayName: 'Photogenic Ana', photo });
-  const aId = created.body.profile.id as string;
-  const b = await person('Plain Bob');
-  const tag = 'Photogenic';
-  assert.equal((await call(b.uid, 'GET', `/api/people?q=${tag}`)).body.people[0].photo, photo);
-  assert.equal((await call(b.uid, 'GET', `/api/people/${aId}`)).body.person.photo, photo);
-  assert.equal((await call(a, 'POST', '/api/follow', { id: b.id })).status, 200);
-  assert.equal((await call(b.uid, 'POST', '/api/follow', { id: aId })).status, 200);
-  assert.equal((await call(b.uid, 'GET', '/api/follows')).body.following[0].photo, photo);
-  assert.equal((await call(b.uid, 'GET', '/api/follows')).body.followers[0].photo, photo);
-  assert.equal((await call(a, 'POST', '/api/messages', { to: b.id, body: 'hi' })).status, 201);
-  assert.equal((await call(b.uid, 'GET', '/api/conversations')).body.conversations[0].with.photo, photo);
-  assert.equal((await call(a, 'POST', '/api/shares', { id: b.id })).status, 200);
-  assert.equal((await call(b.uid, 'GET', '/api/shares')).body.received[0].photo, photo);
-  assert.equal((await call(a, 'GET', '/api/shares')).body.given[0].photo, null);
-  // someone without a photo has null on their cards
-  assert.equal((await call(a, 'GET', `/api/people/${b.id}`)).body.person.photo, null);
-  assert.equal((await call(a, 'GET', '/api/follows')).body.following[0].photo, null);
-  // clearing it clears it for everybody
-  await call(a, 'PUT', '/api/profile', { displayName: 'Photogenic Ana', photo: null });
-  assert.equal((await call(b.uid, 'GET', `/api/people/${aId}`)).body.person.photo, null);
-});
-
-test('ids in paths and bodies must be uuids', async () => {
-  const a = await person();
-  for (const bad of ['abc', 'not-a-uuid', '12345678-1234-1234-1234-12345678901', '00000000-0000-4000-8000-00000000000g', `${a.id}x`, '%20']) {
-    assert.equal((await call(a.uid, 'GET', `/api/people/${bad}`)).status, 404, bad);
-    assert.equal((await call(a.uid, 'GET', `/api/messages/${bad}`)).status, 404, bad);
-    assert.equal((await call(a.uid, 'GET', `/api/people/${bad}/summary`)).status, 403, bad);
-  }
-  for (const bad of [{ id: 'abc' }, { id: 5 }, {}, { handle: 'someone' }, { id: NOBODY, extra: 1 }]) {
-    for (const url of ['/api/follow', '/api/unfollow', '/api/messages/read', '/api/shares', '/api/shares/revoke']) {
-      assert.equal((await call(a.uid, 'POST', url, bad)).status, 400, `${url} ${JSON.stringify(bad)}`);
-    }
-  }
-  assert.equal((await call(a.uid, 'POST', '/api/messages', { to: 'abc', body: 'x' })).status, 400);
-  // upper-case ids are accepted and mean the same person
-  assert.equal((await call(a.uid, 'GET', `/api/people/${a.id.toUpperCase()}`)).body.person.self, true);
-});
-
-test('search: by name only, needs 2 characters, excludes me, escapes wildcards', async () => {
-  const tag = `zq${Date.now().toString(36)}`.slice(0, 12);
-  const me = await person(`Seeker ${tag}`);
-  const p1 = await person(`Maria ${tag} Silva`);
-  const p2 = await person(`${tag} Joao`);
-  assert.deepEqual((await call(me.uid, 'GET', '/api/people?q=a')).body, { people: [] });
-  assert.deepEqual((await call(me.uid, 'GET', '/api/people')).body, { people: [] });
-  const found = (await call(me.uid, 'GET', `/api/people?q=${tag.toUpperCase()}`)).body.people;
-  // a name that starts with the text comes first, then the rest; never me
-  assert.deepEqual(found.map((p: any) => p.id), [p2.id, p1.id]);
-  assert.deepEqual(found[0].relation, { following: false, followsMe: false, mutual: false });
-  assert.deepEqual(Object.keys(found[0]).sort(), ['color', 'displayName', 'id', 'photo', 'relation']);
-  assert.deepEqual((await call(me.uid, 'GET', '/api/people?q=%25%25')).body, { people: [] });
-  assert.deepEqual((await call(me.uid, 'GET', '/api/people?q=__')).body, { people: [] });
-  // an id is not searchable
-  assert.deepEqual((await call(me.uid, 'GET', `/api/people?q=${p1.id}`)).body, { people: [] });
-});
-
-test('person page: not found, self, relation and summary flags', async () => {
-  const { a, b } = await friends();
+test('lookup by code: found, case-insensitive, unknown or malformed is 404, flags for self and for shares', async () => {
+  const a = await person('Ana');
+  const b = await person('Bob');
   assert.equal((await call(a.uid, 'GET', `/api/people/${NOBODY}`)).status, 404);
-    const me = (await call(a.uid, 'GET', `/api/people/${a.id}`)).body.person;
-  assert.equal(me.self, true);
-  assert.deepEqual(me.relation, { following: false, followsMe: false, mutual: false });
-  const other = (await call(a.uid, 'GET', `/api/people/${b.id.toUpperCase()}`)).body.person;
-  assert.equal(other.self, false);
-  assert.deepEqual(other.relation, { following: true, followsMe: true, mutual: true });
-  assert.equal(other.followers, 1);
-  assert.equal(other.following, 1);
-  assert.equal(other.summaryAccess, false);
-  assert.equal(other.sharedWithThem, false);
-  await call(a.uid, 'POST', '/api/shares', { id: b.id });
-  assert.equal((await call(a.uid, 'GET', `/api/people/${b.id}`)).body.person.sharedWithThem, true);
-  assert.equal((await call(b.uid, 'GET', `/api/people/${a.id}`)).body.person.summaryAccess, true);
+  for (const bad of ['abc', '12345', '1234567', 'ABCDEI', 'ABCDEO', '12-456', '%20', `${b.code}x`, 'ñññññññ']) {
+    assert.equal((await call(a.uid, 'GET', `/api/people/${encodeURIComponent(bad)}`)).status, 404, bad);
+  }
+  const self = (await call(a.uid, 'GET', `/api/people/${a.code}`)).body.person;
+  assert.deepEqual(self, { code: a.code, displayName: 'Ana', color: null, photo: null, self: true, summaryAccess: true, sharedWithThem: false, sharesWithMe: false });
+  const other = (await call(a.uid, 'GET', `/api/people/${b.code.toLowerCase()}`)).body.person;
+  assert.deepEqual(other, { code: b.code, displayName: 'Bob', color: null, photo: null, self: false, summaryAccess: false, sharedWithThem: false, sharesWithMe: false });
+  assert.deepEqual(Object.keys(other).sort(), ['code', 'color', 'displayName', 'photo', 'self', 'sharedWithThem', 'sharesWithMe', 'summaryAccess']);
+  // I share with them: only sharedWithThem; they share with me: summaryAccess and sharesWithMe
+  await share(a, b);
+  const afterA = (await call(a.uid, 'GET', `/api/people/${b.code}`)).body.person;
+  assert.equal(afterA.sharedWithThem, true);
+  assert.equal(afterA.summaryAccess, false);
+  assert.equal(afterA.sharesWithMe, false);
+  const fromB = (await call(b.uid, 'GET', `/api/people/${a.code}`)).body.person;
+  assert.equal(fromB.summaryAccess, true);
+  assert.equal(fromB.sharesWithMe, true);
+  assert.equal(fromB.sharedWithThem, false);
 });
 
-test('follow: needs a profile, a real person, not yourself; idempotent; unfollow is soft and re-follow works', async () => {
+test('messaging works by code with no follow at all, and is validated', async () => {
   const a = await person();
   const b = await person();
-  const ghost = user();
-  assert.equal((await call(ghost, 'POST', '/api/follow', { id: b.id })).status, 403);
-  assert.equal((await call(a.uid, 'POST', '/api/follow', { id: NOBODY })).status, 404);
-  assert.equal((await call(a.uid, 'POST', '/api/follow', { id: a.id })).status, 400);
-  assert.equal((await call(a.uid, 'POST', '/api/follow', { id: 'X' })).status, 400);
-  assert.equal((await call(a.uid, 'POST', '/api/follow', { id: b.id, more: 1 })).status, 400);
-  assert.equal((await follow(a, b)).status, 200);
-  assert.equal((await follow(a, b)).status, 200);
-  const list = (await call(a.uid, 'GET', '/api/follows')).body;
-  assert.deepEqual(list.following.map((p: any) => p.id), [b.id]);
-  assert.deepEqual(list.following[0].relation, { following: true, followsMe: false, mutual: false });
-  assert.deepEqual((await call(b.uid, 'GET', '/api/follows')).body.followers.map((p: any) => p.id), [a.id]);
-  assert.equal((await call(b.uid, 'GET', '/api/profile')).body.followers, 1);
-
-  assert.equal((await call(a.uid, 'POST', '/api/unfollow', { id: b.id })).status, 200);
-  assert.equal((await call(a.uid, 'POST', '/api/unfollow', { id: b.id })).status, 200);
-  assert.deepEqual((await call(a.uid, 'GET', '/api/follows')).body.following, []);
-  assert.equal((await call(b.uid, 'GET', '/api/profile')).body.followers, 0);
-  // nothing was removed: the row is archived
-  const rows = (await pool.query('select archived_at_ms from follows where archived_at_ms is not null')).rows;
-  assert.ok(rows.length >= 1);
-  assert.equal((await follow(a, b)).status, 200);
-  assert.deepEqual((await call(a.uid, 'GET', '/api/follows')).body.following.map((p: any) => p.id), [b.id]);
-  assert.equal((await call(a.uid, 'POST', '/api/unfollow', { id: NOBODY })).status, 404);
-});
-
-test('follows list is newest first', async () => {
-  const a = await person();
-  const b = await person();
-  const c = await person();
-  await follow(a, b);
-  await new Promise((r) => setTimeout(r, 5));
-  await follow(a, c);
-  assert.deepEqual((await call(a.uid, 'GET', '/api/follows')).body.following.map((p: any) => p.id), [c.id, b.id]);
-});
-
-test('messages: only between mutual followers, validated, ordered, with since', async () => {
-  const a = await person();
-  const b = await person();
-  const send = (from: { uid: string }, to: { id: string }, body: unknown) => call(from.uid, 'POST', '/api/messages', { to: to.id, body });
-  assert.equal((await send(a, b, 'hi')).status, 403);
-  await follow(a, b);
-  const oneWay = await send(a, b, 'hi');
-  assert.equal(oneWay.status, 403);
-  assert.deepEqual(oneWay.body, { error: 'not_mutual' });
-  assert.equal((await call(a.uid, 'GET', `/api/messages/${b.id}`)).body.canSend, false);
-  await follow(b, a);
-  assert.equal((await call(a.uid, 'GET', `/api/messages/${b.id}`)).body.canSend, true);
-
   assert.equal((await send(a, a, 'me')).status, 400);
-  assert.equal((await send(a, { id: NOBODY }, 'x')).status, 404);
+  assert.equal((await send(a, { code: NOBODY }, 'x')).status, 404);
+  assert.equal((await call(a.uid, 'POST', '/api/messages', { to: 'abc', body: 'x' })).status, 400);
+  assert.equal((await call(a.uid, 'POST', '/api/messages', { to: b.code, body: 'x', extra: 1 })).status, 400);
+  assert.equal((await call(a.uid, 'POST', '/api/messages', { body: 'x' })).status, 400);
   for (const body of ['', '   ', 'x'.repeat(1001), 'a\u0000b', 5, null]) assert.equal((await send(a, b, body)).status, 400, String(body));
-  assert.equal((await call(a.uid, 'POST', '/api/messages', { to: b.id, body: 'x', extra: 1 })).status, 400);
-  assert.equal((await send({ uid: user() }, b, 'x')).status, 403);
+  const noProfile = await send({ uid: user() }, b, 'x');
+  assert.equal(noProfile.status, 403);
+  assert.deepEqual(noProfile.body, { error: 'profile_required' });
 
   const m1 = await send(a, b, '  first  ');
   assert.equal(m1.status, 201);
@@ -300,42 +244,47 @@ test('messages: only between mutual followers, validated, ordered, with since', 
   assert.equal(m1.body.message.mine, true);
   assert.equal(m1.body.message.readAt, null);
   assert.match(m1.body.message.id, /^[0-9a-f-]{36}$/);
-  const m2 = await send(b, a, 'second');
-  await send(a, b, 'x'.repeat(1000));
-  const thread = (await call(a.uid, 'GET', `/api/messages/${b.id}`)).body;
+  // the code works in lower case too
+  assert.equal((await call(b.uid, 'POST', '/api/messages', { to: a.code.toLowerCase(), body: 'second' })).status, 201);
+  assert.equal((await send(a, b, 'x'.repeat(1000))).status, 201);
+  const thread = (await call(a.uid, 'GET', `/api/messages/${b.code}`)).body;
+  assert.equal(thread.canSend, true);
   assert.deepEqual(thread.messages.map((m: any) => m.mine), [true, false, true]);
   assert.equal(thread.messages[0].body, 'first');
-  const theirs = (await call(b.uid, 'GET', `/api/messages/${a.id}`)).body.messages;
-  assert.deepEqual(theirs.map((m: any) => m.mine), [false, true, false]);
-  const since = (await call(a.uid, 'GET', `/api/messages/${b.id}?since=${m2.body.message.createdAt - 1}`)).body.messages;
-  assert.ok(since.length >= 1 && since.every((m: any) => m.createdAt > m2.body.message.createdAt - 1));
-  assert.deepEqual((await call(a.uid, 'GET', `/api/messages/${b.id}?since=99999999999999`)).body.messages, []);
-  assert.equal((await call(a.uid, 'GET', `/api/messages/${b.id}?since=abc`)).status, 400);
+  assert.deepEqual((await call(b.uid, 'GET', `/api/messages/${a.code}`)).body.messages.map((m: any) => m.mine), [false, true, false]);
   assert.equal((await call(a.uid, 'GET', `/api/messages/${NOBODY}`)).status, 404);
+  assert.equal((await call(a.uid, 'GET', '/api/messages/abc')).status, 404);
   // a third person sees nothing of this thread
   const c = await person();
-  assert.deepEqual((await call(c.uid, 'GET', `/api/messages/${a.id}`)).body.messages, []);
+  assert.deepEqual((await call(c.uid, 'GET', `/api/messages/${a.code}`)).body.messages, []);
 });
 
-test('messages: the thread keeps only the last 100 without since', async () => {
-  const { a, b } = await friends();
+test('messages: since, the last 100, and the ordering', async () => {
+  const a = await person();
+  const b = await person();
+  const m1 = await send(a, b, 'one');
+  await new Promise((r) => setTimeout(r, 3));
+  const m2 = await send(b, a, 'two');
+  const since = (await call(a.uid, 'GET', `/api/messages/${b.code}?since=${m1.body.message.createdAt}`)).body.messages;
+  assert.deepEqual(since.map((m: any) => m.body), ['two']);
+  assert.equal(since[0].createdAt, m2.body.message.createdAt);
+  assert.deepEqual((await call(a.uid, 'GET', `/api/messages/${b.code}?since=99999999999999`)).body.messages, []);
+  assert.equal((await call(a.uid, 'GET', `/api/messages/${b.code}?since=abc`)).status, 400);
   await pool.query(
     `insert into messages (id, sender_id, recipient_id, body, created_at_ms)
      select gen_random_uuid()::text, $1, $2, 'm' || i, 1700000000000 + i from generate_series(0, 104) as i`,
     [a.uid, b.uid],
   );
-  const thread = (await call(a.uid, 'GET', `/api/messages/${b.id}`)).body.messages;
+  const thread = (await call(a.uid, 'GET', `/api/messages/${b.code}`)).body.messages;
   assert.equal(thread.length, 100);
-  assert.equal(thread[0].body, 'm5');
-  assert.equal(thread[99].body, 'm104');
+  assert.equal(thread[99].body, 'two');
+  assert.deepEqual(thread.map((m: any) => m.createdAt), [...thread.map((m: any) => m.createdAt)].sort((x: number, y: number) => x - y));
 });
 
 test('unread counts, conversations and marking as read', async () => {
-  const { a, b } = await friends();
-  const c = await person();
-  await follow(a, c);
-  await follow(c, a);
-  const send = (from: { uid: string }, to: { id: string }, body: string) => call(from.uid, 'POST', '/api/messages', { to: to.id, body });
+  const a = await person('A');
+  const b = await person('B');
+  const c = await person('C');
   await send(b, a, 'one');
   await send(b, a, 'two');
   await new Promise((r) => setTimeout(r, 3));
@@ -343,126 +292,95 @@ test('unread counts, conversations and marking as read', async () => {
   assert.equal((await call(a.uid, 'GET', '/api/unread')).body.unread, 3);
   assert.equal((await call(b.uid, 'GET', '/api/unread')).body.unread, 0);
   const convs = (await call(a.uid, 'GET', '/api/conversations')).body.conversations;
-  assert.deepEqual(convs.map((x: any) => x.with.id), [c.id, b.id]);
+  assert.deepEqual(convs.map((x: any) => x.with.code), [c.code, b.code]);
+  assert.deepEqual(Object.keys(convs[0].with).sort(), ['code', 'color', 'displayName', 'photo']);
   assert.equal(convs[0].last.body, 'hello from c');
   assert.equal(convs[0].last.mine, false);
   assert.equal(convs[0].unread, 1);
   assert.equal(convs[1].unread, 2);
   assert.equal(typeof convs[0].last.createdAt, 'number');
-  assert.deepEqual(convs[1].with.relation, { following: true, followsMe: true, mutual: true });
 
-  assert.equal((await call(a.uid, 'POST', '/api/messages/read', { id: b.id })).status, 200);
+  assert.equal((await call(a.uid, 'POST', '/api/messages/read', { code: b.code })).status, 200);
   assert.equal((await call(a.uid, 'GET', '/api/unread')).body.unread, 1);
-  const read = (await call(a.uid, 'GET', `/api/messages/${b.id}`)).body.messages;
-  assert.ok(read.every((m: any) => typeof m.readAt === 'number'));
-  // the sender sees it as read too, and an unrelated read does not touch other threads
-  assert.ok((await call(b.uid, 'GET', `/api/messages/${a.id}`)).body.messages.every((m: any) => typeof m.readAt === 'number'));
-  assert.equal((await call(a.uid, 'GET', '/api/conversations')).body.conversations.find((x: any) => x.with.id === c.id).unread, 1);
-  assert.equal((await call(a.uid, 'POST', '/api/messages/read', { id: NOBODY })).status, 404);
-  // my own sent messages never count as unread for me
+  assert.ok((await call(a.uid, 'GET', `/api/messages/${b.code}`)).body.messages.every((m: any) => typeof m.readAt === 'number'));
+  assert.ok((await call(b.uid, 'GET', `/api/messages/${a.code}`)).body.messages.every((m: any) => typeof m.readAt === 'number'));
+  assert.equal((await call(a.uid, 'GET', '/api/conversations')).body.conversations.find((x: any) => x.with.code === c.code).unread, 1);
+  assert.equal((await call(a.uid, 'POST', '/api/messages/read', { code: NOBODY })).status, 404);
+  assert.equal((await call(a.uid, 'POST', '/api/messages/read', { code: 'x' })).status, 400);
+  // my own sent messages never count as unread for me, and a reply makes the chat appear for the other side
   await send(a, b, 'reply');
   assert.equal((await call(a.uid, 'GET', '/api/unread')).body.unread, 1);
   assert.equal((await call(b.uid, 'GET', '/api/unread')).body.unread, 1);
+  // someone who never exchanged a message has no conversations
+  assert.deepEqual((await call((await person()).uid, 'GET', '/api/conversations')).body, { conversations: [] });
 });
 
-test('a conversation stays readable after unfollowing, but sending stops', async () => {
-  const { a, b } = await friends();
-  await call(a.uid, 'POST', '/api/messages', { to: b.id, body: 'hi' });
-  await call(b.uid, 'POST', '/api/unfollow', { id: a.id });
-  const thread = (await call(a.uid, 'GET', `/api/messages/${b.id}`)).body;
-  assert.equal(thread.messages.length, 1);
-  assert.equal(thread.canSend, false);
-  assert.equal((await call(a.uid, 'POST', '/api/messages', { to: b.id, body: 'again' })).status, 403);
-  assert.equal((await call(a.uid, 'GET', '/api/conversations')).body.conversations.length, 1);
-});
-
-test('shares: need a mutual follow, list both sides, revoke blocks at once', async () => {
-  const a = await person();
-  const b = await person();
-  assert.equal((await call(a.uid, 'POST', '/api/shares', { id: b.id })).status, 403);
-  await follow(a, b);
-  assert.deepEqual((await call(a.uid, 'POST', '/api/shares', { id: b.id })).body, { error: 'not_mutual' });
-  await follow(b, a);
-  assert.equal((await call(a.uid, 'POST', '/api/shares', { id: a.id })).status, 400);
-  assert.equal((await call(a.uid, 'POST', '/api/shares', { id: NOBODY })).status, 404);
-  assert.equal((await call(user(), 'POST', '/api/shares', { id: b.id })).status, 403);
-  assert.equal((await call(a.uid, 'PUT', '/api/summary', summary())).status, 200);
-  assert.equal((await call(a.uid, 'POST', '/api/shares', { id: b.id })).status, 200);
-  assert.equal((await call(a.uid, 'POST', '/api/shares', { id: b.id })).status, 200);
+test('shares: many people on both sides, newest first, idempotent, and no follow needed', async () => {
+  const a = await person('A');
+  const b = await person('B');
+  const c = await person('C');
+  assert.equal((await call(user(), 'POST', '/api/shares', { code: b.code })).status, 403);
+  assert.equal((await call(a.uid, 'POST', '/api/shares', { code: a.code })).status, 400);
+  assert.equal((await call(a.uid, 'POST', '/api/shares', { code: NOBODY })).status, 404);
+  assert.equal((await call(a.uid, 'POST', '/api/shares', { code: 'abc' })).status, 400);
+  assert.equal((await call(a.uid, 'POST', '/api/shares', { code: b.code, extra: 1 })).status, 400);
+  assert.equal((await share(a, b)).status, 200);
+  await new Promise((r) => setTimeout(r, 3));
+  assert.equal((await share(a, c)).status, 200);
+  assert.equal((await share(a, c)).status, 200);
+  assert.equal((await share(b, a)).status, 200);
+  assert.equal((await share(c, a)).status, 200);
 
   const mine = (await call(a.uid, 'GET', '/api/shares')).body;
-  assert.deepEqual(mine.given.map((p: any) => p.id), [b.id]);
-  assert.deepEqual(mine.received, []);
-  assert.deepEqual((await call(b.uid, 'GET', '/api/shares')).body.received.map((p: any) => p.id), [a.id]);
+  assert.deepEqual(mine.given.map((p: any) => p.code), [c.code, b.code]);
+  assert.equal(mine.received.length, 2);
+  assert.deepEqual(Object.keys(mine.given[0]).sort(), ['code', 'color', 'displayName', 'photo']);
+  assert.deepEqual((await call(b.uid, 'GET', '/api/shares')).body, { given: [{ code: a.code, displayName: 'A', color: null, photo: null }], received: [{ code: a.code, displayName: 'A', color: null, photo: null }] });
+});
 
-  const seen = await call(b.uid, 'GET', `/api/people/${a.id}/summary`);
+test('summary: shared people read it, revoking blocks at once, outsiders and unknown codes get the same 403', async () => {
+  const a = await person();
+  const b = await person();
+  const c = await person();
+  const outsider = await person();
+  assert.deepEqual((await readSummary(a, a)).body, { summary: null, updatedAt: null });
+  assert.equal((await call(a.uid, 'PUT', '/api/summary', summary())).status, 200);
+  assert.deepEqual((await readSummary(a, a)).body.summary, summary());
+  await share(a, b);
+  await share(a, c);
+
+  const seen = await readSummary(b, a);
   assert.equal(seen.status, 200);
   assert.deepEqual(seen.body.summary, summary());
   assert.equal(typeof seen.body.updatedAt, 'number');
+  assert.equal((await readSummary(c, a)).status, 200);
+  // the lookup code is accepted in lower case
+  assert.equal((await call(b.uid, 'GET', `/api/people/${a.code.toLowerCase()}/summary`)).status, 200);
 
-  assert.equal((await call(a.uid, 'POST', '/api/shares/revoke', { id: b.id })).status, 200);
-  assert.equal((await call(a.uid, 'POST', '/api/shares/revoke', { id: b.id })).status, 200);
-  const blocked = await call(b.uid, 'GET', `/api/people/${a.id}/summary`);
-  assert.equal(blocked.status, 403);
-  assert.deepEqual(blocked.body, { error: 'not_shared' });
-  assert.deepEqual((await call(a.uid, 'GET', '/api/shares')).body.given, []);
-  assert.equal((await call(a.uid, 'POST', '/api/shares/revoke', { id: NOBODY })).status, 404);
-  // the row is kept, stamped as revoked; sharing again re-activates it
-  assert.ok((await pool.query('select 1 from summary_shares where revoked_at_ms is not null')).rowCount! >= 1);
-  assert.equal((await call(a.uid, 'POST', '/api/shares', { id: b.id })).status, 200);
-  assert.equal((await call(b.uid, 'GET', `/api/people/${a.id}/summary`)).status, 200);
-});
-
-test('summary: the owner reads their own, outsiders and people without a share get the same 403', async () => {
-  const { a, b } = await friends();
-  const outsider = await person();
-  assert.deepEqual((await call(a.uid, 'GET', `/api/people/${a.id}/summary`)).body, { summary: null, updatedAt: null });
-  assert.equal((await call(a.uid, 'PUT', '/api/summary', summary())).status, 200);
-  assert.deepEqual((await call(a.uid, 'GET', `/api/people/${a.id}/summary`)).body.summary, summary());
-  const replaced = summary({ months: [] });
-  await call(a.uid, 'PUT', '/api/summary', replaced);
-  assert.deepEqual((await call(a.uid, 'GET', `/api/people/${a.id}/summary`)).body.summary, replaced);
-
-  const noShare = await call(b.uid, 'GET', `/api/people/${a.id}/summary`);
-  const stranger = await call(outsider.uid, 'GET', `/api/people/${a.id}/summary`);
-  const missing = await call(b.uid, 'GET', `/api/people/${NOBODY}/summary`);
-  for (const r of [noShare, stranger, missing]) {
+  for (const r of [await readSummary(outsider, a), await call(outsider.uid, 'GET', `/api/people/${NOBODY}/summary`), await call(outsider.uid, 'GET', '/api/people/abc/summary'), await call(user(), 'GET', `/api/people/${a.code}/summary`)]) {
     assert.equal(r.status, 403);
     assert.deepEqual(r.body, { error: 'not_shared' });
   }
-  // a share alone is not enough from an outsider: it needs the mutual follow, so nobody else can be shared with
-  assert.equal((await call(a.uid, 'POST', '/api/shares', { id: outsider.id })).status, 403);
-  // someone who has no profile cannot read either
-  assert.equal((await call(user(), 'GET', `/api/people/${a.id}/summary`)).status, 403);
-});
+  // being shared with does not give access the other way round
+  assert.equal((await readSummary(a, b)).status, 403);
 
-test('unfollowing revokes the shares in both directions, and refollowing does not bring them back', async () => {
-  const { a, b } = await friends();
-  await call(a.uid, 'PUT', '/api/summary', summary());
-  await call(b.uid, 'PUT', '/api/summary', summary());
-  await call(a.uid, 'POST', '/api/shares', { id: b.id });
-  await call(b.uid, 'POST', '/api/shares', { id: a.id });
-  assert.equal((await call(a.uid, 'GET', `/api/people/${b.id}/summary`)).status, 200);
-  assert.equal((await call(b.uid, 'GET', `/api/people/${a.id}/summary`)).status, 200);
-  await call(b.uid, 'POST', '/api/unfollow', { id: a.id });
-  assert.equal((await call(a.uid, 'GET', `/api/people/${b.id}/summary`)).status, 403);
-  assert.equal((await call(b.uid, 'GET', `/api/people/${a.id}/summary`)).status, 403);
-  assert.deepEqual((await call(a.uid, 'GET', '/api/shares')).body, { given: [], received: [] });
-  await follow(b, a);
-  assert.equal((await call(a.uid, 'GET', `/api/people/${b.id}/summary`)).status, 403);
-  assert.equal((await call(b.uid, 'GET', `/api/people/${a.id}/summary`)).status, 403);
-});
-
-test('a share is ignored if the follow was archived behind its back', async () => {
-  const { a, b } = await friends();
-  await call(a.uid, 'PUT', '/api/summary', summary());
-  await call(a.uid, 'POST', '/api/shares', { id: b.id });
-  // simulate a broken state: the follow is archived but the share was left active
-  await pool.query('update follows set archived_at_ms = 1 where follower_id = $1 and followee_id = $2', [b.uid, a.uid]);
-  assert.equal((await call(b.uid, 'GET', `/api/people/${a.id}/summary`)).status, 403);
-  assert.deepEqual((await call(b.uid, 'GET', '/api/shares')).body.received, []);
-  assert.deepEqual((await call(a.uid, 'GET', '/api/shares')).body.given, []);
-  assert.equal((await call(b.uid, 'GET', `/api/people/${a.id}`)).body.person.summaryAccess, false);
+  assert.equal((await call(a.uid, 'POST', '/api/shares/revoke', { code: b.code })).status, 200);
+  assert.equal((await call(a.uid, 'POST', '/api/shares/revoke', { code: b.code })).status, 200);
+  const blocked = await readSummary(b, a);
+  assert.equal(blocked.status, 403);
+  assert.deepEqual(blocked.body, { error: 'not_shared' });
+  assert.equal((await readSummary(c, a)).status, 200, 'revoking one person does not touch the others');
+  assert.deepEqual((await call(a.uid, 'GET', '/api/shares')).body.given.map((p: any) => p.code), [c.code]);
+  assert.equal((await call(a.uid, 'POST', '/api/shares/revoke', { code: NOBODY })).status, 404);
+  assert.equal((await call(a.uid, 'POST', '/api/shares/revoke', { code: 'abc' })).status, 400);
+  // the row is kept, stamped as revoked; sharing again re-activates it
+  assert.ok((await pool.query('select 1 from summary_shares where revoked_at_ms is not null')).rowCount! >= 1);
+  assert.equal((await share(a, b)).status, 200);
+  assert.equal((await readSummary(b, a)).status, 200);
+  // the summary is replaced by the next publish, for everybody who can read it
+  const replaced = summary({ months: [] });
+  await call(a.uid, 'PUT', '/api/summary', replaced);
+  assert.deepEqual((await readSummary(b, a)).body.summary, replaced);
 });
 
 test('summary validation: percentages only, strict shape', async () => {
@@ -472,7 +390,6 @@ test('summary validation: percentages only, strict shape', async () => {
   const many = (n: number, f: (i: number) => unknown) => Array.from({ length: n }, (_, i) => f(i));
   const bads: unknown[] = [
     null, [], {}, 'x',
-    // the old version and money fields are not accepted
     { version: 1, generatedAt: 1, months: [{ key: '2026-10', income: 500000, expense: 300000, left: 200000 }], categories: [{ slug: 'x', label: 'X', amount: 100 }] },
     summary({ version: 1 }), summary({ version: 3 }), summary({ version: undefined }),
     summary({ income: 500000 }), summary({ amount: 5 }), summary({ extra: 1 }),
@@ -502,26 +419,38 @@ test('summary validation: percentages only, strict shape', async () => {
 });
 
 test('summary: decimals round-trip as stored, and an old version 1 snapshot is returned unchanged', async () => {
-  const { a, b } = await friends();
+  const a = await person();
+  const b = await person();
   const s = summary({ spent: 33.333333333333336, saved: 66.66666666666666, categories: [{ slug: 'x', label: 'X', pct: 0.1 }] });
   assert.equal((await call(a.uid, 'PUT', '/api/summary', s)).status, 200);
-  await call(a.uid, 'POST', '/api/shares', { id: b.id });
-  assert.deepEqual((await call(b.uid, 'GET', `/api/people/${a.id}/summary`)).body.summary, s);
-  // a snapshot stored before this change (version 1, cents) is simply returned as it is: the front end ignores it
+  await share(a, b);
+  assert.deepEqual((await readSummary(b, a)).body.summary, s);
   const old = { version: 1, generatedAt: 1, months: [{ key: '2026-10', income: 5, expense: 3, left: 2 }], categories: [] };
   await pool.query('update profile_summaries set summary = $2::jsonb where user_id = $1', [a.uid, JSON.stringify(old)]);
-  assert.deepEqual((await call(b.uid, 'GET', `/api/people/${a.id}/summary`)).body.summary, old);
+  assert.deepEqual((await readSummary(b, a)).body.summary, old);
+});
+
+test('old follows are ignored: they neither allow nor block anything', async () => {
+  const a = await person();
+  const b = await person();
+  await pool.query("insert into follows (follower_id, followee_id, created_at_ms) values ($1, $2, 1), ($2, $1, 1)", [a.uid, b.uid]);
+  await call(a.uid, 'PUT', '/api/summary', summary());
+  assert.equal((await readSummary(b, a)).status, 403, 'a follow is not a share');
+  await share(a, b);
+  await pool.query('update follows set archived_at_ms = 5 where follower_id = $1', [b.uid]);
+  assert.equal((await readSummary(b, a)).status, 200, 'an archived follow does not stop a share');
 });
 
 test('no response ever carries a user id, and /api/data stays free of social data', async () => {
-  const { a, b } = await friends();
-  await call(a.uid, 'POST', '/api/messages', { to: b.id, body: 'secret' });
+  const a = await person('Alice');
+  const b = await person('Bob');
+  await send(a, b, 'secret');
   await call(a.uid, 'PUT', '/api/summary', summary());
-  await call(a.uid, 'POST', '/api/shares', { id: b.id });
-  // `call` asserts that no uid appears in any body; walk the whole surface once more as both people
+  await share(a, b);
+  await share(b, a);
   for (const who of [a, b]) {
-    for (const url of ['/api/profile', '/api/follows', '/api/conversations', '/api/shares', '/api/unread', `/api/people?q=${a.id}`, `/api/people?q=${b.id}`,
-      `/api/people/${a.id}`, `/api/people/${b.id}`, `/api/messages/${a.id}`, `/api/messages/${b.id}`, `/api/people/${a.id}/summary`]) {
+    for (const url of ['/api/profile', '/api/conversations', '/api/shares', '/api/unread', `/api/people/${a.code}`, `/api/people/${b.code}`,
+      `/api/messages/${a.code}`, `/api/messages/${b.code}`, `/api/people/${a.code}/summary`, `/api/people/${b.code}/summary`]) {
       await call(who.uid, 'GET', url);
     }
   }
@@ -531,27 +460,45 @@ test('no response ever carries a user id, and /api/data stays free of social dat
   assert.deepEqual(data.transactions, []);
   const mine = (await call(a.uid, 'GET', '/api/data')).body;
   assert.equal(JSON.stringify(mine).includes('secret'), false);
-  assert.equal(JSON.stringify(mine).includes(a.id), false);
+  assert.equal(JSON.stringify(mine).includes(a.code), false);
 });
 
-test('the chatty routes have their own stricter rate limit (30 per minute)', async () => {
-  const limited = await buildApp({
+const limitedApp = () =>
+  buildApp({
     pool,
     verify: async (t) => {
       if (!t.startsWith('tok:')) throw new Error('bad token');
       return { uid: t.slice(4) };
     },
   });
+
+test('looking a code up is limited to 20 a minute, so codes cannot be probed', async () => {
+  const limited = await limitedApp();
   const uid = user();
-  let last = 0;
-  for (let i = 0; i < 31; i++) last = (await limited.inject({ method: 'GET', url: '/api/people?q=zz', headers: bearer(uid) })).statusCode;
-  assert.equal(last, 429);
+  const statuses: number[] = [];
+  for (let i = 0; i < 21; i++) statuses.push((await limited.inject({ method: 'GET', url: `/api/people/${NOBODY}`, headers: bearer(uid) })).statusCode);
+  assert.ok(statuses.slice(0, 20).every((s) => s === 404));
+  assert.equal(statuses[20], 429);
+  assert.deepEqual((await limited.inject({ method: 'GET', url: `/api/people/${NOBODY}`, headers: bearer(uid) })).json(), { error: 'rate_limited' });
+  await limited.close();
+});
+
+test('messages are limited to 30 a minute', async () => {
+  const limited = await limitedApp();
+  const a = await person();
+  const b = await person();
+  const statuses: number[] = [];
+  for (let i = 0; i < 31; i++) {
+    statuses.push((await limited.inject({ method: 'POST', url: '/api/messages', headers: bearer(a.uid), payload: { to: b.code, body: `m${i}` } })).statusCode);
+  }
+  assert.ok(statuses.slice(0, 30).every((s) => s === 201));
+  assert.equal(statuses[30], 429);
   await limited.close();
 });
 
 test('CORS allows POST', async () => {
   const cors = await buildApp({ pool, allowedOrigins: ['http://localhost:8081'], verify: async () => ({ uid: 'x' }) });
-  const r = await cors.inject({ method: 'OPTIONS', url: '/api/follow', headers: { origin: 'http://localhost:8081', 'access-control-request-method': 'POST' } });
+  const r = await cors.inject({ method: 'OPTIONS', url: '/api/messages', headers: { origin: 'http://localhost:8081', 'access-control-request-method': 'POST' } });
   assert.match(String(r.headers['access-control-allow-methods']), /POST/);
   await cors.close();
 });

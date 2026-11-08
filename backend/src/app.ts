@@ -83,8 +83,8 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     return reply.code(401).send({ error: 'unauthorized' });
   };
 
-  // profiles, follows, messages and the shared summary; the chatty routes get a stricter limit (unless a test sets its own)
-  registerSocial(app, { pool: opts.pool, strictMax: opts.rateLimitMax === undefined ? 30 : opts.rateLimitMax }, authenticate);
+  // profiles, messages and the shared summary; code lookups and messages get a stricter limit (unless a test sets its own)
+  registerSocial(app, { pool: opts.pool, strictMax: opts.rateLimitMax }, authenticate);
 
   app.route({
     method: 'GET',

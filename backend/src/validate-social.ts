@@ -1,4 +1,5 @@
 // Validators for the social routes, in the style of validate.ts: hand written, strict, no unknown fields.
+import { normalizeCode } from './code.js';
 import { ValidationError, type Doc } from './validate.js';
 
 const fail = (message: string): never => {
@@ -6,9 +7,6 @@ const fail = (message: string): never => {
 };
 
 const MAX_ABS = 100_000_000_000;
-export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-/** a public profile id, in its lowercase canonical form */
-export const isPublicId = (v: unknown): v is string => typeof v === 'string' && UUID_RE.test(v);
 const strLen = (s: string) => [...s].length;
 const isObject = (v: unknown): v is Doc => typeof v === 'object' && v !== null && !Array.isArray(v);
 const has = (d: Doc, k: string) => Object.prototype.hasOwnProperty.call(d, k);
@@ -35,18 +33,17 @@ function int(v: unknown, name: string, min: number, max: number): number {
   return v;
 }
 
-/** A public profile id (a uuid), as sent in a body: any letter case is accepted and normalized to lower case. */
-export function parseId(v: unknown, name = 'id'): string {
-  const id = typeof v === 'string' ? v.toLowerCase() : v;
-  if (!isPublicId(id)) return fail(`"${name}" must be a uuid`);
-  return id;
+/** A profile code as sent in a body: any letter case is accepted and normalized to upper case. */
+export function parseCode(v: unknown, name = 'code'): string {
+  const code = normalizeCode(v);
+  return code ?? fail(`"${name}" must be a 6 character code`);
 }
 
-/** `{ id }` and nothing else. */
-export function parseIdBody(input: unknown, key = 'id'): string {
+/** `{ code }` and nothing else. */
+export function parseCodeBody(input: unknown, key = 'code'): string {
   const d = obj(input, 'the body');
   onlyKeys(d, [key], [key]);
-  return parseId(d[key], key);
+  return parseCode(d[key], key);
 }
 
 export const PHOTO_MAX = 60000;
@@ -82,7 +79,7 @@ export function parseProfile(input: unknown): ProfileInput {
 export function parseMessage(input: unknown): { to: string; body: string } {
   const d = obj(input, 'the body');
   onlyKeys(d, ['to', 'body'], ['to', 'body']);
-  const to = parseId(d.to, 'to');
+  const to = parseCode(d.to, 'to');
   if (typeof d.body !== 'string') fail('"body" must be a string');
   const body = (d.body as string).trim();
   str(body, 'body', 1, 1000);
@@ -100,7 +97,8 @@ export interface Summary {
   generatedAt: number;
   spent: number;
   saved: number;
-  months: { key: string; spent: number; saved: number; categories: SummaryCategory[] }[];
+  /** `incomeRel`: the month's income as a % of the person's average monthly income (100 = an average month); optional */
+  months: { key: string; spent: number; saved: number; incomeRel?: number; categories: SummaryCategory[] }[];
   categories: SummaryCategory[];
 }
 
@@ -133,7 +131,7 @@ export function parseSummary(input: unknown): Summary {
   const seen = new Set<string>();
   const months = (d.months as unknown[]).map((raw, i) => {
     const m = obj(raw, `months[${i}]`);
-    onlyKeys(m, ['key', 'spent', 'saved', 'categories'], ['key', 'spent', 'saved', 'categories']);
+    onlyKeys(m, ['key', 'spent', 'saved', 'incomeRel', 'categories'], ['key', 'spent', 'saved', 'categories']);
     if (typeof m.key !== 'string' || !/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(m.key)) fail(`months[${i}].key must be a month as YYYY-MM`);
     if (seen.has(m.key as string)) fail(`months[${i}].key is repeated`);
     seen.add(m.key as string);
@@ -141,6 +139,7 @@ export function parseSummary(input: unknown): Summary {
       key: m.key as string,
       spent: pct(m.spent, `months[${i}].spent`, 0, 1000),
       saved: pct(m.saved, `months[${i}].saved`, -1000, 100),
+      ...(m.incomeRel === undefined ? {} : { incomeRel: pct(m.incomeRel, `months[${i}].incomeRel`, 0, 10000) }),
       categories: categories(m.categories, `months[${i}].categories`),
     };
   });
