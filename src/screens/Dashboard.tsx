@@ -429,31 +429,30 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       )}
       </View>
       {visibleGroups.length > 0 && (
-        // month summary, inside the card: ledger-style lines whose values line up under the Amount column,
-        // closed by the "left over" line as the total
+        // month summary, inside the card: Income, Expenses and the leftover as three compact columns (stacked on the phone),
+        // each with its total, a thin confirmed/pending bar and the two amounts. The leftover has no bar: it moves with every confirmation.
         <View style={[s.summary, { borderTopColor: c.border }, mobile && s.summaryMobile]}>
-          {mobile ? (
-            // phone: Income and Expenses share one quiet row, each a small column; the totals line stays below
-            <View style={s.summaryPair}>
-              {[
-                { label: 'Income', part: summary.income, color: c.income, help: 'Everything you earn this month. Confirmed already came in; pending is still expected. Refunds and loans are not counted.' },
-                { label: 'Expenses', part: summary.expense, color: c.expense, help: "All of this month's expenses, card invoices due this month included. Confirmed already happened; pending is still to pay." },
-              ].map((x) => (
-                <View key={x.label} style={s.summaryCol}>
-                  <View style={s.titleRow}>
-                    <Text style={[type.body, { color: c.textMuted, flexShrink: 1 }]} numberOfLines={1}>{x.label}</Text>
-                    <HelpTip title={x.label} text={x.help} />
-                  </View>
-                  <Text style={[type.label, { color: x.color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{formatMoney(x.part.total)}</Text>
-                  <View style={s.splitBar}>
-                    {x.part.total > 0 && (
-                      <>
-                        <View style={{ flex: x.part.confirmed, backgroundColor: x.color }} />
-                        <View style={{ flex: x.part.pending, backgroundColor: x.color, opacity: 0.3 }} />
-                      </>
-                    )}
-                  </View>
-                  {/* confirmed and pending: a check and a clock, then the amount (no words, to keep it short) */}
+          <View style={[s.summaryPair, !mobile && s.summaryTriple]}>
+            {[
+              { label: 'Income', part: summary.income, color: c.income, help: 'Everything you earn this month. Confirmed already came in; pending is still expected. Refunds and loans are not counted.' },
+              { label: 'Expenses', part: summary.expense, color: c.expense, help: "All of this month's expenses, card invoices due this month included. Confirmed already happened; pending is still to pay." },
+            ].map((x) => (
+              <View key={x.label} style={s.summaryCol}>
+                <View style={s.titleRow}>
+                  <Text style={[type.body, { color: c.textMuted, flexShrink: 1 }]} numberOfLines={1}>{x.label}</Text>
+                  <HelpTip title={x.label} text={x.help} />
+                </View>
+                <Text style={[type.label, { color: x.color, fontSize: 20 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{formatMoney(x.part.total)}</Text>
+                <View style={s.splitBar}>
+                  {x.part.total > 0 && (
+                    <>
+                      <View style={{ flex: x.part.confirmed, backgroundColor: x.color }} />
+                      <View style={{ flex: x.part.pending, backgroundColor: x.color, opacity: 0.3 }} />
+                    </>
+                  )}
+                </View>
+                {/* confirmed (check) and pending (clock), side by side */}
+                <View style={s.splitLegend}>
                   <View style={s.splitItem}>
                     <Feather name="check" size={14} color={c.textMuted} />
                     <Text style={[type.body, { color: c.text }]} numberOfLines={1}>{formatMoney(x.part.confirmed)}</Text>
@@ -463,75 +462,43 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
                     <Text style={[type.body, { color: c.text }]} numberOfLines={1}>{formatMoney(x.part.pending)}</Text>
                   </View>
                 </View>
-              ))}
-            </View>
-          ) : (
-            <>
-          {[
-            { label: 'Income', sign: '+', part: summary.income, color: c.income, help: 'Everything you earn this month. Confirmed already came in; pending is still expected. Refunds and loans are not counted.' },
-            { label: 'Expenses', sign: '-', part: summary.expense, color: c.expense, help: "All of this month's expenses, card invoices due this month included. Confirmed already happened; pending is still to pay." },
-          ].map((x) => (
-            <View key={x.label} style={[s.txRow, s.summaryRow]}>
-              {/* the line (label and total), a bar with the confirmed/pending proportion and the two amounts */}
-              <View style={[s.txMain, s.summaryMain]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={[s.titleRow, { flex: wide ? 5.7 : 1 }]}>
-                    <Text style={[type.body, { color: c.textMuted, flexShrink: 1 }]} numberOfLines={1}>{x.label}</Text>
-                    <HelpTip title={x.label} text={x.help} />
-                  </View>
-                  <Text style={[type.label, { color: x.color, flex: wide ? 1.5 : undefined, textAlign: 'right' }]} numberOfLines={1}>{x.sign} {formatMoney(x.part.total)}</Text>
+              </View>
+            ))}
+            {!mobile && (
+              <View style={[s.summaryCol, s.leftBox, { backgroundColor: c.surface }]}>
+                <View style={s.titleRow}>
+                  <Text style={[type.body, { color: c.textMuted, flexShrink: 1 }]} numberOfLines={1}>Expected left over</Text>
+                  <HelpTip title="Expected left over this month" text="Income minus all of the month's expenses, confirmed or pending. It is what goes into your accumulated wealth once everything happens." />
                 </View>
-                <View style={s.splitBar}>
-                  {x.part.total > 0 && (
-                    <>
-                      <View style={{ flex: x.part.confirmed, backgroundColor: x.color }} />
-                      <View style={{ flex: x.part.pending, backgroundColor: x.color, opacity: 0.3 }} />
-                    </>
-                  )}
-                </View>
-                <View style={s.splitLegend}>
-                  <View style={s.splitItem}>
-                    <Text style={[type.body, { color: c.textMuted }]}>Confirmed</Text>
-                    <Text style={[type.body, { color: c.text, fontWeight: '600' }]}>{formatMoney(x.part.confirmed)}</Text>
-                  </View>
-                  <View style={s.splitItem}>
-                    <Text style={[type.body, { color: c.textMuted }]}>Pending</Text>
-                    <Text style={[type.body, { color: c.text, fontWeight: '600' }]}>{formatMoney(x.part.pending)}</Text>
-                  </View>
+                <Text style={[type.title, { color: summary.left < 0 ? c.expense : c.primary, fontSize: 24 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{formatMoney(summary.left)}</Text>
+                <View style={[s.splitItem, { marginTop: 2 }]}>
+                  <Feather name="check" size={14} color={c.textMuted} />
+                  <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>So far</Text>
+                  <Text style={[type.body, { color: summary.leftNow < 0 ? c.expense : c.text, fontWeight: '600' }]} numberOfLines={1}>{formatMoney(summary.leftNow)}</Text>
+                  <HelpTip title="Left over so far" text="Confirmed income minus confirmed expenses: what you actually have left from this month right now." />
                 </View>
               </View>
-              <View style={{ width: 44 }} />
+            )}
+          </View>
+          {mobile && (
+            <View style={[s.leftBox, s.leftBoxMobile, { backgroundColor: c.surface }]}>
+              <View style={s.summaryCol}>
+                <View style={s.titleRow}>
+                  <Text style={[type.body, { color: c.textMuted, flexShrink: 1 }]} numberOfLines={1}>Expected left over</Text>
+                  <HelpTip title="Expected left over this month" text="Income minus all of the month's expenses, confirmed or pending. It is what goes into your accumulated wealth once everything happens." />
+                </View>
+                <Text style={[type.title, { color: summary.left < 0 ? c.expense : c.primary, fontSize: 22 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{formatMoney(summary.left)}</Text>
+              </View>
+              <View style={[s.summaryCol, { alignItems: 'flex-end' }]}>
+                <View style={s.titleRow}>
+                  <Feather name="check" size={14} color={c.textMuted} />
+                  <Text style={[type.body, { color: c.textMuted, flexShrink: 1 }]} numberOfLines={1}>So far</Text>
+                  <HelpTip title="Left over so far" text="Confirmed income minus confirmed expenses: what you actually have left from this month right now." />
+                </View>
+                <Text style={[type.label, { color: summary.leftNow < 0 ? c.expense : c.text, fontSize: 18 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{formatMoney(summary.leftNow)}</Text>
+              </View>
             </View>
-          ))}
-            </>
           )}
-          {/* the expected leftover is the headline (what goes into wealth); what you have right now is a quiet line below it,
-              in the summary rows' style (muted label, check icon, normal text color), no bar: it moves with every confirmation */}
-          <View style={[s.txRow, s.summaryTotal, { borderTopColor: c.border }]}>
-            <View style={[s.txMain, { minHeight: mobile ? 48 : 60 }]}>
-              <View style={[s.titleRow, { flex: wide ? 5.7 : 1 }]}>
-                <Text style={[type.label, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{mobile ? 'Expected left over' : 'Expected left over this month'}</Text>
-                <HelpTip title="Expected left over this month" text="Income minus all of the month's expenses, confirmed or pending. It is what goes into your accumulated wealth once everything happens." />
-              </View>
-              <Text style={[type.title, { color: summary.left < 0 ? c.expense : c.primary, fontSize: 22, flex: wide ? 1.5 : undefined, textAlign: 'right' }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                {formatMoney(summary.left)}
-              </Text>
-            </View>
-            <View style={{ width: 44 }} />
-          </View>
-          <View style={s.txRow}>
-            <View style={[s.txMain, { minHeight: 44 }]}>
-              <View style={[s.titleRow, { flex: wide ? 5.7 : 1 }]}>
-                <Feather name="check" size={14} color={c.textMuted} />
-                <Text style={[type.body, { color: c.textMuted, flexShrink: 1 }]} numberOfLines={1}>{mobile ? 'Left over now' : 'Left over so far'}</Text>
-                <HelpTip title="Left over so far" text="Confirmed income minus confirmed expenses: what you actually have left from this month right now." />
-              </View>
-              <Text style={[type.body, { color: summary.leftNow < 0 ? c.expense : c.text, fontWeight: '600', flex: wide ? 1.5 : undefined, textAlign: 'right' }]} numberOfLines={1}>
-                {formatMoney(summary.leftNow)}
-              </Text>
-            </View>
-            <View style={{ width: 44 }} />
-          </View>
         </View>
       )}
     </Card>
@@ -815,14 +782,14 @@ const s = StyleSheet.create({
   /** phone: Income and Expenses side by side, small columns */
   summaryPair: { flexDirection: 'row', gap: spacing.lg, paddingHorizontal: spacing.xl - 4, paddingTop: spacing.md, paddingBottom: spacing.sm },
   summaryCol: { flex: 1, minWidth: 0, gap: 4 },
-  summaryRow: { minHeight: 40 },
+  summaryTriple: { paddingBottom: spacing.md },
+  leftBox: { borderRadius: radius.card - 8, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, justifyContent: 'center' },
+  leftBoxMobile: { flexDirection: 'row', gap: spacing.lg, marginHorizontal: spacing.xl - 4, marginBottom: spacing.md },
   /** Income / Expenses block: line, proportion bar and the two amounts stacked */
-  summaryMain: { flexDirection: 'column', alignItems: 'stretch', justifyContent: 'center', gap: 6, paddingVertical: spacing.md },
   splitBar: { flexDirection: 'row', height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: c.surface },
   splitLegend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.lg, rowGap: 2 },
   splitItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   /** the total line: same white as the rest of the card, set apart by a hairline and bigger type (no different background) */
-  summaryTotal: { borderTopWidth: 1, minHeight: 60 },
   /** web: sticks under the fixed top bar while the page scrolls; solid white so rows pass beneath it */
   stickyHead: { backgroundColor: c.card, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, borderBottomWidth: 1, borderBottomColor: c.border, ...(Platform.OS === 'web' ? ({ position: 'sticky', top: 0, zIndex: 5 } as object) : null) },
   tableBody: { overflow: 'hidden' },
