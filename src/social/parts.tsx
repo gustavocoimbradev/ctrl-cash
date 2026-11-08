@@ -46,7 +46,8 @@ export function PersonRow({ person, onPress, right, subtitle }: { person: Pick<P
 }
 
 /** A small text button for the panel (quiet by default; `primary` fills it with the brand blue). */
-export function Pill({ label, icon, onPress, primary, danger, disabled }: { label: string; icon?: keyof typeof Feather.glyphMap; onPress: () => void; primary?: boolean; danger?: boolean; disabled?: boolean }) {
+/** `block` takes a whole row, `grow` shares the row with its neighbours (for phones, where buttons fill the width). */
+export function Pill({ label, icon, onPress, primary, danger, disabled, block, grow }: { label: string; icon?: keyof typeof Feather.glyphMap; onPress: () => void; primary?: boolean; danger?: boolean; disabled?: boolean; block?: boolean; grow?: boolean }) {
   const c = useColors();
   const fg = primary ? c.onPrimary : danger ? c.expense : c.text;
   return (
@@ -56,6 +57,8 @@ export function Pill({ label, icon, onPress, primary, danger, disabled }: { labe
       disabled={disabled}
       style={({ pressed, hovered }: any) => [
         s.pill,
+        block && { width: '100%' },
+        grow && { flexGrow: 1, flexBasis: 0, minWidth: 0 },
         { backgroundColor: primary ? c.primary : hovered ? c.surfaceAlt : c.surface, opacity: disabled ? 0.4 : pressed ? 0.8 : 1 },
         Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '150ms' } as object),
       ]}

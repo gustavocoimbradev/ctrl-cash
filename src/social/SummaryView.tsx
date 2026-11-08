@@ -15,8 +15,10 @@ const PALETTE = ['#E0446A', '#D9831F', '#8B5CF6', '#0EA5E9', '#1FA86A', '#F28BA3
 const OTHER = '#9AA5BC';
 /** the donut's largest size, its ring thickness and the room left around it for the percentage that points at a slice */
 const PIE_MAX = 232;
-const RING = 40;
-const MARGIN_X = 104;
+const RING_FULL = 40;
+const RING_COMPACT = 30;
+const MARGIN_X_FULL = 104;
+const MARGIN_X_COMPACT = 62;
 const MARGIN_Y = 30;
 
 const pct = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(1)}%`;
@@ -35,8 +37,10 @@ const arc = (cx: number, cy: number, r: number, a0: number, a1: number) => {
  * A donut: one slice per category. Hovering (or tapping) a slice makes it stand out and puts its percentage outside the
  * ring, at the end of a thin line from the slice. `onSelect` is told which slice the pointer is on.
  */
-function Pie({ slices, selected, onSelect, size, center }: { slices: { key: string; value: number; color: string }[]; selected: string | null; onSelect: (key: string | null) => void; size: number; center: React.ReactNode }) {
+function Pie({ slices, selected, onSelect, size, compact, center }: { slices: { key: string; value: number; color: string }[]; selected: string | null; onSelect: (key: string | null) => void; size: number; /** phones: a thinner ring and less room around it */ compact: boolean; center: React.ReactNode }) {
   const c = useColors();
+  const RING = compact ? RING_COMPACT : RING_FULL;
+  const MARGIN_X = compact ? MARGIN_X_COMPACT : MARGIN_X_FULL;
   const n = slices.length;
   // everything eases: the slices grow in and reshape when the period changes, the chosen one swells and the others fade
   const values = useTweenList(slices.map((sl) => sl.value), motion.slow);
@@ -91,12 +95,12 @@ function Pie({ slices, selected, onSelect, size, center }: { slices: { key: stri
   if (chosen && lead > 0.01) {
     const side = Math.sin((mid * Math.PI) / 180) >= 0 ? 1 : -1;
     const p0 = polar(cx, cy, size / 2 + 3, mid);
-    const p1 = polar(cx, cy, size / 2 + 3 + 17 * lead, mid);
-    const p2 = { x: p1.x + side * 18 * lead, y: p1.y };
+    const p1 = polar(cx, cy, size / 2 + 3 + (compact ? 9 : 17) * lead, mid);
+    const p2 = { x: p1.x + side * (compact ? 7 : 18) * lead, y: p1.y };
     leader = (
       <>
         <Path d={`M ${p0.x} ${p0.y} L ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`} stroke={chosen.color} strokeOpacity={lead} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        <SvgText x={p2.x + side * 6} y={p2.y + 6} fontSize={17} fontWeight="700" fontFamily={fontFamily} fill={chosen.color} fillOpacity={lead} textAnchor={side > 0 ? 'start' : 'end'}>{pct(r1(((target ?? chosen).value / pieTotalOf(slices)) * 100))}</SvgText>
+        <SvgText x={p2.x + side * 5} y={p2.y + 6} fontSize={compact ? 16 : 17} fontWeight="700" fontFamily={fontFamily} fill={chosen.color} fillOpacity={lead} textAnchor={side > 0 ? 'start' : 'end'}>{pct(r1(((target ?? chosen).value / pieTotalOf(slices)) * 100))}</SvgText>
       </>
     );
   }
@@ -267,11 +271,12 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
             slices={pieRows}
             selected={slice}
             onSelect={setSlice}
-            size={Math.max(150, Math.min(PIE_MAX, (pieBox.w || PIE_MAX + MARGIN_X * 2) - MARGIN_X * 2))}
+            compact={!wide}
+            size={Math.max(150, Math.min(PIE_MAX, (pieBox.w || PIE_MAX + MARGIN_X_FULL * 2) - (wide ? MARGIN_X_FULL : MARGIN_X_COMPACT) * 2))}
             center={
               <>
-                <Text style={[type.title, { color: c.expense }]}>{pct(r1(shownSpent))}</Text>
-                <Text style={[type.body, { color: c.textMuted }]}>of income spent</Text>
+                <Text style={[type.title, { color: c.expense, fontSize: wide ? 20 : 22 }]}>{pct(r1(shownSpent))}</Text>
+                <Text style={[type.body, { color: c.textMuted }]}>{wide ? 'of income spent' : 'spent'}</Text>
               </>
             }
           />
@@ -299,8 +304,8 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   return (
     <View style={{ gap: spacing.lg }}>
       <View style={s.head}>
-        <Text style={[type.label, { color: c.text }]}>Month by month</Text>
-        <PillToggle value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: `${h} months` }))} />
+        {wide ? <Text style={[type.label, { color: c.text }]}>Month by month</Text> : null}
+        <PillToggle stretch={!wide} value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: `${h} months` }))} />
       </View>
       <View style={[{ gap: spacing.xl }, wide && { flexDirection: 'row', alignItems: 'flex-start' }]}>
         {chart}
@@ -318,7 +323,7 @@ const s = StyleSheet.create({
   tipPill: { flex: 1, minHeight: 44, borderRadius: 14, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   tipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   miniTrack: { flex: 1, height: 8, borderRadius: 4, overflow: 'hidden' },
-  pieCenter: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: RING + 12 },
+  pieCenter: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44, paddingHorizontal: spacing.sm, borderRadius: 12 },
   swatch: { width: 12, height: 12, borderRadius: 6 },
 });

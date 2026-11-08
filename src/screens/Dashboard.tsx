@@ -26,7 +26,6 @@ import { useCurrentBalance } from '../store/useCurrentBalance';
 import { colors as c, glow, radius, spacing, type } from '../theme';
 import { CreditCard, Occurrence, Transaction } from '../types';
 import type { MobileTab } from '../components/BottomBar';
-import { CardsContent } from './CardsSheet';
 import { StatementKind, StatementSheet } from './Statements';
 import { FormPreset } from './TransactionForm';
 
@@ -701,14 +700,6 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
           {mobileTab === 'summary' && stats}
           {mobileTab === 'projection' && <Reveal>{chartCard}</Reveal>}
           {mobileTab === 'transactions' && <Reveal>{table}</Reveal>}
-          {mobileTab === 'cards' && (
-            <Reveal>
-              <Card>
-                <Text style={[type.title, { color: c.text, textAlign: 'center' }]}>Cards</Text>
-                <CardsContent />
-              </Card>
-            </Reveal>
-          )}
         </View>
       ) : wide ? (
         <View style={s.cols}>

@@ -74,12 +74,12 @@ function Header({ name, code, color, photo, counters, actions }: { name: string;
           <CodeChip code={code} />
         </View>
         {counters?.length ? (
-          <View style={{ flexDirection: 'row', gap: spacing.xs, marginLeft: wide ? -COUNT_PAD : 0 }}>
+          <View style={{ flexDirection: 'row', gap: spacing.xs, marginLeft: wide ? -COUNT_PAD : 0, alignSelf: wide ? 'flex-start' : 'stretch', justifyContent: 'center' }}>
             {counters.map((x) => <Count key={x.label} n={x.n} label={x.label} onPress={x.onPress} />)}
           </View>
         ) : null}
       </View>
-      {actions ? <View style={[s.actions, !wide && { justifyContent: 'center' }]}>{actions}</View> : null}
+      {actions ? <View style={[s.actions, !wide && { alignSelf: 'stretch' }]}>{actions}</View> : null}
     </Card>
   );
 }
@@ -132,6 +132,8 @@ function ShareDialog({ visible, onClose }: { visible: boolean; onClose: () => vo
 /** My own profile: the summary (only I can see it) and who I share it with, or who shares theirs with me. */
 function OwnProfile({ onOpen, onEditAccount, email }: { onOpen: (code: string) => void; onEditAccount: () => void; email: string }) {
   const c = useColors();
+  const { width } = useWindowDimensions();
+  const narrow = width < desktopBreakpoint;
   const { profile, given, received } = useSocial();
   const { data } = useStore();
   const [editing, setEditing] = useState(false);
@@ -160,9 +162,9 @@ function OwnProfile({ onOpen, onEditAccount, email }: { onOpen: (code: string) =
         ]}
         actions={
           <>
-            <Pill label="Share data" icon="share-2" primary onPress={() => setDialog('share')} />
-            <Pill label="Edit profile" icon="edit-2" onPress={() => setEditing(true)} />
-            <Pill label="Edit account" icon="settings" onPress={onEditAccount} />
+            <Pill label="Share data" icon="share-2" primary block={narrow} onPress={() => setDialog('share')} />
+            <Pill label="Edit profile" icon="edit-2" grow={narrow} onPress={() => setEditing(true)} />
+            <Pill label="Edit account" icon="settings" grow={narrow} onPress={onEditAccount} />
           </>
         }
       />
@@ -190,6 +192,8 @@ function OwnProfile({ onOpen, onEditAccount, email }: { onOpen: (code: string) =
 /** Somebody else's profile: message them, share mine with them and, when they shared theirs, their summary. */
 function OtherProfile({ code }: { code: string }) {
   const c = useColors();
+  const { width } = useWindowDimensions();
+  const narrow = width < desktopBreakpoint;
   const { share, revoke, openChat } = useSocial();
   const [person, setPerson] = useState<PersonDetail | null>(null);
   const [summary, setSummary] = useState<{ summary: Summary | null; updatedAt: number | null } | null>(null);
@@ -234,8 +238,8 @@ function OtherProfile({ code }: { code: string }) {
         photo={person.photo}
         actions={
           <>
-            <Pill label="Message" icon="message-circle" primary onPress={() => openChat(code)} />
-            <Pill label={person.sharedWithThem ? 'Stop sharing my data' : 'Share my data'} icon="share-2" danger={person.sharedWithThem} disabled={busy} onPress={toggle} />
+            <Pill label="Message" icon="message-circle" primary grow={narrow} onPress={() => openChat(code)} />
+            <Pill label={person.sharedWithThem ? 'Stop sharing' : 'Share my data'} icon="share-2" danger={person.sharedWithThem} grow={narrow} disabled={busy} onPress={toggle} />
           </>
         }
       />

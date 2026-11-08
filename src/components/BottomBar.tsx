@@ -5,15 +5,15 @@ import { colors as c, spacing } from '../theme';
 import { motion, useReducedMotion } from '../theme/motion';
 import { Reveal } from './Reveal';
 
-export type MobileTab = 'summary' | 'projection' | 'transactions' | 'cards';
+export type MobileTab = 'summary' | 'projection' | 'transactions';
 
-/** Five equal slots: two tabs, the + in the center, two tabs (the + is not a tab). */
-const SLOTS: ({ key: MobileTab; icon: keyof typeof Feather.glyphMap; label: string } | 'add')[] = [
+/** Five equal slots: two tabs, the + in the center, a tab and the profile avatar (the + and the avatar are not tabs). */
+const SLOTS: ({ key: MobileTab; icon: keyof typeof Feather.glyphMap; label: string } | 'add' | 'profile')[] = [
   { key: 'summary', icon: 'pie-chart', label: 'Summary' },
   { key: 'projection', icon: 'trending-up', label: 'Projection' },
   'add',
   { key: 'transactions', icon: 'list', label: 'Transactions' },
-  { key: 'cards', icon: 'credit-card', label: 'Cards' },
+  'profile',
 ];
 
 /** side padding of the bar (same margin as the content) and vertical padding */
@@ -27,10 +27,17 @@ const SIZE = 48;
  * no shadow, no dark fill): four icon tabs with the + button perfectly centered, and a soft tinted
  * circle that slides to the active tab. Muted icons, the active one in the accent color.
  */
-export function BottomBar({ tab, onChange, onAdd }: { tab: MobileTab; onChange: (t: MobileTab) => void; onAdd: () => void }) {
+/** `tab` is null while a page that is not one of the tabs (a profile) is open: no tab is highlighted then. */
+export function BottomBar({ tab, onChange, onAdd, onProfile, avatar }: { tab: MobileTab | null; onChange: (t: MobileTab) => void; onAdd: () => void; onProfile: () => void; avatar: React.ReactNode }) {
   const reduced = useReducedMotion();
-  const slot = SLOTS.findIndex((x) => x !== 'add' && x.key === tab);
+  const found = SLOTS.findIndex((x) => x !== 'add' && x !== 'profile' && x.key === tab);
+  const slot = found < 0 ? 0 : found;
   const pos = useRef(new Animated.Value(slot)).current;
+  /** the highlight fades away while no tab is the active one */
+  const shown = useRef(new Animated.Value(found < 0 ? 0 : 1)).current;
+  useEffect(() => {
+    Animated.timing(shown, { toValue: found < 0 ? 0 : 1, duration: motion.base, easing: motion.ease, useNativeDriver: Platform.OS !== 'web' }).start();
+  }, [found, shown]);
   const [ready, setReady] = useState(false);
   const [barW, setBarW] = useState(0);
   // each slot has the same width (the bar fills the full width); the highlight is a circle centered on the active slot
@@ -49,7 +56,7 @@ export function BottomBar({ tab, onChange, onAdd }: { tab: MobileTab; onChange: 
     <View pointerEvents="box-none" style={s.wrap}>
       <Reveal distance={16} duration={320} style={{ alignSelf: 'stretch' }}>
         <View style={s.bar} onLayout={(e) => setBarW(e.nativeEvent.layout.width)}>
-          {slotW > 0 && <Animated.View pointerEvents="none" style={[s.pill, { transform: [{ translateX }] }]} />}
+          {slotW > 0 && <Animated.View pointerEvents="none" style={[s.pill, { opacity: shown, transform: [{ translateX }] }]} />}
           {SLOTS.map((it, i) =>
             it === 'add' ? (
               <View key="add" style={s.item}>
@@ -57,6 +64,10 @@ export function BottomBar({ tab, onChange, onAdd }: { tab: MobileTab; onChange: 
                   <Feather name="plus" size={24} color={c.onPrimary} />
                 </Pressable>
               </View>
+            ) : it === 'profile' ? (
+              <Pressable key="profile" accessibilityRole="button" accessibilityLabel="My profile" onPress={onProfile} style={({ pressed }) => [s.item, { opacity: pressed ? 0.7 : 1 }]}>
+                {avatar}
+              </Pressable>
             ) : (
               <Pressable
                 key={it.key}

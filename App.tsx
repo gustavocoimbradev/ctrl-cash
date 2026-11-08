@@ -20,6 +20,7 @@ import { StoreProvider, useStore } from './src/store';
 import { SocialProvider, useSocial } from './src/social/SocialProvider';
 import { ChatDock } from './src/social/ChatDock';
 import { Avatar } from './src/social/parts';
+import { MenuDrawer } from './src/components/MenuDrawer';
 import { ProfilePage } from './src/social/ProfilePage';
 import { Transaction } from './src/types';
 import { desktopBreakpoint, maxContentWidth, minTouch, radius, spacing, type, useColors } from './src/theme';
@@ -55,6 +56,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   const [seen, setSeen] = useState(() => onboardingSeen(uid));
   const [hidden, setHidden] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   /** the page on screen: the dashboard, or a profile (yours or somebody else's) */
   const [page, setPage] = useState<Page>(pageFromUrl);
   const { profile: myProfile } = useSocial();
@@ -100,14 +102,6 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
     };
   }, [c.card]);
 
-  const avatar = (
-    <Pressable accessibilityRole="button" accessibilityLabel="Account settings" onPress={() => setAccountOpen(true)} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-      <View style={[s.avatar, { backgroundColor: c.surfaceAlt }]}>
-        <Text style={[type.label, { color: c.primary }]}>{name.charAt(0).toUpperCase()}</Text>
-      </View>
-    </Pressable>
-  );
-
   return (
     <View style={[s.root, { backgroundColor: c.bg }]}>
       <StatusBar style="dark" />
@@ -138,20 +132,13 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
             </View>
           </View>
         ) : (
-          // mobile: avatar with greeting on the left and sign out on the right (cards is a bottom bar tab)
+          // phone: the brand on the left and the menu (a panel with everything that is not on the bottom bar) on the right
           <View style={s.topInner}>
-            {avatar}
-            <Pressable accessibilityRole="button" accessibilityLabel="Account settings" onPress={() => setAccountOpen(true)} style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[type.label, { color: c.text, lineHeight: 22 }]} numberOfLines={1}>{name}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Dashboard" onPress={toDashboard} style={[s.brandRow, { flex: 1 }]}>
+              <Brand size={18} color={c.text} />
             </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={() => setPage({ name: 'profile', id: 'me' })} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}>
-              <Feather name="user" size={20} color={c.textMuted} />
-            </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Categories" onPress={() => setCategoriesOpen(true)} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}>
-              <Feather name="tag" size={20} color={c.textMuted} />
-            </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={onSignOut} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}>
-              <Feather name="log-out" size={20} color={c.textMuted} />
+            <Pressable accessibilityRole="button" accessibilityLabel="Open menu" onPress={() => setMenuOpen(true)} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}>
+              <Feather name="menu" size={22} color={c.textMuted} />
             </Pressable>
           </View>
         )}
@@ -179,7 +166,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
               mobileTab={tab}
               month={month}
               onMonthChange={setMonth}
-              onOpenCards={() => (desktop ? setCardsOpen(true) : setTab('cards'))}
+              onOpenCards={() => setCardsOpen(true)}
               onOpenCategories={() => setCategoriesOpen(true)}
               onPayInvoice={(p) => {
                 setEditing(undefined);
@@ -203,13 +190,15 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
       </ScrollView>
       {!desktop && ready && (
         <BottomBar
-          tab={tab}
+          tab={page.name === 'dashboard' ? tab : null}
           onChange={(t) => { toDashboard(); setTab(t); }}
           onAdd={() => {
             setEditing(undefined);
             setPreset(undefined);
             setFormOpen(true);
           }}
+          onProfile={() => setPage({ name: 'profile', id: 'me' })}
+          avatar={<Avatar name={myProfile?.displayName ?? name} id={myProfile?.code ?? 'me'} color={myProfile?.color} photo={myProfile?.photo} size={34} />}
         />
       )}
       <Onboarding key={setupRun} visible={ready && fresh && !seen && !hidden && !accountOpen} onClose={() => setHidden(true)} onDone={finishOnboarding} />
@@ -227,6 +216,25 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
         }}
       />
       {ready ? <ChatDock mobile={!desktop} onOpenProfile={(h) => setPage({ name: 'profile', id: h })} /> : null}
+      <MenuDrawer
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        header={
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <Avatar name={myProfile?.displayName ?? name} id={myProfile?.code ?? 'me'} color={myProfile?.color} photo={myProfile?.photo} size={44} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{myProfile?.displayName ?? name}</Text>
+              {myProfile ? <Text style={[type.body, { color: c.textMuted, letterSpacing: 2 }]}>{myProfile.code}</Text> : null}
+            </View>
+          </View>
+        }
+        items={[
+          { key: 'cards', icon: 'credit-card', label: 'Cards', onPress: () => setCardsOpen(true) },
+          { key: 'categories', icon: 'tag', label: 'Categories', onPress: () => setCategoriesOpen(true) },
+          { key: 'account', icon: 'settings', label: 'Account settings', onPress: () => setAccountOpen(true) },
+          { key: 'out', icon: 'log-out', label: 'Sign out', onPress: onSignOut, danger: true },
+        ]}
+      />
       <CardsSheet visible={cardsOpen} onClose={() => setCardsOpen(false)} />
       <CategoriesSheet visible={categoriesOpen} onClose={() => setCategoriesOpen(false)} />
       <TransactionForm visible={formOpen} transaction={editing} occurrenceMonth={editingMonth} preset={preset} onClose={() => setFormOpen(false)} />
