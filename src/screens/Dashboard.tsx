@@ -517,12 +517,13 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
   );
 
   // no data yet: start from the best (full score and full bars), so it begins with a good feeling
-  const health = financialHealth(runway, debtTotal, avgExpense, quality) ?? { score: 1000, saved: 40, debt: 30, habits: 30, label: 'Excellent' };
+  const health = financialHealth(runway, debtTotal, avgExpense, quality, { left: summary.left, income: summary.income.total }) ?? { score: 1000, saved: 40, debt: 30, habits: 30, month: 1, label: 'Excellent' };
   const healthColor = health.score < 250 ? c.expense : health.score < 500 ? c.warning : c.primary;
   const factors = [
     { label: 'Wealth', v: health.saved / 40 },
     { label: 'Debt-free', v: health.debt / 30 },
     { label: 'Healthy spending', v: health.habits / 30 },
+    { label: 'Month result', v: health.month },
   ];
   // what makes up the score (pulling it down / pushing it up), from the same numbers the score uses
   const activeCards = cards.filter((x) => !x.archivedAt);

@@ -63,6 +63,8 @@ export interface Health {
   saved: number;
   debt: number;
   habits: number;
+  /** how much of the score the month's result keeps, 0 to 1 (1 = a healthy leftover, lower as it shrinks or turns negative) */
+  month: number;
   label: 'Critical' | 'Warning' | 'Good' | 'Excellent';
 }
 
@@ -96,15 +98,35 @@ export function spendQuality(spends: Spend[]): number | null {
  *   measured by runway (peace of mind); full at 12 months;
  * - **Debt-free** (30 pts): card debt; drops to zero at 2 months of expenses;
  * - **Healthy spending** (30 pts): spending quality (categories and planning); with no spending, full.
+ * Then the month's result scales the whole score (`monthResultKeep`): a small leftover, or spending more than you earn,
+ * pulls it down a lot.
  * null without data to evaluate (no expenses to measure the runway).
  */
-export function financialHealth(runway: number | null, debt: number, avgExpense: number, quality: number | null): Health | null {
+/**
+ * How much of the score the month's result keeps. A leftover of 20% of the income or more costs nothing; below that
+ * the score falls fast (a leftover of 0 keeps 50%), and spending more than you earn keeps at most 50% and goes down to
+ * 15% when the shortfall is a quarter of the income or more (and the score never passes 499, "Warning", while the month
+ * ends in the red). Without income there is nothing to compare: no penalty
+ * unless the month is negative.
+ */
+export function monthResultKeep(left: number, income: number): number {
+  if (income <= 0) return left < 0 ? 0.3 : 1;
+  const ratio = left / income;
+  if (ratio >= 0.2) return 1;
+  if (ratio >= 0) return 0.5 + 0.5 * (ratio / 0.2);
+  return Math.max(0.15, 0.5 - (-ratio / 0.25) * 0.35);
+}
+
+export function financialHealth(runway: number | null, debt: number, avgExpense: number, quality: number | null, monthResult?: { left: number; income: number }): Health | null {
   if (runway === null) return null;
   const saved = Math.min(runway / 12, 1) * 40;
   const debtPts = 30 * Math.max(0, 1 - debt / avgExpense / 2);
   const habits = quality === null ? 30 : 30 * quality;
   // factors add up to 100; the score is shown from 0 to 1000
-  const score = Math.round((saved + debtPts + habits) * 10);
+  const month = monthResult ? monthResultKeep(monthResult.left, monthResult.income) : 1;
+  let score = Math.round((saved + debtPts + habits) * 10 * month);
+  // ending the month owing money is never "Good", whatever else is fine
+  if (monthResult && monthResult.left < 0) score = Math.min(score, 499);
   const label = score < 250 ? 'Critical' : score < 500 ? 'Warning' : score < 750 ? 'Good' : 'Excellent';
-  return { score, saved, debt: debtPts, habits, label };
+  return { score, saved, debt: debtPts, habits, month, label };
 }
