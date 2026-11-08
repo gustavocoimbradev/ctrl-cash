@@ -69,7 +69,7 @@ export function CategoriesSheet({ visible, onClose }: { visible: boolean; onClos
   const [kind, setKind] = useState<Kind>('expense');
   const [form, setForm] = useState<{ category?: Category } | null>(null);
   return (
-    <Sheet visible={visible} title="Categories" onClose={onClose} footer={<Button label="New category" icon="plus" onPress={() => setForm({})} flex />}>
+    <Sheet screen visible={visible} title="Categories" onClose={onClose} footer={<Button label="New category" icon="plus" onPress={() => setForm({})} flex />}>
       <CategoriesList kind={kind} onKind={setKind} onEdit={(category) => setForm({ category })} />
       <CategoryForm visible={!!form} kind={kind} category={form?.category} onClose={() => setForm(null)} />
     </Sheet>

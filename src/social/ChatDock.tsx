@@ -120,12 +120,12 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
         <Animated.View
           style={[
             s.window,
-            mobile ? { left: 0, right: 0, top: spacing.xl, bottom: 0, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card } : { ...place, width: WIDTH, height, borderRadius: radius.card },
-            glow('#1E2950', 40, 0.5),
+            mobile ? { left: 0, right: 0, top: 0, bottom: 0, borderRadius: 0, borderWidth: 0 } : { ...place, width: WIDTH, height, borderRadius: radius.card },
+            !mobile && glow('#1E2950', 40, 0.5),
             { backgroundColor: c.card, borderColor: c.border, opacity: enter, transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }, { scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1] }) }] },
           ]}
         >
-          <View style={[s.header, { borderBottomColor: c.border }]}>
+          <View style={[s.header, mobile && s.headerPhone, { borderBottomColor: c.border }]}>
             {chat.with ? (
               <>
                 <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={chatList} style={s.iconBtn}>
@@ -137,7 +137,12 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
                 </Pressable>
               </>
             ) : (
-              <View style={[s.who, { paddingLeft: spacing.sm }]}>
+              <View style={[s.who, { paddingLeft: mobile ? 0 : spacing.sm }]}>
+                {mobile && !composing ? (
+                  <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={closeChat} style={s.iconBtn}>
+                    <Feather name="arrow-left" size={24} color={c.text} />
+                  </Pressable>
+                ) : null}
                 {composing ? (
                   <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => { setComposing(false); finder.clear(); }} style={[s.iconBtn, { marginLeft: -spacing.sm }]}>
                     <Feather name="arrow-left" size={22} color={c.text} />
@@ -151,9 +156,11 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
                 ) : null}
               </View>
             )}
-            <Pressable accessibilityRole="button" accessibilityLabel="Close chat" onPress={closeChat} style={s.iconBtn}>
-              <Feather name="x" size={22} color={c.textMuted} />
-            </Pressable>
+            {mobile ? null : (
+              <Pressable accessibilityRole="button" accessibilityLabel="Close chat" onPress={closeChat} style={s.iconBtn}>
+                <Feather name="x" size={22} color={c.textMuted} />
+              </Pressable>
+            )}
           </View>
           {profile && chat.with ? (
             <Thread key={chat.with} id={chat.with} />
@@ -175,6 +182,8 @@ const s = StyleSheet.create({
   count: { minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   window: { position: 'absolute', zIndex: 31, overflow: 'hidden', borderWidth: 1 },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 60, paddingHorizontal: spacing.sm, borderBottomWidth: 1 },
+  /** a screen's top bar on the phone: under the status area, with a back arrow */
+  headerPhone: { minHeight: 64, paddingLeft: spacing.sm, ...(Platform.OS === 'web' ? ({ paddingTop: 'calc(env(safe-area-inset-top) + 6px)' } as object) : null) },
   iconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   who: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44 },
   body: { padding: spacing.lg, paddingBottom: spacing.xl },

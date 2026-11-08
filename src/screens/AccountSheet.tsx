@@ -72,7 +72,7 @@ export function AccountSheet({ visible, email, onClose, onCleared }: { visible: 
   );
 
   return (
-    <Sheet visible={visible} title="Account" onClose={onClose}>
+    <Sheet screen visible={visible} title="Account" onClose={onClose}>
       <View style={{ gap: spacing.xl }}>
         <View style={{ gap: spacing.sm }}>
           <Text style={[type.label, { color: c.text }]}>Email</Text>

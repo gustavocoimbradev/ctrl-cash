@@ -76,7 +76,7 @@ export function CardsContent() {
 export function CardsSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [form, setForm] = useState<{ card?: CreditCard } | null>(null);
   return (
-    <Sheet visible={visible} title="Cards" onClose={onClose} footer={<Button label="New card" icon="plus" onPress={() => setForm({})} flex />}>
+    <Sheet screen visible={visible} title="Cards" onClose={onClose} footer={<Button label="New card" icon="plus" onPress={() => setForm({})} flex />}>
       <CardsList onEdit={(card) => setForm({ card })} />
       <CardForm visible={!!form} card={form?.card} onClose={() => setForm(null)} />
     </Sheet>

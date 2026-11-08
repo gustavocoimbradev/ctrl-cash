@@ -12,6 +12,8 @@ interface Props {
   footer?: React.ReactNode;
   /** pinned under the header: it does not scroll, only `children` do (summary and tabs above a long list) */
   fixed?: React.ReactNode;
+  /** on the phone, open as a full screen (a back arrow and the title on top) instead of a bottom sheet; larger screens keep the dialog */
+  screen?: boolean;
 }
 
 /**
@@ -19,7 +21,7 @@ interface Props {
  * (fade + slide + scale); during exit the content stays frozen as it was, so it does not
  * change or vanish abruptly while the dialog closes.
  */
-export function Sheet({ visible, title, onClose, children, footer, fixed }: Props) {
+export function Sheet({ visible, title, onClose, children, footer, fixed, screen }: Props) {
   const scroller = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const reduced = useReducedMotion();
   const enter = useRef(new Animated.Value(0)).current;
@@ -54,6 +56,7 @@ export function Sheet({ visible, title, onClose, children, footer, fixed }: Prop
   const desktop = width >= desktopBreakpoint;
   // generous inner space: 32px on desktop, 24px on mobile (the content never hugs the edges)
   const pad = desktop ? spacing.xxl : spacing.xl;
+  const asScreen = !!screen && !desktop;
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -62,21 +65,31 @@ export function Sheet({ visible, title, onClose, children, footer, fixed }: Prop
           <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.overlay, opacity: enter }, Platform.OS === 'web' && ({ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } as object)]} />
           <Pressable
             onPress={() => {}}
-            style={[s.wrap, glow('#1E2950', 40, 0.5), desktop ? s.panelDesktop : s.panelMobile, Platform.OS === 'web' && ({ cursor: 'default' } as object)]}
+            style={[s.wrap, asScreen ? s.wrapScreen : glow('#1E2950', 40, 0.5), asScreen ? null : desktop ? s.panelDesktop : s.panelMobile, Platform.OS === 'web' && ({ cursor: 'default' } as object)]}
           >
-          <Animated.View style={{ maxHeight: '100%', opacity: enter, transform: desktop ? [{ scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }] : [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [28, 0] }) }] }}>
-          <View style={[s.panel, { backgroundColor: c.card }]}>
-            <View style={[s.header, { paddingHorizontal: pad, paddingTop: pad - 4 }]}>
-              <Text style={[type.title, { color: c.text, flex: 1 }]}>{view.title}</Text>
-              <Pressable accessibilityLabel="Close" onPress={onClose} style={s.close}>
-                <Feather name="x" size={22} color={c.textMuted} />
-              </Pressable>
-            </View>
+          <Animated.View style={[{ maxHeight: '100%', opacity: enter, transform: asScreen ? [{ translateX: enter.interpolate({ inputRange: [0, 1], outputRange: [36, 0] }) }] : desktop ? [{ scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }] : [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [28, 0] }) }] }, asScreen && { flex: 1, maxHeight: undefined }]}>
+          <View style={[s.panel, { backgroundColor: c.card }, asScreen && s.panelScreen]}>
+            {asScreen ? (
+              <View style={[s.header, s.headerScreen, { borderBottomColor: c.border }]}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onClose} style={s.back}>
+                  <Feather name="arrow-left" size={24} color={c.text} />
+                </Pressable>
+                <Text style={[type.title, { color: c.text, flex: 1 }]} numberOfLines={1}>{view.title}</Text>
+              </View>
+            ) : (
+              <View style={[s.header, { paddingHorizontal: pad, paddingTop: pad - 4 }]}>
+                <Text style={[type.title, { color: c.text, flex: 1 }]}>{view.title}</Text>
+                <Pressable accessibilityLabel="Close" onPress={onClose} style={s.close}>
+                  <Feather name="x" size={22} color={c.textMuted} />
+                </Pressable>
+              </View>
+            )}
             {view.fixed ? <View style={[s.fixed, { paddingHorizontal: pad, borderColor: c.border }]}>{view.fixed}</View> : null}
             <ScrollView
               ref={scroller}
+              style={asScreen ? { flex: 1 } : undefined}
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={[s.body, { paddingHorizontal: pad, paddingBottom: pad }, view.fixed ? { paddingTop: spacing.lg } : null]}
+              contentContainerStyle={[s.body, { paddingHorizontal: pad, paddingBottom: pad }, asScreen ? { paddingTop: spacing.xl } : null, view.fixed ? { paddingTop: spacing.lg } : null]}
             >
               {view.children}
             </ScrollView>
@@ -96,6 +109,11 @@ const s = StyleSheet.create({
   wrap: { borderRadius: radius.card },
   gradBorder: { padding: 1, borderRadius: radius.card, maxHeight: '100%' },
   panel: { overflow: 'hidden', borderRadius: radius.card - 1, maxHeight: '100%' },
+  wrapScreen: { width: '100%', height: '100%', borderRadius: 0 },
+  panelScreen: { flex: 1, maxHeight: undefined, borderRadius: 0 },
+  /** a screen's top bar: back arrow and title, under the phone's status area */
+  headerScreen: { paddingHorizontal: spacing.sm, paddingTop: Platform.OS === 'web' ? ('calc(env(safe-area-inset-top) + 6px)' as unknown as number) : spacing.md, paddingBottom: spacing.sm, minHeight: 64, borderBottomWidth: 1, gap: spacing.xs },
+  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   panelMobile: { width: '100%', maxHeight: '92%', borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card },
   panelDesktop: { width: 620, maxWidth: '94%', maxHeight: '90%' },
   header: { flexDirection: 'row', alignItems: 'center', paddingBottom: spacing.md },
