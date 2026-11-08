@@ -160,6 +160,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       income: { total: totals.income, confirmed: Math.min(confirmedIncome, totals.income), pending: Math.max(totals.income - confirmedIncome, 0) },
       expense: { total: totals.expense, confirmed: Math.min(confirmedExpense, totals.expense), pending: Math.max(totals.expense - confirmedExpense, 0) },
       left: totals.income - totals.expense,
+      leftNow: Math.min(confirmedIncome, totals.income) - Math.min(confirmedExpense, totals.expense),
     };
     return {
       entries,
@@ -504,18 +505,23 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
           ))}
             </>
           )}
-          <View style={[s.txRow, s.summaryTotal, { borderTopColor: c.border }]}>
-            <View style={[s.txMain, { minHeight: mobile ? 48 : 60 }]}>
-              <View style={[s.titleRow, { flex: wide ? 5.7 : 1 }]}>
-                <Text style={[type.label, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{mobile ? 'Left over' : 'Left over this month'}</Text>
-                <HelpTip title="Left over this month" text="Income minus all of the month's expenses, confirmed or pending. It is what goes into your accumulated wealth." />
+          {[
+            { label: mobile ? 'Left over now' : 'Left over so far', value: summary.leftNow, help: "Confirmed income minus confirmed expenses: what you actually have left from this month right now." },
+            { label: mobile ? 'Expected left over' : 'Expected left over this month', value: summary.left, help: "Income minus all of the month's expenses, confirmed or pending. It is what goes into your accumulated wealth once everything happens." },
+          ].map((x, i) => (
+            <View key={x.label} style={[s.txRow, i === 0 && s.summaryTotal, { borderTopColor: c.border }]}>
+              <View style={[s.txMain, { minHeight: mobile ? 48 : 60 }]}>
+                <View style={[s.titleRow, { flex: wide ? 5.7 : 1 }]}>
+                  <Text style={[type.label, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{x.label}</Text>
+                  <HelpTip title={x.label} text={x.help} />
+                </View>
+                <Text style={[type.title, { color: x.value < 0 ? c.expense : c.primary, fontSize: 22, flex: wide ? 1.5 : undefined, textAlign: 'right' }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                  {formatMoney(x.value)}
+                </Text>
               </View>
-              <Text style={[type.title, { color: summary.left < 0 ? c.expense : c.primary, fontSize: 22, flex: wide ? 1.5 : undefined, textAlign: 'right' }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                {formatMoney(summary.left)}
-              </Text>
+              <View style={{ width: 44 }} />
             </View>
-            <View style={{ width: 44 }} />
-          </View>
+          ))}
         </View>
       )}
     </Card>
