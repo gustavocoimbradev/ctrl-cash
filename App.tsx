@@ -17,6 +17,8 @@ import { HelpProvider } from './src/components/HelpTip';
 import { Reveal } from './src/components/Reveal';
 import { Skeleton } from './src/components/Motion';
 import { StoreProvider, useStore } from './src/store';
+import { SocialProvider, useSocial } from './src/social/SocialProvider';
+import { SocialPanel } from './src/social/SocialPanel';
 import { Transaction } from './src/types';
 import { desktopBreakpoint, maxContentWidth, minTouch, radius, spacing, type, useColors } from './src/theme';
 
@@ -40,6 +42,8 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   const [seen, setSeen] = useState(() => onboardingSeen(uid));
   const [hidden, setHidden] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const { unread } = useSocial();
   const [setupRun, setSetupRun] = useState(0);
   const fresh = data.transactions.length === 0 && data.cards.length === 0 && data.reserves.length === 0;
   const finishOnboarding = () => {
@@ -66,6 +70,23 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
       <View style={[s.avatar, { backgroundColor: c.surfaceAlt }]}>
         <Text style={[type.label, { color: c.primary }]}>{name.charAt(0).toUpperCase()}</Text>
       </View>
+    </Pressable>
+  );
+
+  // the social panel opens from here: a chat bubble with the count of unread messages
+  const chatButton = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={unread > 0 ? `Chat, ${unread} unread` : 'Chat'}
+      onPress={() => setChatOpen(true)}
+      style={({ pressed, hovered }: any) => [s.iconBtn, { backgroundColor: hovered || !desktop ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}
+    >
+      <Feather name="message-circle" size={20} color={c.textMuted} />
+      {unread > 0 ? (
+        <View style={[s.badge, { backgroundColor: c.expense, borderColor: c.card }]}>
+          <Text style={s.badgeText}>{unread > 9 ? '9+' : unread}</Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 
@@ -99,6 +120,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
               <Feather name="tag" size={20} color={c.textMuted} />
               <Text style={[type.label, { color: c.textMuted }]}>Categories</Text>
             </Pressable>
+            {chatButton}
             {avatar}
             <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={onSignOut} style={({ pressed, hovered }: any) => [s.iconBtn, { backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}>
               <Feather name="log-out" size={20} color={c.textMuted} />
@@ -111,6 +133,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
             <Pressable accessibilityRole="button" accessibilityLabel="Account settings" onPress={() => setAccountOpen(true)} style={{ flex: 1, minWidth: 0 }}>
               <Text style={[type.label, { color: c.text, lineHeight: 22 }]} numberOfLines={1}>{name}</Text>
             </Pressable>
+            {chatButton}
             <Pressable accessibilityRole="button" accessibilityLabel="Categories" onPress={() => setCategoriesOpen(true)} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}>
               <Feather name="tag" size={20} color={c.textMuted} />
             </Pressable>
@@ -186,6 +209,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
           setAccountOpen(false);
         }}
       />
+      <SocialPanel visible={chatOpen} email={email} onClose={() => setChatOpen(false)} />
       <CardsSheet visible={cardsOpen} onClose={() => setCardsOpen(false)} />
       <CategoriesSheet visible={categoriesOpen} onClose={() => setCategoriesOpen(false)} />
       <TransactionForm visible={formOpen} transaction={editing} occurrenceMonth={editingMonth} preset={preset} onClose={() => setFormOpen(false)} />
@@ -200,7 +224,9 @@ export default function App() {
   return (
     <StoreProvider uid={state.uid}>
       <HelpProvider>
-        <Shell uid={state.uid} email={state.email} onSignOut={signOut} />
+        <SocialProvider>
+          <Shell uid={state.uid} email={state.email} onSignOut={signOut} />
+        </SocialProvider>
       </HelpProvider>
     </StoreProvider>
   );
@@ -214,6 +240,8 @@ const s = StyleSheet.create({
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   topBtn: { minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: 'rgba(15,27,51,0.10)' },
   iconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  badge: { position: 'absolute', top: 2, right: 0, minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { color: '#FFFFFF', fontSize: 12, lineHeight: 14, fontWeight: '700' },
   avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   banner: { borderWidth: 1, borderRadius: radius.control, padding: spacing.md, marginBottom: spacing.lg },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },

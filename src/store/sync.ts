@@ -37,7 +37,7 @@ const byCreation = (a: { createdAt?: number; id: string }, b: { createdAt?: numb
   (a.createdAt ?? 0) - (b.createdAt ?? 0) || a.id.localeCompare(b.id);
 
 /** One call to the API with the Firebase ID token (refreshed once if the server says it expired). */
-async function call<T>(path: string, init?: { method?: string; body?: unknown }): Promise<T> {
+export async function call<T>(path: string, init?: { method?: string; body?: unknown }): Promise<T> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const token = await auth.currentUser?.getIdToken(attempt > 0);
     if (!token) throw new Error('not signed in');
