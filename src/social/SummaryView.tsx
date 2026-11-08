@@ -36,7 +36,6 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
     rows.map((x) => (
       <View key={x.slug} style={{ gap: 6 }}>
         <View style={s.catHead}>
-          <View style={[s.dot, { backgroundColor: colorOf(x.slug) }]} />
           <Text style={[type.body, { color: c.text, flex: 1 }]} numberOfLines={1}>{x.label}</Text>
           <Text style={[type.label, { color: c.text }]}>{pct(x.pct)}</Text>
         </View>
@@ -147,5 +146,4 @@ const s = StyleSheet.create({
   tipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   miniTrack: { flex: 1, height: 8, borderRadius: 4, overflow: 'hidden' },
   catHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  dot: { width: 12, height: 12, borderRadius: 6 },
 });
