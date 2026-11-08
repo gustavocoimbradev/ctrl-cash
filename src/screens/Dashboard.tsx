@@ -469,6 +469,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
             <Text style={[type.title, { color: c.text }]}>Left over</Text>
             <View style={s.resultValue}>
               <View style={s.resultAmount}>
+                <Text style={[type.title, { color: summary.leftNow < 0 ? c.expense : c.primary, fontSize: 22 }]} numberOfLines={1}>{formatMoney(summary.leftNow)}</Text>
                 <Pressable
                   onPress={() => { setAdjustTo(summary.leftNow); setAdjustOpen(true); }}
                   accessibilityRole="button"
@@ -478,7 +479,6 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
                 >
                   <Feather name="edit-2" size={16} color={c.textMuted} />
                 </Pressable>
-                <Text style={[type.title, { color: summary.leftNow < 0 ? c.expense : c.primary, fontSize: 22 }]} numberOfLines={1}>{formatMoney(summary.leftNow)}</Text>
               </View>
               <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{formatMoney(summary.left)} when everything is paid</Text>
             </View>
@@ -792,8 +792,8 @@ const s = StyleSheet.create({
   summaryPair: { flexDirection: 'row', gap: spacing.lg, paddingHorizontal: spacing.xl - 4, paddingTop: spacing.md, paddingBottom: spacing.md },
   summaryCol: { flex: 1, minWidth: 0, gap: 4 },
   resultRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, borderTopWidth: 1, paddingHorizontal: spacing.xl - 4, paddingVertical: spacing.md },
-  resultAmount: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  adjustButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  resultAmount: { flexDirection: 'row', alignItems: 'center' },
+  adjustButton: { minWidth: 44, minHeight: 44, marginLeft: -8, alignItems: 'center', justifyContent: 'center' },
   resultValue: { alignItems: 'flex-end', flexShrink: 1, minWidth: 0 },
   
   summaryStack: { flexDirection: 'column', gap: spacing.md },
