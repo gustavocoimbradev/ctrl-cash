@@ -646,6 +646,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
           { values: projection.habit, color: c.expense, dashed: true, label: 'Historical' },
         ].filter((_, i) => !hiddenSeries.includes(i))}
         labels={chartLabels}
+        nowIndex={0}
         selected={chartSel === null ? null : Math.min(chartSel, projection.keys.length - 1)}
         onSelect={setChartSel}
       />

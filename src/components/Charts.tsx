@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, Text, View } from 'react-native';
-import Svg, { Circle, ClipPath, Defs, G, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, ClipPath, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { formatMoney } from '../domain/money';
 import { colors as c, fontFamily, radius, spacing, type } from '../theme';
 import { motion, useProgress, useReducedMotion, useTweenList } from '../theme/motion';
@@ -44,10 +44,12 @@ interface ProjectionProps {
   tipWidth?: number;
   /** color of the area under the first series (default: the brand blue) */
   areaColor?: string;
+  /** index of the point that is "now": a dotted vertical line and a small label mark it */
+  nowIndex?: number;
 }
 
 /** Line chart (up to 2 series, the first with an area), vertical guide and tooltip at the selected point. */
-export function ProjectionChart({ series, labels, selected, onSelect, height = 230, format = formatMoney, renderTip, tipWidth = 190, areaColor = c.primary }: ProjectionProps) {
+export function ProjectionChart({ series, labels, selected, onSelect, height = 230, format = formatMoney, renderTip, tipWidth = 190, areaColor = c.primary, nowIndex }: ProjectionProps) {
   const [w, setW] = useState(0);
   /** drawing: the lines reveal from left to right on enter and when the horizon changes */
   const progress = useProgress(`proj-${labels.length}`);
@@ -102,6 +104,13 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
               const gy = top + ((height - top - bottom) / 3) * i;
               return <Line key={i} x1={0} y1={gy} x2={w} y2={gy} stroke={c.border} strokeWidth={1} />;
             })}
+            {nowIndex !== undefined && nowIndex >= 0 && nowIndex < n && (
+              <>
+                <Line x1={x(nowIndex)} y1={top} x2={x(nowIndex)} y2={height - bottom} stroke={c.text} strokeOpacity={0.45} strokeDasharray="2 5" strokeWidth={1.5} strokeLinecap="round" />
+                <Rect x={x(nowIndex) + 3} y={top - 2} width={46} height={22} rx={6} fill="#FFFFFF" fillOpacity={0.85} />
+                <SvgText x={x(nowIndex) + 8} y={top + 14} fontSize={16} fontWeight="600" fontFamily={fontFamily} fill={c.textMuted}>Now</SvgText>
+              </>
+            )}
             {min < 0 && <Line x1={0} y1={zeroY} x2={w} y2={zeroY} stroke={c.textMuted} strokeOpacity={0.4} strokeDasharray="4 4" strokeWidth={1} />}
             <G clipPath="url(#reveal)">
             {series.map((sr, k) => {
