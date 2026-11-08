@@ -1,4 +1,3 @@
-import { InstallCard } from '../components/InstallCard';
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -71,6 +70,8 @@ interface Props {
   onPayInvoice: (preset: FormPreset) => void;
   /** opens card management */
   onOpenCards: () => void;
+  /** opens category management */
+  onOpenCategories: () => void;
 }
 
 /** Short explanations shown by the "?" next to the card titles (the totals explain themselves inside their own dialogs). */
@@ -93,7 +94,7 @@ const shortDate = (iso: string) => {
   return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
 };
 
-export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange, onAdd, onEdit, onPayInvoice, onOpenCards }: Props) {
+export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange, onAdd, onEdit, onPayInvoice, onOpenCards, onOpenCategories }: Props) {
   const { data, toggleConfirmed, archivePayment, addTransaction } = useStore();
   // left over adjustment: the dialog, and the amount the person says they really have
   const [adjustOpen, setAdjustOpen] = useState(false);
@@ -657,6 +658,27 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
     </Card>
   );
 
+  // the places that open as dialogs, as a small menu above the projection
+  const menu = (
+    <View style={s.menu}>
+      {[
+        { key: 'cards', icon: 'credit-card' as const, label: 'Cards', onPress: onOpenCards },
+        { key: 'categories', icon: 'tag' as const, label: 'Categories', onPress: onOpenCategories },
+      ].map((it) => (
+        <Pressable
+          key={it.key}
+          accessibilityRole="button"
+          accessibilityLabel={it.label}
+          onPress={it.onPress}
+          style={({ pressed, hovered }: any) => [s.menuBtn, { backgroundColor: hovered ? c.surfaceAlt : c.card, opacity: pressed ? 0.8 : 1 }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '150ms' } as object)]}
+        >
+          <Feather name={it.icon} size={20} color={c.textMuted} />
+          <Text style={[type.label, { color: c.text }]}>{it.label}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+
   const statementCtx = {
     occ,
     invoices: calc.invoices,
@@ -691,7 +713,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       ) : wide ? (
         <View style={s.cols}>
           <View style={{ flex: 1, minWidth: 0, gap: spacing.lg }}>
-            <InstallCard />
+            <Reveal index={1}>{menu}</Reveal>
             <Reveal index={1}>{chartCard}</Reveal>
             {figureGrid}
             <Reveal index={3}>{table}</Reveal>
@@ -705,6 +727,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
         </View>
       ) : (
         <View style={{ gap: spacing.lg }}>
+          <Reveal index={1}>{menu}</Reveal>
           <Reveal index={1}>{chartCard}</Reveal>
           <Reveal index={2}>{table}</Reveal>
           <View style={{ gap: spacing.md }}>{stats}</View>
@@ -801,6 +824,8 @@ const s = StyleSheet.create({
   resultValue: { alignItems: 'flex-end', flexShrink: 1, minWidth: 0 },
   
   summaryStack: { flexDirection: 'column', gap: spacing.md },
+  menu: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
+  menuBtn: { minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   valueRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.sm },
   /** Income / Expenses block: line, proportion bar and the two amounts stacked */
   splitBar: { flexDirection: 'row', height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: c.surface },

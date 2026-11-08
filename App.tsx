@@ -20,7 +20,6 @@ import { StoreProvider, useStore } from './src/store';
 import { SocialProvider, useSocial } from './src/social/SocialProvider';
 import { ChatDock } from './src/social/ChatDock';
 import { PeopleSearch } from './src/social/PeopleSearch';
-import { SideRail } from './src/components/SideRail';
 import { ProfilePage } from './src/social/ProfilePage';
 import { Transaction } from './src/types';
 import { desktopBreakpoint, maxContentWidth, minTouch, radius, spacing, type, useColors } from './src/theme';
@@ -37,9 +36,6 @@ function pageFromUrl(): Page {
   if (!m[1]) return { name: 'profile', id: 'me' };
   return UUID.test(m[1]) ? { name: 'profile', id: m[1].toLowerCase() } : { name: 'profile', id: m[1] };
 }
-
-/** desktop: room on the left for the floating side menu; the top bar uses the same insets as the page, so both line up */
-const DESKTOP_LEFT = 104;
 
 function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOut: () => void }) {
   const c = useColors();
@@ -120,7 +116,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
       <StatusBar style="dark" />
       {/* fixed top bar: brand, cards, avatar and sign out */}
       <Reveal distance={-12} duration={320} style={{ zIndex: 10 }}>
-      <View style={[s.topBar, { backgroundColor: c.card, borderBottomColor: c.border }, desktop && { paddingLeft: DESKTOP_LEFT, paddingRight: spacing.xxl }]}>
+      <View style={[s.topBar, { backgroundColor: c.card, borderBottomColor: c.border }, desktop && { paddingHorizontal: spacing.xxl }]}>
         {desktop ? (
           <View style={s.topInner}>
             <View style={s.topSide}>
@@ -133,6 +129,16 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
               <PeopleSearch onOpenProfile={(h) => setPage({ name: 'profile', id: h })} />
             </View>
             <View style={[s.topSide, { justifyContent: 'flex-end' }]}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="My profile"
+                accessibilityState={{ selected: page.name === 'profile' && page.id === 'me' }}
+                onPress={() => setPage({ name: 'profile', id: 'me' })}
+                style={({ pressed, hovered }: any) => [s.topBtn, { backgroundColor: page.name === 'profile' && page.id === 'me' ? `${c.primary}1A` : hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Feather name="user" size={20} color={page.name === 'profile' && page.id === 'me' ? c.primary : c.textMuted} />
+                <Text style={[type.label, { color: page.name === 'profile' && page.id === 'me' ? c.primary : c.textMuted }]}>My profile</Text>
+              </Pressable>
               <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={onSignOut} style={({ pressed, hovered }: any) => [s.iconBtn, { backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}>
                 <Feather name="log-out" size={20} color={c.textMuted} />
               </Pressable>
@@ -166,17 +172,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
         ) : null}
       </View>
       </Reveal>
-      {desktop ? (
-        <SideRail
-          items={[
-            { key: 'home', icon: 'home', label: 'Dashboard', onPress: toDashboard, active: page.name === 'dashboard' },
-            { key: 'cards', icon: 'credit-card', label: 'Cards', onPress: () => setCardsOpen(true) },
-            { key: 'categories', icon: 'tag', label: 'Categories', onPress: () => setCategoriesOpen(true) },
-            { key: 'profile', icon: 'user', label: 'Profile', onPress: () => setPage({ name: 'profile', id: 'me' }), active: page.name === 'profile' && page.id === 'me' },
-          ]}
-        />
-      ) : null}
-      <ScrollView contentContainerStyle={[s.content, desktop ? { padding: spacing.xxl, paddingTop: spacing.lg, paddingLeft: DESKTOP_LEFT } : { paddingTop: spacing.lg, paddingBottom: 120 }]}>
+      <ScrollView contentContainerStyle={[s.content, desktop ? { padding: spacing.xxl, paddingTop: spacing.lg } : { paddingTop: spacing.lg, paddingBottom: 120 }]}>
         <View style={s.inner}>
           {syncError ? (
             <View style={[s.banner, { borderColor: c.expense }]}>
@@ -199,6 +195,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
               month={month}
               onMonthChange={setMonth}
               onOpenCards={() => (desktop ? setCardsOpen(true) : setTab('cards'))}
+              onOpenCategories={() => setCategoriesOpen(true)}
               onPayInvoice={(p) => {
                 setEditing(undefined);
                 setPreset(p);
