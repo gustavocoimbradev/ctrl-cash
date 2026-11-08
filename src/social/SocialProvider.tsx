@@ -18,7 +18,7 @@ interface Social {
   received: Person[];
   /** fresh lists (the chat polls faster while it is open) */
   refresh: () => Promise<void>;
-  saveProfile: (p: { displayName: string; color?: string }) => Promise<void>;
+  saveProfile: (p: { displayName: string; color?: string; photo?: string | null }) => Promise<void>;
   follow: (id: string) => Promise<void>;
   unfollow: (id: string) => Promise<void>;
   share: (id: string) => Promise<void>;

@@ -19,6 +19,7 @@ import { Skeleton } from './src/components/Motion';
 import { StoreProvider, useStore } from './src/store';
 import { SocialProvider, useSocial } from './src/social/SocialProvider';
 import { ChatDock } from './src/social/ChatDock';
+import { Avatar } from './src/social/parts';
 import { PeopleSearch } from './src/social/PeopleSearch';
 import { ProfilePage } from './src/social/ProfilePage';
 import { Transaction } from './src/types';
@@ -129,15 +130,14 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
               <PeopleSearch onOpenProfile={(h) => setPage({ name: 'profile', id: h })} />
             </View>
             <View style={[s.topSide, { justifyContent: 'flex-end' }]}>
+              {/* my profile: the avatar (it is not highlighted on the profile page) */}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="My profile"
-                accessibilityState={{ selected: page.name === 'profile' && page.id === 'me' }}
                 onPress={() => setPage({ name: 'profile', id: 'me' })}
-                style={({ pressed, hovered }: any) => [s.topBtn, { backgroundColor: page.name === 'profile' && page.id === 'me' ? `${c.primary}1A` : hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}
+                style={({ pressed, hovered }: any) => [s.avatarBtn, { borderColor: hovered ? c.surfaceAlt : 'transparent', opacity: pressed ? 0.7 : 1 }]}
               >
-                <Feather name="user" size={20} color={page.name === 'profile' && page.id === 'me' ? c.primary : c.textMuted} />
-                <Text style={[type.label, { color: page.name === 'profile' && page.id === 'me' ? c.primary : c.textMuted }]}>My profile</Text>
+                <Avatar name={myProfile?.displayName ?? name} id={myProfile?.id ?? 'me'} color={myProfile?.color} photo={myProfile?.photo} size={36} />
               </Pressable>
               <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={onSignOut} style={({ pressed, hovered }: any) => [s.iconBtn, { backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}>
                 <Feather name="log-out" size={20} color={c.textMuted} />
@@ -275,6 +275,7 @@ const s = StyleSheet.create({
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   topBtn: { minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: 'rgba(15,27,51,0.10)' },
   iconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  avatarBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   banner: { borderWidth: 1, borderRadius: radius.control, padding: spacing.md, marginBottom: spacing.lg },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },

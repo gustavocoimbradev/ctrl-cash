@@ -85,7 +85,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
             ) : null}
           </View>
           <Text style={[type.label, { color: c.text }]}>Messages</Text>
-          {latest ? <Avatar name={latest.displayName} id={latest.id} color={latest.color} size={32} /> : null}
+          {latest ? <Avatar name={latest.displayName} id={latest.id} color={latest.color} photo={latest.photo} size={32} /> : null}
         </Pressable>
       ) : null}
 
@@ -106,7 +106,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
                   <Feather name="arrow-left" size={22} color={c.text} />
                 </Pressable>
                 <Pressable accessibilityRole="button" onPress={() => chat.with && onOpenProfile(chat.with)} style={s.who}>
-                  {peer ? <Avatar name={peer.displayName} id={peer.id} color={peer.color} size={36} /> : null}
+                  {peer ? <Avatar name={peer.displayName} id={peer.id} color={peer.color} photo={peer.photo} size={36} /> : null}
                   <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{peer?.displayName ?? 'Conversation'}</Text>
                 </Pressable>
               </>

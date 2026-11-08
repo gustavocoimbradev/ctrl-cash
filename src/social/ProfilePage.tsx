@@ -35,13 +35,13 @@ const Count = ({ n, label, onPress }: { n: number; label: string; onPress?: () =
 };
 
 /** The top card of a profile: who it is, the numbers and the actions. */
-function Header({ name, id, color, followers, following, access, onCount, actions }: { name: string; id: string; color: string | null; followers: number; following: number; /** people who can read the summary (your own profile only) */ access?: number; onCount?: (kind: 'followers' | 'following' | 'access') => void; actions?: React.ReactNode }) {
+function Header({ name, id, color, photo, followers, following, access, onCount, actions }: { name: string; id: string; color: string | null; photo?: string | null; followers: number; following: number; /** people who can read the summary (your own profile only) */ access?: number; onCount?: (kind: 'followers' | 'following' | 'access') => void; actions?: React.ReactNode }) {
   const c = useColors();
   const { width } = useWindowDimensions();
   const wide = width >= desktopBreakpoint;
   return (
     <Card style={[s.head, wide && s.headWide]}>
-      <Avatar name={name} id={id} color={color} size={wide ? 104 : 88} />
+      <Avatar name={name} id={id} color={color} photo={photo} size={wide ? 104 : 88} />
       <View style={[s.headInfo, !wide && { alignItems: 'center' }]}>
         <View style={wide ? undefined : { alignItems: 'center' }}>
           <Text style={[type.hero, { color: c.text, fontSize: 28 }]} numberOfLines={2}>{name}</Text>
@@ -135,12 +135,12 @@ function OwnProfile({ email, onOpen, onEditAccount }: { email: string; onOpen: (
   const [dialog, setDialog] = useState<'followers' | 'following' | 'access' | null>(null);
   const summary = useMemo<Summary>(() => buildSummary(data), [data]);
 
-  if (!profile || editing) {
+  // first time: the form is the page itself; afterwards "Edit profile" opens it in a dialog
+  if (!profile) {
     return (
       <Card style={{ maxWidth: 560, width: '100%', alignSelf: 'center' }}>
-        <Text style={[type.title, { color: c.text }]}>{profile ? 'Edit profile' : 'Create your profile'}</Text>
-        <ProfileForm email={email} existing={profile} onDone={() => setEditing(false)} />
-        {profile ? <Pill label="Cancel" onPress={() => setEditing(false)} /> : null}
+        <Text style={[type.title, { color: c.text }]}>Create your profile</Text>
+        <ProfileForm email={email} existing={null} onDone={() => {}} />
       </Card>
     );
   }
@@ -154,6 +154,7 @@ function OwnProfile({ email, onOpen, onEditAccount }: { email: string; onOpen: (
         name={profile.displayName}
         id={profile.id}
         color={profile.color}
+        photo={profile.photo}
         followers={counts.followers}
         following={counts.following}
         access={given.length}
@@ -171,6 +172,9 @@ function OwnProfile({ email, onOpen, onEditAccount }: { email: string; onOpen: (
         <SummaryView summary={summary} />
       </Card>
 
+      <Sheet visible={editing} title="Edit profile" onClose={() => setEditing(false)}>
+        <ProfileForm email={email} existing={profile} onDone={() => setEditing(false)} />
+      </Sheet>
       <Sheet visible={dialog === 'followers'} title={`Followers · ${followers.length}`} onClose={() => setDialog(null)}>
         <PeopleList people={followers} empty="Nobody follows you yet." onOpen={open} />
       </Sheet>
@@ -228,6 +232,7 @@ function OtherProfile({ id }: { id: string }) {
         name={person.displayName}
         id={person.id}
         color={person.color}
+        photo={person.photo}
         followers={person.followers}
         following={person.following}
         actions={

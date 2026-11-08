@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { ChartLegend, ProjectionChart } from '../components/Charts';
 import { AnimatedBar } from '../components/Motion';
-import { monthLabel } from '../domain/dates';
+import { formatMonth } from '../domain/dates';
 import { radius, spacing, type, useColors } from '../theme';
 import { CategoryShare, Summary } from './api';
 
-const BAR_H = 160;
 /** category colors: the app's palette without the brand blue, which means "saved" */
 const PALETTE = ['#E0446A', '#D9831F', '#8B5CF6', '#0EA5E9', '#1FA86A', '#F28BA3', '#B98A5E'];
 const OTHER = '#9AA5BC';
@@ -13,16 +13,14 @@ const OTHER = '#9AA5BC';
 const pct = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(1)}%`;
 
 /**
- * The shared summary, always in percentages of income: how much was spent and saved overall, a bar for each month split
- * by category (and what was saved), and where the spending goes. Tap (or hover) a month to read its breakdown. Used
- * for the own profile (live) and for the summary somebody shared.
+ * The shared summary, always in percentages of income: how much was spent and saved overall, a line chart of both month
+ * by month (hover or tap a month: a tooltip with its split by category) and where the spending goes. Used for the own
+ * profile (live) and for the summary somebody shared.
  */
 export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedAt?: number | null }) {
   const c = useColors();
   const { months, categories } = summary;
-  const [picked, setPicked] = useState<string | null>(null);
-  useEffect(() => setPicked(null), [summary.generatedAt]);
-  const selected = months.find((m) => m.key === picked) ?? months[months.length - 1];
+  const [sel, setSel] = useState<number | null>(null);
 
   // the same category always has the same color: the biggest ones get the palette, the rest share a gray
   const colorOf = (slug: string) => {
@@ -31,7 +29,6 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   };
   const top = categories.slice(0, PALETTE.length);
   const rest = categories.slice(PALETTE.length).reduce((s, x) => s + x.pct, 0);
-  const scale = Math.max(100, ...months.map((m) => m.spent + Math.max(m.saved, 0)));
 
   if (months.length === 0) return <Text style={[type.body, { color: c.textMuted }]}>Nothing to show yet: add some income and expenses.</Text>;
 
@@ -68,45 +65,51 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
         </View>
       </View>
 
-      {/* each month: spending by category + what was saved, 100% = the month's income */}
+      {/* month by month: the same line chart as the wealth projection, with a tooltip that splits the month by category */}
       <View style={{ gap: spacing.sm }}>
         <Text style={[type.label, { color: c.text }]}>Month by month</Text>
-        <View style={[s.chart, { height: BAR_H }]}>
-          {months.map((m) => {
-            const on = m.key === selected?.key;
+        <ProjectionChart
+          series={[
+            { values: months.map((m) => m.saved), color: c.primary, area: true, label: 'Saved' },
+            { values: months.map((m) => m.spent), color: c.expense, label: 'Spent' },
+          ]}
+          labels={months.map((m) => formatMonth(m.key))}
+          selected={sel}
+          onSelect={setSel}
+          format={pct}
+          tipWidth={230}
+          renderTip={(i) => {
+            const m = months[i];
+            if (!m) return null;
             return (
-              <Pressable
-                key={m.key}
-                accessibilityRole="button"
-                accessibilityLabel={`${monthLabel(m.key)}: spent ${pct(m.spent)}, saved ${pct(m.saved)}`}
-                accessibilityState={{ selected: on }}
-                onPress={() => setPicked(m.key)}
-                {...(Platform.OS === 'web' ? ({ onMouseEnter: () => setPicked(m.key) } as object) : null)}
-                style={[s.col, { opacity: on ? 1 : 0.55 }]}
-              >
-                <View style={[s.stack, { height: BAR_H * (Math.min((m.spent + Math.max(m.saved, 0)) / scale, 1)) }]}>
-                  {m.saved > 0 ? <View style={{ flex: m.saved, backgroundColor: c.primary }} /> : null}
-                  {m.categories.map((x) => <View key={x.slug} style={{ flex: x.pct, backgroundColor: colorOf(x.slug) }} />)}
+              <View style={{ gap: 2 }}>
+                <View style={s.tipRow}>
+                  <View style={[s.dot, { backgroundColor: c.expense }]} />
+                  <Text style={[type.label, { color: c.text, flex: 1 }]} numberOfLines={1}>Spent</Text>
+                  <Text style={[type.label, { color: c.expense }]}>{pct(m.spent)}</Text>
                 </View>
-              </Pressable>
+                <View style={s.tipRow}>
+                  <View style={[s.dot, { backgroundColor: c.primary }]} />
+                  <Text style={[type.label, { color: c.text, flex: 1 }]} numberOfLines={1}>{m.saved < 0 ? 'Overspent' : 'Saved'}</Text>
+                  <Text style={[type.label, { color: m.saved < 0 ? c.expense : c.primary }]}>{pct(Math.abs(m.saved))}</Text>
+                </View>
+                {m.categories.slice(0, 5).map((x) => (
+                  <View key={x.slug} style={s.tipRow}>
+                    <View style={[s.dot, { backgroundColor: colorOf(x.slug), width: 8, height: 8, borderRadius: 4 }]} />
+                    <Text style={[type.body, { color: c.textMuted, flex: 1 }]} numberOfLines={1}>{x.label}</Text>
+                    <Text style={[type.body, { color: c.textMuted }]}>{pct(x.pct)}</Text>
+                  </View>
+                ))}
+              </View>
             );
-          })}
-        </View>
-        <View style={s.labels}>
-          {months.map((m) => (
-            <Text key={m.key} style={[s.label, { color: m.key === selected?.key ? c.text : c.textMuted, fontWeight: m.key === selected?.key ? '700' : '400' }]} numberOfLines={1}>{monthLabel(m.key).slice(0, 1)}</Text>
-          ))}
-        </View>
-        {selected ? (
-          <View style={[s.detail, { backgroundColor: c.surface }]}>
-            <Text style={[type.label, { color: c.text }]}>{monthLabel(selected.key)}</Text>
-            <Text style={[type.body, { color: c.textMuted }]}>
-              Spent <Text style={{ color: c.expense, fontWeight: '700' }}>{pct(selected.spent)}</Text> · {selected.saved < 0 ? 'Overspent' : 'Saved'}{' '}
-              <Text style={{ color: selected.saved < 0 ? c.expense : c.primary, fontWeight: '700' }}>{pct(Math.abs(selected.saved))}</Text>
-            </Text>
-            <View style={{ gap: spacing.sm, marginTop: spacing.xs }}>{list(selected.categories)}</View>
-          </View>
-        ) : null}
+          }}
+        />
+        <ChartLegend
+          items={[
+            { label: 'Saved', color: c.primary, line: true, on: true, onPress: () => {} },
+            { label: 'Spent', color: c.expense, line: true, on: true, onPress: () => {} },
+          ]}
+        />
       </View>
 
       {/* overall by category */}
@@ -127,12 +130,7 @@ const s = StyleSheet.create({
   stats: { flexDirection: 'row', gap: spacing.sm },
   stat: { flex: 1, minWidth: 0, borderRadius: radius.control, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, gap: 2 },
   split: { flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden' },
-  chart: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
-  col: { flex: 1, height: '100%', justifyContent: 'flex-end' },
-  stack: { width: '100%', borderRadius: 6, overflow: 'hidden', flexDirection: 'column-reverse' },
-  labels: { flexDirection: 'row', gap: 6 },
-  label: { flex: 1, textAlign: 'center', fontSize: 16 },
-  detail: { borderRadius: radius.control, padding: spacing.lg, gap: 2 },
+  tipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   catHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: { width: 12, height: 12, borderRadius: 6 },
 });

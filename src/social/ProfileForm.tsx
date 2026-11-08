@@ -5,7 +5,8 @@ import { TextField } from '../components/Fields';
 import { radius, spacing, type, useColors } from '../theme';
 import { MyProfile } from './api';
 import { useSocial } from './SocialProvider';
-import { AVATAR_COLORS, Avatar, colorFor } from './parts';
+import { photoSupported, pickPhoto } from './photo';
+import { AVATAR_COLORS, Avatar, Pill, colorFor } from './parts';
 
 const nice = (email: string) => {
   const n = (email.split('@')[0] ?? '').replace(/[._-]+/g, ' ').trim();
@@ -18,6 +19,9 @@ export function ProfileForm({ email, existing, onDone }: { email: string; existi
   const { saveProfile } = useSocial();
   const [name, setName] = useState(existing?.displayName ?? nice(email));
   const [color, setColor] = useState<string | null>(existing?.color ?? null);
+  /** the photo shown now; `changed` says whether it differs from the saved one (so an untouched photo is not sent again) */
+  const [photo, setPhoto] = useState<string | null>(existing?.photo ?? null);
+  const [changed, setChanged] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -27,7 +31,7 @@ export function ProfileForm({ email, existing, onDone }: { email: string; existi
     setBusy(true);
     setError('');
     try {
-      await saveProfile({ displayName: name.trim(), ...(color ? { color } : {}) });
+      await saveProfile({ displayName: name.trim(), ...(color ? { color } : {}), ...(changed ? { photo } : {}) });
       onDone();
     } catch (e) {
       setError('Could not save. Try again.');
@@ -38,8 +42,18 @@ export function ProfileForm({ email, existing, onDone }: { email: string; existi
 
   return (
     <View style={{ gap: spacing.lg }}>
-      <View style={{ alignItems: 'center' }}>
-        <Avatar name={name} id={existing?.id ?? 'me'} color={color} size={72} />
+      <View style={{ alignItems: 'center', gap: spacing.md }}>
+        <Avatar name={name} id={existing?.id ?? 'me'} color={color} photo={photo} size={96} />
+        {photoSupported ? (
+          <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <Pill
+              label={photo ? 'Change photo' : 'Add photo'}
+              icon="camera"
+              onPress={() => void pickPhoto().then((p) => { if (p) { setPhoto(p); setChanged(true); } })}
+            />
+            {photo ? <Pill label="Remove" danger onPress={() => { setPhoto(null); setChanged(true); }} /> : null}
+          </View>
+        ) : null}
       </View>
       {!existing ? <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>Create your profile to follow people and chat. Nothing about your money is shown unless you choose to share it.</Text> : null}
       <TextField label="Name" value={name} onChangeText={setName} maxLength={40} placeholder="Your name" />

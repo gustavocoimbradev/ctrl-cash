@@ -37,10 +37,17 @@ interface ProjectionProps {
   selected: number | null;
   onSelect: (i: number | null) => void;
   height?: number;
+  /** how a value is written (default: money) */
+  format?: (v: number) => string;
+  /** custom tooltip body for a point (default: one line per series with its value) */
+  renderTip?: (i: number) => React.ReactNode;
+  tipWidth?: number;
+  /** color of the area under the first series (default: the brand blue) */
+  areaColor?: string;
 }
 
 /** Line chart (up to 2 series, the first with an area), vertical guide and tooltip at the selected point. */
-export function ProjectionChart({ series, labels, selected, onSelect, height = 230 }: ProjectionProps) {
+export function ProjectionChart({ series, labels, selected, onSelect, height = 230, format = formatMoney, renderTip, tipWidth = 190, areaColor = c.primary }: ProjectionProps) {
   const [w, setW] = useState(0);
   /** drawing: the lines reveal from left to right on enter and when the horizon changes */
   const progress = useProgress(`proj-${labels.length}`);
@@ -67,7 +74,7 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
   const y = (v: number) => top + (height - top - bottom) * (1 - (v - min) / span);
   const sel = selected === null ? null : Math.min(selected, n - 1);
   const zeroY = y(0);
-  const tipW = 190;
+  const tipW = tipWidth;
   /** diagonal labels need about 28px per column; with less, show every Nth (still the full MM/YYYY) */
   const labelEvery = Math.max(1, Math.ceil(28 / Math.max(step, 1)));
   const LABEL_W = 84;
@@ -87,8 +94,8 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
                 <Rect x={0} y={0} width={Math.max(w * progress, 0.01)} height={height} />
               </ClipPath>
               <LinearGradient id="area" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor={c.primary} stopOpacity={0.3} />
-                <Stop offset="1" stopColor={c.primary} stopOpacity={0} />
+                <Stop offset="0" stopColor={areaColor} stopOpacity={0.3} />
+                <Stop offset="1" stopColor={areaColor} stopOpacity={0} />
               </LinearGradient>
             </Defs>
             {[0, 1, 2, 3].map((i) => {
@@ -119,7 +126,7 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
               <Pressable
                 key={i}
                 accessibilityRole="button"
-                accessibilityLabel={`${labels[i]}: ${series.map((sr) => `${sr.label} ${formatMoney(sr.values[i])}`).join(', ')}`}
+                accessibilityLabel={`${labels[i]}: ${series.map((sr) => `${sr.label} ${format(sr.values[i])}`).join(', ')}`}
                 onPress={() => onSelect(sel === i ? null : i)}
                 {...({ onHoverIn: () => onSelect(i) } as object)}
                 style={{ flex: 1 }}
@@ -148,12 +155,14 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
             }}
           >
             <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{labels[tipSel]}</Text>
-            {series.map((sr, k) => (
-              <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: sr.color }} />
-                <Text style={[type.label, { color: sr.values[tipSel] < 0 ? c.expense : c.text, flex: 1 }]} numberOfLines={1}>{formatMoney(sr.values[tipSel])}</Text>
-              </View>
-            ))}
+            {renderTip
+              ? renderTip(tipSel)
+              : series.map((sr, k) => (
+                  <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: sr.color }} />
+                    <Text style={[type.label, { color: sr.values[tipSel] < 0 ? c.expense : c.text, flex: 1 }]} numberOfLines={1}>{format(sr.values[tipSel])}</Text>
+                  </View>
+                ))}
           </Animated.View>
           )}
         </View>

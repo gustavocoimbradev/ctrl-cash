@@ -11,12 +11,15 @@ export interface Person {
   id: string;
   displayName: string;
   color: string | null;
+  /** a small square JPEG as a data URL */
+  photo: string | null;
   relation: Relation;
 }
 export interface MyProfile {
   id: string;
   displayName: string;
   color: string | null;
+  photo: string | null;
 }
 export interface PersonDetail extends Person {
   followers: number;
@@ -68,7 +71,7 @@ const enc = encodeURIComponent;
 
 export const socialApi = {
   profile: () => call<{ profile: MyProfile | null; followers: number; following: number }>('/profile'),
-  saveProfile: (p: { displayName: string; color?: string }) => call<{ profile: MyProfile }>('/profile', { method: 'PUT', body: p }),
+  saveProfile: (p: { displayName: string; color?: string; /** a data URL sets it, null clears it, absent leaves it */ photo?: string | null }) => call<{ profile: MyProfile }>('/profile', { method: 'PUT', body: p }),
   search: (q: string) => call<{ people: Person[] }>(`/people?q=${enc(q)}`),
   person: (id: string) => call<{ person: PersonDetail }>(`/people/${enc(id)}`),
   follow: (id: string) => post<{ ok: true }>('/follow', { id }),
