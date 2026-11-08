@@ -4,6 +4,7 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import type { Verifier } from './auth.js';
 import { readAll, upsertDocs, withTransaction, type Docs, type Pool } from './db.js';
+import { registerSocial } from './social.js';
 import { COLLECTIONS, validate, type Doc } from './validate.js';
 
 declare module 'fastify' {
@@ -35,12 +36,12 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
 
   await app.register(helmet, { contentSecurityPolicy: false });
   if (opts.allowedOrigins?.length) {
-    await app.register(cors, { origin: opts.allowedOrigins, methods: ['GET', 'PUT', 'OPTIONS'], allowedHeaders: ['Authorization', 'Content-Type'] });
+    await app.register(cors, { origin: opts.allowedOrigins, methods: ['GET', 'PUT', 'POST', 'OPTIONS'], allowedHeaders: ['Authorization', 'Content-Type'] });
   }
   await app.register(rateLimit, {
     max: opts.rateLimitMax ?? 120,
     timeWindow: '1 minute',
-    errorResponseBuilder: () => ({ error: 'rate_limited' }),
+    errorResponseBuilder: () => ({ statusCode: 429, error: 'rate_limited' }),
   });
 
   app.setErrorHandler((rawErr, req, reply) => {
@@ -81,6 +82,9 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     }
     return reply.code(401).send({ error: 'unauthorized' });
   };
+
+  // profiles, follows, messages and the shared summary; the chatty routes get a stricter limit (unless a test sets its own)
+  registerSocial(app, { pool: opts.pool, strictMax: opts.rateLimitMax === undefined ? 30 : opts.rateLimitMax }, authenticate);
 
   app.route({
     method: 'GET',
