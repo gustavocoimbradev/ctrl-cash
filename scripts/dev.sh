@@ -94,8 +94,8 @@ ok "$(tail -n1 "$LOGS/seed.log")"
 if port_open "$PORT"; then
     fail "Port $PORT is busy." "Use another one: PORT=8082 make up:dev"
 fi
-EXPO_PUBLIC_FIREBASE_EMULATOR=1 EXPO_PUBLIC_API_URL="http://localhost:$API_PORT/api" BROWSER=none CI=1 \
-    setsid nohup npx expo start --web --port "$PORT" >"$LOGS/web.log" 2>&1 &
+EXPO_PUBLIC_FIREBASE_EMULATOR=1 EXPO_PUBLIC_API_URL="http://localhost:$API_PORT/api" BROWSER=none \
+    setsid nohup npx expo start --web --non-interactive --port "$PORT" >"$LOGS/web.log" 2>&1 &
 echo $! >"$LOGS/web.pid"
 echo "$PORT" >"$LOGS/web.port"
 wait_port "$PORT" "The web app" 120
