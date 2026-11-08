@@ -1,43 +1,42 @@
 // Social routes: profiles, follows, direct messages and the shared monthly summary.
-// People are addressed by handle. The Firebase user id (`req.uid`) stays inside this file and is never put in a response.
+// People are addressed by their public uuid (`id`), never by the Firebase user id. The Firebase user id (`req.uid`) stays inside this file and is never put in a response.
 // Nothing is removed: unfollow archives the follow, revoking a share stamps revoked_at_ms, messages stay.
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type pg from 'pg';
 import { withTransaction, type Pool } from './db.js';
 import { ValidationError } from './validate.js';
-import { HANDLE_RE, parseHandle, parseHandleBody, parseMessage, parseProfile, parseSummary } from './validate-social.js';
+import { isPublicId, parseIdBody, parseMessage, parseProfile, parseSummary } from './validate-social.js';
 
 type Authn = (req: FastifyRequest, reply: FastifyReply) => Promise<unknown>;
 type Db = pg.Pool | pg.PoolClient;
 type Row = Record<string, any>;
 
 interface Person {
-  handle: string;
+  /** the public uuid of the profile (not the Firebase user id) */
+  id: string;
   displayName: string;
-  bio: string | null;
   color: string | null;
   relation: { following: boolean; followsMe: boolean; mutual: boolean };
 }
 
 /** A public card. Built field by field so the internal user id can never leak. */
 const toPerson = (r: Row): Person => ({
-  handle: r.handle,
+  id: r.public_id,
   displayName: r.display_name,
-  bio: r.bio ?? null,
   color: r.color ?? null,
   relation: { following: !!r.following, followsMe: !!r.follows_me, mutual: !!r.following && !!r.follows_me },
 });
 
 /** Profile columns plus how `$1` (the caller) and the person follow each other. Callers append joins and filters. */
-const CARD_COLUMNS = `p.user_id, p.handle, p.display_name, p.bio, p.color,
+const CARD_COLUMNS = `p.user_id, p.public_id, p.display_name, p.color,
   exists (select 1 from follows f where f.follower_id = $1 and f.followee_id = p.user_id and f.archived_at_ms is null) as following,
   exists (select 1 from follows f where f.follower_id = p.user_id and f.followee_id = $1 and f.archived_at_ms is null) as follows_me`;
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (m) => `\\${m}`);
 
-async function profileByHandle(db: Db, handle: string): Promise<Row | null> {
-  const res = await db.query('select user_id, handle, display_name, bio, color from profiles where handle = $1', [handle]);
+async function profileById(db: Db, id: string): Promise<Row | null> {
+  const res = await db.query('select user_id, public_id, display_name, color from profiles where public_id = $1::uuid', [id]);
   return res.rows[0] ?? null;
 }
 
@@ -109,15 +108,15 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
     return false;
   };
   const notFound = (reply: FastifyReply) => reply.code(404).send({ error: 'not_found' });
-  const handleParam = (req: FastifyRequest) => String((req.params as { handle?: string }).handle ?? '').toLowerCase();
+  const idParam = (req: FastifyRequest) => String((req.params as { id?: string }).id ?? '').toLowerCase();
 
   // ---- profile
   route('GET', '/api/profile', async (req) => {
-    const res = await pool.query('select handle, display_name, bio, color from profiles where user_id = $1', [req.uid]);
+    const res = await pool.query('select public_id, display_name, color from profiles where user_id = $1', [req.uid]);
     const r = res.rows[0];
     const c = await counts(pool, req.uid);
     return {
-      profile: r ? { handle: r.handle, displayName: r.display_name, bio: r.bio ?? null, color: r.color ?? null } : null,
+      profile: r ? { id: r.public_id, displayName: r.display_name, color: r.color ?? null } : null,
       followers: c.followers,
       following: c.following,
     };
@@ -125,20 +124,15 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
 
   route('PUT', '/api/profile', async (req, reply) => {
     const p = parseProfile(req.body);
-    try {
-      const res = await pool.query(
-        `insert into profiles (user_id, handle, display_name, bio, color, created_at_ms) values ($1, $2, $3, $4, $5, $6)
-         on conflict (user_id) do update set handle = excluded.handle, display_name = excluded.display_name,
-           bio = excluded.bio, color = excluded.color, updated_at = now()
-         returning handle, display_name, bio, color`,
-        [req.uid, p.handle, p.displayName, p.bio, p.color, Date.now()],
-      );
-      const r = res.rows[0];
-      return { profile: { handle: r.handle, displayName: r.display_name, bio: r.bio ?? null, color: r.color ?? null } };
-    } catch (e) {
-      if ((e as { code?: string }).code === '23505') return reply.code(409).send({ error: 'handle_taken' });
-      throw e;
-    }
+    // the public id is assigned once, by the table's default, and never changes on an update
+    const res = await pool.query(
+      `insert into profiles (user_id, display_name, color, created_at_ms) values ($1, $2, $3, $4)
+       on conflict (user_id) do update set display_name = excluded.display_name, color = excluded.color, updated_at = now()
+       returning public_id, display_name, color`,
+      [req.uid, p.displayName, p.color, Date.now()],
+    );
+    const r = res.rows[0];
+    return { profile: { id: r.public_id, displayName: r.display_name, color: r.color ?? null } };
   });
 
   // ---- people
@@ -151,19 +145,19 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
       const like = escapeLike(q);
       const res = await pool.query(
         `select ${CARD_COLUMNS} from profiles p
-          where p.user_id <> $1 and (p.handle like $2 escape '\\' or p.display_name ilike $3 escape '\\')
-          order by (p.handle like $2 escape '\\') desc, p.handle limit 20`,
-        [req.uid, `${like}%`, `%${like}%`],
+          where p.user_id <> $1 and p.display_name ilike $2 escape '\\'
+          order by (p.display_name ilike $3 escape '\\') desc, lower(p.display_name), p.public_id limit 20`,
+        [req.uid, `%${like}%`, `${like}%`],
       );
       return { people: res.rows.map(toPerson) };
     },
     true,
   );
 
-  route('GET', '/api/people/:handle', async (req, reply) => {
-    const handle = handleParam(req);
-    if (!HANDLE_RE.test(handle)) return notFound(reply);
-    const res = await pool.query(`select ${CARD_COLUMNS} from profiles p where p.handle = $2`, [req.uid, handle]);
+  route('GET', '/api/people/:id', async (req, reply) => {
+    const id = idParam(req);
+    if (!isPublicId(id)) return notFound(reply);
+    const res = await pool.query(`select ${CARD_COLUMNS} from profiles p where p.public_id = $2::uuid`, [req.uid, id]);
     const row = res.rows[0];
     if (!row) return notFound(reply);
     const self = row.user_id === req.uid;
@@ -184,9 +178,9 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
 
   // ---- follows
   route('POST', '/api/follow', async (req, reply) => {
-    const handle = parseHandleBody(req.body);
+    const id = parseIdBody(req.body);
     if (!(await needProfile(req, reply))) return reply;
-    const target = await profileByHandle(pool, handle);
+    const target = await profileById(pool, id);
     if (!target) return notFound(reply);
     if (target.user_id === req.uid) return bad(reply, 'you cannot follow yourself');
     const now = Date.now();
@@ -201,8 +195,8 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
   });
 
   route('POST', '/api/unfollow', async (req, reply) => {
-    const handle = parseHandleBody(req.body);
-    const target = await profileByHandle(pool, handle);
+    const id = parseIdBody(req.body);
+    const target = await profileById(pool, id);
     if (!target) return notFound(reply);
     const now = Date.now();
     await withTransaction(pool, async (client) => {
@@ -224,13 +218,13 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
     const following = await pool.query(
       `select ${CARD_COLUMNS} from profiles p
          join follows ff on ff.followee_id = p.user_id and ff.follower_id = $1 and ff.archived_at_ms is null
-        order by ff.created_at_ms desc, p.handle`,
+        order by ff.created_at_ms desc, p.public_id`,
       [req.uid],
     );
     const followers = await pool.query(
       `select ${CARD_COLUMNS} from profiles p
          join follows ff on ff.follower_id = p.user_id and ff.followee_id = $1 and ff.archived_at_ms is null
-        order by ff.created_at_ms desc, p.handle`,
+        order by ff.created_at_ms desc, p.public_id`,
       [req.uid],
     );
     return { following: following.rows.map(toPerson), followers: followers.rows.map(toPerson) };
@@ -263,10 +257,10 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
 
   const messageOut = (r: Row) => ({ id: r.id, mine: r.mine, body: r.body, createdAt: Number(r.created_at_ms), readAt: r.read_at_ms === null ? null : Number(r.read_at_ms) });
 
-  route('GET', '/api/messages/:handle', async (req, reply) => {
-    const handle = handleParam(req);
-    if (!HANDLE_RE.test(handle)) return notFound(reply);
-    const peer = await profileByHandle(pool, handle);
+  route('GET', '/api/messages/:id', async (req, reply) => {
+    const id = idParam(req);
+    if (!isPublicId(id)) return notFound(reply);
+    const peer = await profileById(pool, id);
     if (!peer) return notFound(reply);
     const raw = (req.query as { since?: unknown }).since;
     let since: number | null = null;
@@ -292,7 +286,7 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
       try {
         const m = parseMessage(req.body);
         if (!(await needProfile(req, reply))) return reply;
-        const peer = await profileByHandle(pool, m.to);
+        const peer = await profileById(pool, m.to);
         if (!peer) return notFound(reply);
         if (peer.user_id === req.uid) return bad(reply, 'you cannot message yourself');
         if (!(await isMutual(pool, req.uid, peer.user_id))) return reply.code(403).send({ error: 'not_mutual' });
@@ -308,7 +302,7 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
   });
 
   route('POST', '/api/messages/read', async (req, reply) => {
-    const peer = await profileByHandle(pool, parseHandleBody(req.body));
+    const peer = await profileById(pool, parseIdBody(req.body));
     if (!peer) return notFound(reply);
     await pool.query(
       'update messages set read_at_ms = $3 where recipient_id = $1 and sender_id = $2 and read_at_ms is null',
@@ -328,22 +322,22 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
     const given = await pool.query(
       `select * from (select ${CARD_COLUMNS}, s.created_at_ms as ord from profiles p
          join summary_shares s on s.viewer_id = p.user_id and s.owner_id = $1 and s.revoked_at_ms is null) t
-        where t.following and t.follows_me order by t.ord desc, t.handle`,
+        where t.following and t.follows_me order by t.ord desc, t.public_id`,
       [req.uid],
     );
     const received = await pool.query(
       `select * from (select ${CARD_COLUMNS}, s.created_at_ms as ord from profiles p
          join summary_shares s on s.owner_id = p.user_id and s.viewer_id = $1 and s.revoked_at_ms is null) t
-        where t.following and t.follows_me order by t.ord desc, t.handle`,
+        where t.following and t.follows_me order by t.ord desc, t.public_id`,
       [req.uid],
     );
     return { given: given.rows.map(toPerson), received: received.rows.map(toPerson) };
   });
 
   route('POST', '/api/shares', async (req, reply) => {
-    const handle = parseHandleBody(req.body);
+    const id = parseIdBody(req.body);
     if (!(await needProfile(req, reply))) return reply;
-    const target = await profileByHandle(pool, handle);
+    const target = await profileById(pool, id);
     if (!target) return notFound(reply);
     if (target.user_id === req.uid) return bad(reply, 'you cannot share with yourself');
     if (!(await isMutual(pool, req.uid, target.user_id))) return reply.code(403).send({ error: 'not_mutual' });
@@ -358,7 +352,7 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
   });
 
   route('POST', '/api/shares/revoke', async (req, reply) => {
-    const target = await profileByHandle(pool, parseHandleBody(req.body));
+    const target = await profileById(pool, parseIdBody(req.body));
     if (!target) return notFound(reply);
     await pool.query(
       'update summary_shares set revoked_at_ms = $3 where owner_id = $1 and viewer_id = $2 and revoked_at_ms is null',
@@ -377,11 +371,11 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
     return { ok: true };
   });
 
-  route('GET', '/api/people/:handle/summary', async (req, reply) => {
+  route('GET', '/api/people/:id/summary', async (req, reply) => {
     const denied = () => reply.code(403).send({ error: 'not_shared' });
-    const handle = handleParam(req);
-    if (!HANDLE_RE.test(handle)) return denied();
-    const owner = await profileByHandle(pool, parseHandle(handle));
+    const id = idParam(req);
+    if (!isPublicId(id)) return denied();
+    const owner = await profileById(pool, id);
     if (!owner) return denied();
     if (owner.user_id !== req.uid) {
       // an active share from them to me AND both still following each other

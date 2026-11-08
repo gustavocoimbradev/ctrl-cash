@@ -17,7 +17,7 @@ test('migrations are idempotent and recorded', async () => {
   assert.deepEqual(await migrate(pool), []);
   assert.deepEqual(await migrate(pool), []);
   const r = await pool.query('select name from schema_migrations order by name');
-  assert.deepEqual(r.rows.map((x) => x.name), ['001_init.sql', '002_social.sql']);
+  assert.deepEqual(r.rows.map((x) => x.name), ['001_init.sql', '002_social.sql', '003_profile_public_id.sql']);
   // concurrent runs do not collide
   await Promise.all([migrate(pool), migrate(pool), migrate(pool)]);
 });
