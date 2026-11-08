@@ -495,20 +495,23 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
             ? `Already ${formatMoney(summary.leftNow)}: nothing to adjust.`
             : `Now ${formatMoney(summary.leftNow)}. A ${adjustTo > summary.leftNow ? 'income' : 'expense'} of ${formatMoney(Math.abs(adjustTo - summary.leftNow))} named "Left over adjustment" will be added.`}
         </Text>
-        <Button
-          label="Adjust"
-          icon="check"
-          disabled={adjustTo === summary.leftNow}
-          onPress={() => {
-            const diff = adjustTo - summary.leftNow;
-            if (diff === 0) return;
-            // dated today while looking at the current month, otherwise on the last day of the month on screen
-            const date = monthKey(today) === month ? today : endOfMonth(month);
-            addTransaction({ type: diff > 0 ? 'income' : 'expense', description: 'Left over adjustment', amount: Math.abs(diff), date, confirmed: true, fixed: false, category: 'adjustment', installments: 1 });
-            setAdjustOpen(false);
-          }}
-        />
-        <Button label="Cancel" variant="tertiary" onPress={() => setAdjustOpen(false)} />
+        <View style={{ flexDirection: 'row', gap: spacing.md }}>
+          <Button label="Cancel" variant="secondary" flex onPress={() => setAdjustOpen(false)} />
+          <Button
+            label="Adjust"
+            flex
+            icon="check"
+            disabled={adjustTo === summary.leftNow}
+            onPress={() => {
+              const diff = adjustTo - summary.leftNow;
+              if (diff === 0) return;
+              // dated today while looking at the current month, otherwise on the last day of the month on screen
+              const date = monthKey(today) === month ? today : endOfMonth(month);
+              addTransaction({ type: diff > 0 ? 'income' : 'expense', description: 'Left over adjustment', amount: Math.abs(diff), date, confirmed: true, fixed: false, category: 'adjustment', installments: 1 });
+              setAdjustOpen(false);
+            }}
+          />
+        </View>
       </Sheet>
     </Card>
   );
