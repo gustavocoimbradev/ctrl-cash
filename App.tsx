@@ -134,17 +134,17 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
         ) : (
           // phone: the menu on the left (a panel with what is not on the bottom bar) and the chat on the right
           <View style={s.topInner}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Open menu" onPress={() => setMenuOpen(true)} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}>
-              <Feather name="menu" size={22} color={c.textMuted} />
+            <Pressable accessibilityRole="button" accessibilityLabel="Open menu" onPress={() => setMenuOpen(true)} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: pressed ? c.surface : 'transparent' }]}>
+              <Feather name="menu" size={24} color={c.text} />
             </Pressable>
             <View style={{ flex: 1 }} />
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={unread > 0 ? `Messages, ${unread} unread` : 'Messages'}
               onPress={() => openChat()}
-              style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}
+              style={({ pressed }: any) => [s.iconBtn, { backgroundColor: pressed ? c.surface : 'transparent' }]}
             >
-              <Feather name="heart" size={22} color={c.textMuted} />
+              <Feather name="heart" size={24} color={c.text} />
               {unread > 0 ? (
                 <View style={[s.badge, { backgroundColor: c.expense, borderColor: c.card }]}>
                   <Text style={s.badgeText}>{unread > 9 ? '9+' : unread}</Text>
