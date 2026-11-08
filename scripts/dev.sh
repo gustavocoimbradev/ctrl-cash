@@ -14,12 +14,15 @@ for argument in "$@"; do
     [ "$argument" = "--stop" ] && MODE="stop"
 done
 
+# a closed port can hang for minutes on some setups (WSL), so every probe is capped at 1 second
+port_open() { timeout 1 bash -c "exec 3<>/dev/tcp/127.0.0.1/$1" >/dev/null 2>&1; }
+
 LOGS=".logs"
 mkdir -p "$LOGS"
 # the web port: the one asked for, or the first free one from 8081
 if [ -z "${PORT:-}" ]; then
     PORT=8081
-    while (exec 3<>"/dev/tcp/127.0.0.1/$PORT") >/dev/null 2>&1 && [ "$PORT" -lt 8095 ]; do PORT=$((PORT + 1)); done
+    while port_open "$PORT" && [ "$PORT" -lt 8095 ]; do PORT=$((PORT + 1)); done
 fi
 export WEB_PORT="$PORT"
 AUTH_PORT=19099
@@ -33,7 +36,6 @@ fi
 ok()   { printf '%s✔%s %s\n' "$G" "$N" "$1"; }
 fail() { printf '%s✖%s %s%s%s\n' "$R" "$N" "$B" "$1" "$N"; shift; for l in "$@"; do printf '  %s%s%s\n' "$D" "$l" "$N"; done; exit 1; }
 
-port_open() { (exec 3<>"/dev/tcp/127.0.0.1/$1") >/dev/null 2>&1; }
 wait_port() { for _ in $(seq 1 "${3:-60}"); do port_open "$1" && return 0; sleep 1; done; fail "$2 did not start." "Look at $LOGS/."; }
 
 stop_pid() {
