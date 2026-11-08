@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/Button';
 import { Sheet } from '../components/Sheet';
 import { authMessage, currentHasPassword, savePassword } from '../firebase/useAuth';
@@ -94,23 +94,34 @@ export function AccountSheet({ visible, email, onClose, onCleared }: { visible: 
         </View>
 
         <View style={{ gap: spacing.md, borderTopWidth: 1, borderTopColor: c.border, paddingTop: spacing.xl }}>
-          <Text style={[type.title, { color: c.expense }]}>Clear everything</Text>
+          <Text style={[type.title, { color: c.text }]}>Start over</Text>
           <Text style={[type.body, { color: c.textMuted }]}>
             Starts the account over: transactions, cards, payments, reserves and categories leave the app, and the quick setup comes back. Nothing is permanently deleted.
           </Text>
-          {confirming ? (
-            <View style={{ gap: spacing.md }}>
-              <Text style={[type.label, { color: c.text }]}>Clear absolutely everything?</Text>
-              <View style={{ flexDirection: 'row', gap: spacing.md }}>
-                <Button label="Cancel" variant="secondary" onPress={() => setConfirming(false)} flex />
-                <Button label="Yes, clear it" danger onPress={() => { clearAll(); onCleared(); }} flex />
-              </View>
-            </View>
-          ) : (
-            <Button label="Clear everything" variant="secondary" danger icon="trash-2" onPress={() => setConfirming(true)} />
-          )}
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setConfirming(true)}
+            style={({ pressed }) => ({ minHeight: 48, justifyContent: 'center', alignItems: 'flex-start', opacity: pressed ? 0.6 : 1 })}
+          >
+            <Text style={[type.label, { color: c.expense }]}>Clear everything</Text>
+          </Pressable>
         </View>
       </View>
+      <Sheet
+        visible={confirming}
+        title="Clear everything"
+        onClose={() => setConfirming(false)}
+        footer={
+          <>
+            <Button label="Cancel" variant="secondary" onPress={() => setConfirming(false)} flex />
+            <Button label="Clear everything" danger flex onPress={() => { setConfirming(false); clearAll(); onCleared(); }} />
+          </>
+        }
+      >
+        <Text style={[type.body, { color: c.text }]}>
+          Everything leaves the app and the quick setup comes back. It is archived, so nothing is permanently deleted.
+        </Text>
+      </Sheet>
     </Sheet>
   );
 }
