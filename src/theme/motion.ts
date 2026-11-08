@@ -68,6 +68,38 @@ export function useTween(target: number, duration: number = motion.slow): number
 }
 
 /**
+ * A number that glides to its target (a marker moving from one point to the next). With `snap` it jumps instead, for the
+ * moment the marker first appears, so it does not slide in from wherever it was last.
+ */
+export function useGlide(target: number, snap: boolean, duration: number = motion.fast + 40): number {
+  const [value, setValue] = useState(target);
+  const from = useRef(target);
+  const raf = useRef<number | null>(null);
+  const reduced = useReducedMotion();
+  useEffect(() => {
+    if (snap || reduced) {
+      from.current = target;
+      setValue(target);
+      return;
+    }
+    const start = Date.now();
+    const origin = from.current;
+    const step = () => {
+      const p = Math.min((Date.now() - start) / duration, 1);
+      const v = origin + (target - origin) * easeOutCubic(p);
+      from.current = v;
+      setValue(v);
+      if (p < 1) raf.current = requestAnimationFrame(step);
+    };
+    raf.current = requestAnimationFrame(step);
+    return () => {
+      if (raf.current !== null) cancelAnimationFrame(raf.current);
+    };
+  }, [target, snap, duration, reduced]);
+  return value;
+}
+
+/**
  * Like `useTween`, for a list of numbers (the slices of a chart): the first render grows them from 0 and every
  * change afterwards animates from what is on screen to the new values, so a chart never restarts from nothing.
  */

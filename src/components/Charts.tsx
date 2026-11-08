@@ -3,7 +3,7 @@ import { Animated, Platform, Pressable, Text, View } from 'react-native';
 import Svg, { Circle, ClipPath, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { formatMoney } from '../domain/money';
 import { colors as c, fontFamily, radius, spacing, type } from '../theme';
-import { motion, useProgress, useReducedMotion, useTweenList } from '../theme/motion';
+import { motion, useGlide, useProgress, useReducedMotion, useTween, useTweenList } from '../theme/motion';
 
 /** Smooth curve (Catmull-Rom → Bézier) through the points. */
 function smooth(pts: { x: number; y: number }[]): string {
@@ -57,6 +57,14 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
   const tipV = useRef(new Animated.Value(0)).current;
   const lastSel = useRef<number | null>(selected);
   if (selected !== null) lastSel.current = selected;
+  // the marker, its dots and the tooltip glide from one point to the next (and fade away instead of vanishing)
+  const wasShown = useRef(false);
+  const snapMarker = selected !== null && !wasShown.current;
+  useEffect(() => {
+    wasShown.current = selected !== null;
+  });
+  const pos = useGlide(selected ?? lastSel.current ?? 0, snapMarker);
+  const showAmt = useTween(selected === null ? 0 : 1, motion.fast + 40);
   useEffect(() => {
     if (reduced) {
       tipV.setValue(selected === null ? 0 : 1);
@@ -85,7 +93,14 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
   const angle = steep ? -70 : -45;
   // the tooltip keeps the last point while fading out, instead of vanishing abruptly
   const tipSel = lastSel.current === null ? null : Math.min(lastSel.current, n - 1);
-  const tipLeft = tipSel === null ? 0 : Math.min(Math.max(x(tipSel) - tipW / 2, 0), Math.max(w - tipW, 0));
+  const posC = Math.min(Math.max(pos, 0), Math.max(n - 1, 0));
+  const tipLeft = tipSel === null ? 0 : Math.min(Math.max(x(posC) - tipW / 2, 0), Math.max(w - tipW, 0));
+  /** a value between two points, for the dots that travel with the marker */
+  const at = (vals: number[], p: number) => {
+    const i = Math.floor(p);
+    const j = Math.min(i + 1, vals.length - 1);
+    return (vals[i] ?? 0) + ((vals[j] ?? 0) - (vals[i] ?? 0)) * (p - i);
+  };
   return (
     <View onLayout={(e) => setW(e.nativeEvent.layout.width)}>
       {w > 0 && (
@@ -106,13 +121,13 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
             })}
             {nowIndex !== undefined && nowIndex >= 0 && nowIndex < n && (
               <>
-                <Line x1={x(nowIndex)} y1={top} x2={x(nowIndex)} y2={height - bottom} stroke={c.text} strokeOpacity={0.45} strokeDasharray="2 5" strokeWidth={1.5} strokeLinecap="round" />
-                <Rect x={x(nowIndex) + 3} y={top - 2} width={46} height={22} rx={6} fill="#FFFFFF" fillOpacity={0.85} />
-                <SvgText x={x(nowIndex) + 8} y={top + 14} fontSize={16} fontWeight="600" fontFamily={fontFamily} fill={c.textMuted}>Now</SvgText>
+                <Line x1={x(nowIndex)} y1={top} x2={x(nowIndex)} y2={height - bottom} stroke={c.text} strokeOpacity={0.45 * progress} strokeDasharray="2 5" strokeWidth={1.5} strokeLinecap="round" />
+                <Rect x={x(nowIndex) + 3} y={top - 2} width={46} height={22} rx={6} fill="#FFFFFF" fillOpacity={0.85 * progress} />
+                <SvgText x={x(nowIndex) + 8} y={top + 14} fontSize={16} fontWeight="600" fontFamily={fontFamily} fill={c.textMuted} fillOpacity={progress}>Now</SvgText>
               </>
             )}
             {min < 0 && <Line x1={0} y1={zeroY} x2={w} y2={zeroY} stroke={c.textMuted} strokeOpacity={0.4} strokeDasharray="4 4" strokeWidth={1} />}
-            <G clipPath="url(#reveal)">
+            <G clipPath="url(#reveal)" opacity={Math.min(1, progress * 3)}>
             {series.map((sr, k) => {
               const pts = sr.values.map((v, i) => ({ x: x(i), y: y(v) }));
               const line = smooth(pts);
@@ -125,9 +140,9 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
               );
             })}
             </G>
-            {sel !== null && <Line x1={x(sel)} y1={top} x2={x(sel)} y2={height - bottom} stroke={c.textMuted} strokeOpacity={0.5} strokeDasharray="3 4" strokeWidth={1} />}
-            {sel !== null &&
-              series.map((sr, k) => <Circle key={k} cx={x(sel)} cy={y(sr.values[sel])} r={5.5} fill="#FFFFFF" stroke={sr.color} strokeWidth={3} />)}
+            {tipSel !== null && showAmt > 0.01 && <Line x1={x(posC)} y1={top} x2={x(posC)} y2={height - bottom} stroke={c.textMuted} strokeOpacity={0.5 * showAmt} strokeDasharray="3 4" strokeWidth={1} />}
+            {tipSel !== null && showAmt > 0.01 &&
+              series.map((sr, k) => <Circle key={k} cx={x(posC)} cy={y(at(sr.values, posC))} r={5.5 * (0.6 + 0.4 * showAmt)} fill="#FFFFFF" fillOpacity={showAmt} stroke={sr.color} strokeOpacity={showAmt} strokeWidth={3} />)}
           </Svg>
           {/* touch/hover areas per column */}
           <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, flexDirection: 'row' }} {...({ onMouseLeave: () => onSelect(null) } as object)}>

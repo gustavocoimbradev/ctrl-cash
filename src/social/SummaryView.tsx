@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import Svg, { Path, Text as SvgText } from 'react-native-svg';
 import { ChartLegend, ProjectionChart } from '../components/Charts';
 import { PillToggle } from '../components/Controls';
 import { addMonthsToKey, currentMonthKey, formatMonth } from '../domain/dates';
 import { desktopBreakpoint, fontFamily, spacing, type, useColors } from '../theme';
+import { motion, useGlide, useTween, useTweenList } from '../theme/motion';
 import { CategoryShare, Summary } from './api';
 
 const HORIZONS = [6, 12, 24] as const;
@@ -36,7 +37,11 @@ const arc = (cx: number, cy: number, r: number, a0: number, a1: number) => {
  */
 function Pie({ slices, selected, onSelect, size, center }: { slices: { key: string; value: number; color: string }[]; selected: string | null; onSelect: (key: string | null) => void; size: number; center: React.ReactNode }) {
   const c = useColors();
-  const total = slices.reduce((a, b) => a + b.value, 0) || 1;
+  const n = slices.length;
+  // everything eases: the slices grow in and reshape when the period changes, the chosen one swells and the others fade
+  const values = useTweenList(slices.map((sl) => sl.value), motion.slow);
+  const amounts = useTweenList([...slices.map((sl) => (selected === sl.key ? 1 : 0)), ...slices.map((sl) => (selected !== null && selected !== sl.key ? 1 : 0))], motion.fast + 60);
+  const total = values.reduce((a, b) => a + b, 0) || 1;
   const W = size + MARGIN_X * 2;
   const H = size + MARGIN_Y * 2;
   const cx = W / 2;
@@ -45,18 +50,36 @@ function Pie({ slices, selected, onSelect, size, center }: { slices: { key: stri
   const r = size / 2 - RING / 2 - 4;
   // each slice's angles, from 12 o'clock clockwise
   let acc = 0;
-  const spans = slices.map((sl) => {
-    const sweep = (sl.value / total) * 360;
-    const span = { ...sl, a0: acc, a1: acc + sweep };
+  const spans = slices.map((sl, i) => {
+    const sweep = ((values[i] ?? 0) / total) * 360;
+    const span = { ...sl, a0: acc, a1: acc + sweep, grow: amounts[i] ?? 0, dim: amounts[n + i] ?? 0 };
     acc += sweep;
     return span;
   });
-  const chosen = spans.find((x) => x.key === selected);
+  const target = spans.find((x) => x.key === selected);
+
+  // the leader line: it remembers the last slice so it can fade out in place, and it glides the short way round between slices
+  const lastKey = useRef<string | null>(null);
+  if (selected) lastKey.current = selected;
+  const chosen = spans.find((x) => x.key === (selected ?? lastKey.current));
+  const midTarget = chosen ? (chosen.a0 + chosen.a1) / 2 : 0;
+  const unwrapped = useRef(midTarget);
+  if (selected && chosen) {
+    const delta = ((((midTarget - unwrapped.current) % 360) + 540) % 360) - 180;
+    unwrapped.current += delta;
+  }
+  const wasOn = useRef(false);
+  const snapLeader = !!selected && !wasOn.current;
+  useEffect(() => {
+    wasOn.current = !!selected;
+  });
+  const mid = useGlide(unwrapped.current, snapLeader, motion.fast + 60);
+  const lead = useTween(selected ? 1 : 0, motion.fast + 60);
 
   /** which slice is at a point of the donut area (pointer position relative to its top left corner) */
-  const hit = (x: number, y: number): string | null => {
-    const dx = x - cx;
-    const dy = y - cy;
+  const hit = (px: number, py: number): string | null => {
+    const dx = px - cx;
+    const dy = py - cy;
     const dist = Math.hypot(dx, dy);
     if (dist < size / 2 - RING - 10 || dist > size / 2 + 6) return null;
     const angle = ((Math.atan2(dx, -dy) * 180) / Math.PI + 360) % 360;
@@ -65,17 +88,15 @@ function Pie({ slices, selected, onSelect, size, center }: { slices: { key: stri
 
   // the line from the slice to its percentage: out of the ring, a short elbow, then sideways
   let leader: React.ReactNode = null;
-  if (chosen) {
-    const mid = (chosen.a0 + chosen.a1) / 2;
+  if (chosen && lead > 0.01) {
     const side = Math.sin((mid * Math.PI) / 180) >= 0 ? 1 : -1;
     const p0 = polar(cx, cy, size / 2 + 3, mid);
-    const p1 = polar(cx, cy, size / 2 + 20, mid);
-    const p2 = { x: p1.x + side * 18, y: p1.y };
+    const p1 = polar(cx, cy, size / 2 + 3 + 17 * lead, mid);
+    const p2 = { x: p1.x + side * 18 * lead, y: p1.y };
     leader = (
       <>
-        <Path d={`M ${p0.x} ${p0.y} L ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`} stroke={chosen.color} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        <Circle cx={p0.x} cy={p0.y} r={3.5} fill={chosen.color} />
-        <SvgText x={p2.x + side * 6} y={p2.y + 6} fontSize={17} fontWeight="700" fontFamily={fontFamily} fill={chosen.color} textAnchor={side > 0 ? 'start' : 'end'}>{pct(r1((chosen.value / total) * 100))}</SvgText>
+        <Path d={`M ${p0.x} ${p0.y} L ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`} stroke={chosen.color} strokeOpacity={lead} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <SvgText x={p2.x + side * 6} y={p2.y + 6} fontSize={17} fontWeight="700" fontFamily={fontFamily} fill={chosen.color} fillOpacity={lead} textAnchor={side > 0 ? 'start' : 'end'}>{pct(r1(((target ?? chosen).value / pieTotalOf(slices)) * 100))}</SvgText>
       </>
     );
   }
@@ -87,8 +108,7 @@ function Pie({ slices, selected, onSelect, size, center }: { slices: { key: stri
         {spans.map((sl) => {
           const sweep = sl.a1 - sl.a0;
           if (sweep < 0.4) return null;
-          const dim = selected !== null && selected !== sl.key;
-          return <Path key={sl.key} d={arc(cx, cy, r, sl.a0 + 0.6, Math.max(sl.a1 - 0.6, sl.a0 + 0.2))} stroke={sl.color} strokeWidth={selected === sl.key ? RING + 8 : RING} strokeOpacity={dim ? 0.35 : 1} fill="none" />;
+          return <Path key={sl.key} d={arc(cx, cy, r, sl.a0 + 0.6, Math.max(sl.a1 - 0.6, sl.a0 + 0.2))} stroke={sl.color} strokeWidth={RING + 8 * sl.grow} strokeOpacity={1 - 0.65 * sl.dim} fill="none" />;
         })}
         {leader}
       </Svg>
@@ -113,6 +133,9 @@ function Pie({ slices, selected, onSelect, size, center }: { slices: { key: stri
     </View>
   );
 }
+
+/** The slices' values add up to the whole the percentages are shares of (from the target values, not the ones still easing). */
+const pieTotalOf = (slices: { value: number }[]) => slices.reduce((a, b) => a + b.value, 0) || 1;
 
 /**
  * The shared summary, always in percentages: a line chart of the months around today (6, 12 or 24 of them, the past and
@@ -154,6 +177,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
     return { categories: list, spentOfIncome: list.reduce((a, x) => a + x.pct, 0) };
   }, [months]);
 
+  const shownSpent = useTween(spentOfIncome, motion.slow);
   const hasData = months.some((m) => weight(m) > 0);
   if (!hasData) return <Text style={[type.body, { color: c.textMuted }]}>Nothing to show yet: add some income and expenses.</Text>;
 
@@ -246,7 +270,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
             size={Math.max(150, Math.min(PIE_MAX, (pieBox.w || PIE_MAX + MARGIN_X * 2) - MARGIN_X * 2))}
             center={
               <>
-                <Text style={[type.title, { color: c.expense }]}>{pct(r1(spentOfIncome))}</Text>
+                <Text style={[type.title, { color: c.expense }]}>{pct(r1(shownSpent))}</Text>
                 <Text style={[type.body, { color: c.textMuted }]}>of income spent</Text>
               </>
             }
@@ -259,7 +283,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
                 accessibilityLabel={`${x.label}: ${pct(r1((x.value / pieTotal) * 100))}`}
                 onPress={() => setSlice(slice === x.key ? null : x.key)}
                 {...({ onHoverIn: () => setSlice(x.key), onHoverOut: () => setSlice(null) } as object)}
-                style={({ hovered }: any) => [s.legendRow, { backgroundColor: hovered || slice === x.key ? c.surface : 'transparent' }]}
+                style={({ hovered }: any) => [s.legendRow, { backgroundColor: hovered || slice === x.key ? c.surface : 'transparent' }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '180ms' } as object)]}
               >
                 <View style={[s.swatch, { backgroundColor: x.color }]} />
                 <Text style={[type.body, { color: c.text, flex: 1 }]} numberOfLines={1}>{x.label}</Text>
