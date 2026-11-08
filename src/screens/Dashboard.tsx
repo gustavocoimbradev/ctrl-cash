@@ -433,7 +433,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
         // the confirmed amount big on the left, the pending one ("Pending $X") on the right and a thin confirmed/total bar.
         // The totals live in the "?" help.
         <View style={[s.summary, { borderTopColor: c.border }, mobile && s.summaryMobile]}>
-          <View style={[s.summaryPair, !mobile && s.summaryTriple, mobile && s.summaryStack]}>
+          <View style={[s.summaryPair, mobile && s.summaryStack]}>
             {[
               { label: 'Income', confirmed: summary.income.confirmed, pending: summary.income.pending, color: c.income, help: 'Everything you earn this month. The big amount already came in; the pending amount is still expected. Refunds and loans are not counted.', total: summary.income.total },
               { label: 'Expenses', confirmed: summary.expense.confirmed, pending: summary.expense.pending, color: c.expense, help: "All of this month's expenses, card invoices due this month included. The big amount already happened; the pending amount is still to pay.", total: summary.expense.total },
@@ -458,6 +458,15 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
                 </View>
               );
             })}
+          </View>
+          {/* the result: what is left over right now, and what it will be once everything pending happens */}
+          <View style={s.resultRow}>
+            <View style={s.titleRow}>
+              <Text style={[type.body, { color: c.textMuted }]}>Left over</Text>
+              <HelpTip title="Left over" text={`Income minus expenses. The big amount is what you really have left right now; the other one is what it will be once everything pending happens. It is what goes into your accumulated wealth.\n\nTotal for the month: ${formatMoney(summary.left)}.`} />
+            </View>
+            <Text style={[type.label, { color: summary.leftNow < 0 ? c.expense : c.primary, fontSize: 20 }]} numberOfLines={1}>{formatMoney(summary.leftNow)}</Text>
+            <Text style={[type.body, { color: c.textMuted, flexShrink: 1 }]} numberOfLines={1}>· {formatMoney(summary.left)} when everything is paid</Text>
           </View>
         </View>
       )}
@@ -742,7 +751,8 @@ const s = StyleSheet.create({
   /** phone: Income and Expenses side by side, small columns */
   summaryPair: { flexDirection: 'row', gap: spacing.lg, paddingHorizontal: spacing.xl - 4, paddingTop: spacing.md, paddingBottom: spacing.sm },
   summaryCol: { flex: 1, minWidth: 0, gap: 4 },
-  summaryTriple: { paddingBottom: spacing.md },
+  resultRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: spacing.sm, paddingHorizontal: spacing.xl - 4, paddingBottom: spacing.md },
+  
   summaryStack: { flexDirection: 'column', gap: spacing.md },
   valueRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.sm },
   /** Income / Expenses block: line, proportion bar and the two amounts stacked */
