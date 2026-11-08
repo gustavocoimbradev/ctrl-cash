@@ -143,36 +143,40 @@ async function api<T>(token: string, path: string, method = 'GET', body?: unknow
 /** The social side: two accounts that follow each other, a short chat and a summary shared both ways. */
 async function seedSocial(demo: string, data: Parameters<typeof buildSummary>[0]) {
   const maria = await tokenFor('maria@ctrlcash.dev');
-  await api(demo, '/profile', 'PUT', { handle: 'demo', displayName: 'Demo', bio: 'Trying to keep more than I spend.', color: '#2D55D9' });
-  await api(maria, '/profile', 'PUT', { handle: 'maria', displayName: 'Maria Costa', bio: 'Saving for a trip, one month at a time.', color: '#8B5CF6' });
-  await api(demo, '/follow', 'POST', { handle: 'maria' });
-  await api(maria, '/follow', 'POST', { handle: 'demo' });
-  await api(demo, '/shares', 'POST', { handle: 'maria' });
-  await api(maria, '/shares', 'POST', { handle: 'demo' });
+  // people are identified by the public id the API gives each profile (it never changes, so running this again is safe)
+  const me = (await api<{ profile: { id: string } }>(demo, '/profile', 'PUT', { displayName: 'Demo', color: '#2D55D9' })).profile.id;
+  const friend = (await api<{ profile: { id: string } }>(maria, '/profile', 'PUT', { displayName: 'Maria Costa', color: '#8B5CF6' })).profile.id;
+  await api(demo, '/follow', 'POST', { id: friend });
+  await api(maria, '/follow', 'POST', { id: me });
+  await api(demo, '/shares', 'POST', { id: friend });
+  await api(maria, '/shares', 'POST', { id: me });
   await api(demo, '/summary', 'PUT', buildSummary(data));
-  // Maria's summary, handmade: a steady salary, a few months of savings and one tight month
+  // Maria's summary, handmade: a steady salary, a few months of savings and one tight month. Percentages of income only.
   const current = currentMonthKey();
+  const income = 520000;
   const left = [140000, 95000, 120000, -18000, 160000, 110000, 90000, 130000, 70000, 150000, 125000, 105000];
-  const months = left.map((l, i) => ({ key: addMonthsToKey(current, i - 11), income: 520000, expense: 520000 - l, left: l }));
+  const split = [['bills', 'Bills', 0.46], ['groceries', 'Groceries', 0.28], ['leisure', 'Leisure', 0.12], ['car', 'Car', 0.08], ['health', 'Health', 0.06]] as const;
+  const months = left.map((l, i) => ({
+    key: addMonthsToKey(current, i - 11),
+    spent: ((income - l) / income) * 100,
+    saved: (l / income) * 100,
+    categories: split.map(([slug, label, share]) => ({ slug, label, pct: (((income - l) * share) / income) * 100 })),
+  }));
+  const totalSpent = left.reduce((sum, l) => sum + (income - l), 0);
   await api(maria, '/summary', 'PUT', {
-    version: 1,
+    version: 2,
     generatedAt: Date.now(),
+    spent: (totalSpent / (income * 12)) * 100,
+    saved: (left.reduce((sum, l) => sum + l, 0) / (income * 12)) * 100,
     months,
-    categories: [
-      { slug: 'bills', label: 'Bills', amount: 1_720_000 },
-      { slug: 'groceries', label: 'Groceries', amount: 1_050_000 },
-      { slug: 'leisure', label: 'Leisure', amount: 610_000 },
-      { slug: 'car', label: 'Car', amount: 480_000 },
-      { slug: 'health', label: 'Health', amount: 330_000 },
-      { slug: 'subscriptions', label: 'Subscriptions', amount: 160_000 },
-    ],
+    categories: split.map(([slug, label, share]) => ({ slug, label, pct: ((totalSpent * share) / (income * 12)) * 100 })),
   });
   // a short chat, only the first time
-  const thread = await api<{ messages: unknown[] }>(demo, '/messages/maria');
+  const thread = await api<{ messages: unknown[] }>(demo, `/messages/${friend}`);
   if (thread.messages.length === 0) {
-    await api(maria, '/messages', 'POST', { to: 'demo', body: 'Hey! I just shared my monthly summary with you.' });
-    await api(demo, '/messages', 'POST', { to: 'maria', body: 'Nice, thanks! Mine is on my profile too.' });
-    await api(maria, '/messages', 'POST', { to: 'demo', body: 'How is the saving going this month?' });
+    await api(maria, '/messages', 'POST', { to: me, body: 'Hey! I just shared my monthly summary with you.' });
+    await api(demo, '/messages', 'POST', { to: friend, body: 'Nice, thanks! Mine is on my profile too.' });
+    await api(maria, '/messages', 'POST', { to: me, body: 'How is the saving going this month?' });
   }
 }
 
@@ -185,7 +189,7 @@ async function main() {
   });
   if (!res.ok) throw new Error(`The API answered ${res.status}: ${await res.text()}`);
   await seedSocial(token, { transactions: txs, cards: [cardA, cardB], payments, categories, reserves: [], reserveMoves: [] });
-  console.log(`Demo account ready: ${EMAIL} / ${PASSWORD}  (${txs.length} transactions, 2 cards, ${payments.length} payments, and a friend: @maria)`);
+  console.log(`Demo account ready: ${EMAIL} / ${PASSWORD}  (${txs.length} transactions, 2 cards, ${payments.length} payments, and a friend: Maria Costa)`);
 }
 
 main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1); });
