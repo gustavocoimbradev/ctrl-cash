@@ -182,8 +182,8 @@ const s = StyleSheet.create({
   count: { minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   window: { position: 'absolute', zIndex: 31, overflow: 'hidden', borderWidth: 1 },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 60, paddingHorizontal: spacing.sm, borderBottomWidth: 1 },
-  /** a screen's top bar on the phone: under the status area, with a back arrow */
-  headerPhone: { minHeight: 64, paddingLeft: spacing.sm, ...(Platform.OS === 'web' ? ({ paddingTop: 'calc(env(safe-area-inset-top) + 6px)' } as object) : null) },
+  /** a screen's top bar on the phone, with a back arrow (the chat sits inside the app, which is already below the banner and the status area) */
+  headerPhone: { minHeight: 64, paddingLeft: spacing.sm },
   iconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   who: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44 },
   body: { padding: spacing.lg, paddingBottom: spacing.xl },

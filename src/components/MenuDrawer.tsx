@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { colors as c, glow, radius, spacing, type } from '../theme';
 import { motion, useReducedMotion } from '../theme/motion';
+import { useInstallBannerHeight } from '../theme/viewport';
 
 export interface MenuItem {
   key: string;
@@ -22,6 +23,8 @@ export function MenuDrawer({ visible, onClose, header, items, side = 'right' }: 
   const enter = useRef(new Animated.Value(0)).current;
   const [mounted, setMounted] = useState(visible);
   const panelW = Math.min(320, width * 0.86);
+  /** the install banner at the top of phones stays above the menu */
+  const bannerH = useInstallBannerHeight();
 
   useEffect(() => {
     if (visible) {
@@ -44,7 +47,7 @@ export function MenuDrawer({ visible, onClose, header, items, side = 'right' }: 
 
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, marginTop: bannerH }}>
         <Pressable accessibilityLabel="Close menu" style={StyleSheet.absoluteFill} onPress={onClose}>
           <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.overlay, opacity: enter }, Platform.OS === 'web' && ({ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' } as object)]} />
         </Pressable>

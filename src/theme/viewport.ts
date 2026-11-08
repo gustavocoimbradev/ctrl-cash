@@ -21,3 +21,24 @@ export function useViewportHeight(): number {
   const page = document.getElementById('root')?.clientHeight;
   return page ? Math.min(height, page) : height;
 }
+
+/**
+ * Height of the install banner at the top of phones while it is shown (0 otherwise, and off the web). The panels that open over
+ * the app (menu, full screens, dialogs) start below it, so the banner stays visible and usable.
+ */
+export function useInstallBannerHeight(): number {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const refresh = () => setTick((n) => n + 1);
+    window.addEventListener('installbanner', refresh);
+    window.addEventListener('resize', refresh);
+    return () => {
+      window.removeEventListener('installbanner', refresh);
+      window.removeEventListener('resize', refresh);
+    };
+  }, []);
+  if (Platform.OS !== 'web') return 0;
+  if (!document.body.classList.contains('install-banner-on')) return 0;
+  return document.getElementById('install-banner')?.offsetHeight ?? 0;
+}

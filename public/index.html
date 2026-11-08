@@ -115,6 +115,8 @@
 
       /* Install banner (phones on the web): one quiet line, light, close to the signed-in header */
       #install-banner {
+        /* above the panels that open over the app (they start below it), so it stays visible and usable */
+        position: relative; z-index: 100000;
         display: none; flex-shrink: 0; align-items: center; gap: 10px;
         padding: 0 12px; padding-top: env(safe-area-inset-top);
         min-height: 48px;

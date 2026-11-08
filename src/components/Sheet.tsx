@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { motion, useReducedMotion } from '../theme/motion';
+import { useInstallBannerHeight } from '../theme/viewport';
 import { colors, desktopBreakpoint, glow, radius, spacing, type, useColors } from '../theme';
 
 interface Props {
@@ -57,10 +58,12 @@ export function Sheet({ visible, title, onClose, children, footer, fixed, screen
   // generous inner space: 32px on desktop, 24px on mobile (the content never hugs the edges)
   const pad = desktop ? spacing.xxl : spacing.xl;
   const asScreen = !!screen && !desktop;
+  /** the install banner at the top of phones stays above: the sheet starts below it */
+  const bannerH = useInstallBannerHeight();
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <Pressable style={[s.overlay, desktop && s.center, Platform.OS === 'web' && ({ cursor: 'default' } as object)]} onPress={onClose}>
+        <Pressable style={[s.overlay, desktop && s.center, { marginTop: bannerH }, Platform.OS === 'web' && ({ cursor: 'default' } as object)]} onPress={onClose}>
           {/* dimmed backdrop with blur (8px) */}
           <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.overlay, opacity: enter }, Platform.OS === 'web' && ({ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } as object)]} />
           <Pressable
@@ -70,7 +73,7 @@ export function Sheet({ visible, title, onClose, children, footer, fixed, screen
           <Animated.View style={[{ maxHeight: '100%', opacity: enter, transform: asScreen ? [{ translateX: enter.interpolate({ inputRange: [0, 1], outputRange: [36, 0] }) }] : desktop ? [{ scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }] : [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [28, 0] }) }] }, asScreen && { flex: 1, maxHeight: undefined }]}>
           <View style={[s.panel, { backgroundColor: c.card }, asScreen && s.panelScreen]}>
             {asScreen ? (
-              <View style={[s.header, s.headerScreen, { borderBottomColor: c.border }]}>
+              <View style={[s.header, s.headerScreen, bannerH > 0 && { paddingTop: spacing.sm }, { borderBottomColor: c.border }]}>
                 <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onClose} style={s.back}>
                   <Feather name="arrow-left" size={24} color={c.text} />
                 </Pressable>
