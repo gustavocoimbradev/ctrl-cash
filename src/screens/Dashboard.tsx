@@ -459,7 +459,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
             })}
           </View>
           {/* the result: what is left over right now, and what it will be once everything pending happens */}
-          <View style={[s.resultRow, { backgroundColor: c.surface, borderTopColor: c.border }]}>
+          <View style={[s.resultRow, { backgroundColor: c.card, borderTopColor: c.border }]}>
             <Text style={[type.title, { color: c.text }]}>Left over</Text>
             <View style={s.resultValue}>
               <Text style={[type.title, { color: summary.leftNow < 0 ? c.expense : c.primary, fontSize: 22 }]} numberOfLines={1}>{formatMoney(summary.leftNow)}</Text>
