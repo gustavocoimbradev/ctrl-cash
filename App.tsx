@@ -25,6 +25,9 @@ import { ProfilePage } from './src/social/ProfilePage';
 import { Transaction } from './src/types';
 import { desktopBreakpoint, maxContentWidth, minTouch, radius, spacing, type, useColors } from './src/theme';
 
+/** desktop: room on the left for the floating side menu; the top bar uses the same insets as the page, so both line up */
+const DESKTOP_LEFT = 104;
+
 function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOut: () => void }) {
   const c = useColors();
   const { ready, syncError, data } = useStore();
@@ -83,7 +86,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
       <StatusBar style="dark" />
       {/* fixed top bar: brand, cards, avatar and sign out */}
       <Reveal distance={-12} duration={320} style={{ zIndex: 10 }}>
-      <View style={[s.topBar, { backgroundColor: c.card, borderBottomColor: c.border }]}>
+      <View style={[s.topBar, { backgroundColor: c.card, borderBottomColor: c.border }, desktop && { paddingLeft: DESKTOP_LEFT, paddingRight: spacing.xxl }]}>
         {desktop ? (
           <View style={s.topInner}>
             <View style={s.topSide}>
@@ -140,7 +143,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
           ]}
         />
       ) : null}
-      <ScrollView contentContainerStyle={[s.content, desktop ? { padding: spacing.xxl, paddingTop: spacing.lg, paddingLeft: 104 } : { paddingTop: spacing.lg, paddingBottom: 120 }]}>
+      <ScrollView contentContainerStyle={[s.content, desktop ? { padding: spacing.xxl, paddingTop: spacing.lg, paddingLeft: DESKTOP_LEFT } : { paddingTop: spacing.lg, paddingBottom: 120 }]}>
         <View style={s.inner}>
           {syncError ? (
             <View style={[s.banner, { borderColor: c.expense }]}>
