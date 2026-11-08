@@ -151,14 +151,17 @@ async function seedSocial(demo: string, data: Parameters<typeof buildSummary>[0]
   await api(demo, '/summary', 'PUT', buildSummary(data));
   // Maria's summary, handmade: a steady salary, a few months of savings and one tight month. Percentages of income only.
   const current = currentMonthKey();
-  const incomes = [520000, 520000, 540000, 520000, 520000, 560000, 520000, 520000, 520000, 600000, 520000, 540000];
-  const left = [140000, 95000, 120000, -18000, 160000, 110000, 90000, 130000, 70000, 150000, 125000, 105000];
+  const baseIncomes = [520000, 520000, 540000, 520000, 520000, 560000, 520000, 520000, 520000, 600000, 520000, 540000];
+  const baseLeft = [140000, 95000, 120000, -18000, 160000, 110000, 90000, 130000, 70000, 150000, 125000, 105000];
   const split = [['bills', 'Bills', 0.46], ['groceries', 'Groceries', 0.28], ['leisure', 'Leisure', 0.12], ['car', 'Car', 0.08], ['health', 'Health', 0.06]] as const;
+  // a year back and a year ahead (what she has already planned), like the app publishes
+  const incomes = Array.from({ length: 24 }, (_, i) => baseIncomes[i % 12]);
+  const left = Array.from({ length: 24 }, (_, i) => baseLeft[(i + 3) % 12]);
   const averageIncome = incomes.reduce((a, b) => a + b, 0) / incomes.length;
   const months = left.map((l, i) => {
     const income = incomes[i];
     return {
-      key: addMonthsToKey(current, i - 11),
+      key: addMonthsToKey(current, i - 12),
       spent: ((income - l) / income) * 100,
       saved: (l / income) * 100,
       incomeRel: (income / averageIncome) * 100,
