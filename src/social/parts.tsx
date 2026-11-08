@@ -22,7 +22,7 @@ export function Avatar({ name, id, color, photo, size = 44 }: { name: string; id
 }
 
 /** One person in a list: avatar and name (and a line under it when there is something to say), with whatever sits on the right. */
-export function PersonRow({ person, onPress, right, subtitle }: { person: Pick<Person, 'id' | 'displayName' | 'color' | 'photo'>; onPress?: () => void; right?: React.ReactNode; subtitle?: string }) {
+export function PersonRow({ person, onPress, right, subtitle }: { person: Pick<Person, 'code' | 'displayName' | 'color' | 'photo'>; onPress?: () => void; right?: React.ReactNode; subtitle?: string }) {
   const c = useColors();
   // the row is not one big button: the person area opens the profile and `right` (a Follow button, say) stays its own
   // control, so there is never a button inside a button
@@ -34,7 +34,7 @@ export function PersonRow({ person, onPress, right, subtitle }: { person: Pick<P
         disabled={!onPress}
         style={({ pressed, hovered }: any) => [s.who, { backgroundColor: hovered && onPress ? 'rgba(15,27,51,0.03)' : 'transparent', opacity: pressed ? 0.7 : 1 }]}
       >
-        <Avatar name={person.displayName} id={person.id} color={person.color} photo={person.photo} />
+        <Avatar name={person.displayName} id={person.code} color={person.color} photo={person.photo} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{person.displayName}</Text>
           {subtitle ? <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{subtitle}</Text> : null}

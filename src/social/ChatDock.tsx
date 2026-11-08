@@ -6,6 +6,8 @@ import { motion, useReducedMotion } from '../theme/motion';
 import { ChatsList } from './Lists';
 import { useSocial } from './SocialProvider';
 import { Thread } from './Thread';
+import { CodeInput, FoundPerson, useCodeLookup } from './code';
+import { Person, socialApi } from './api';
 import { Avatar, Pill } from './parts';
 
 const WIDTH = 380;
@@ -18,7 +20,12 @@ const HEIGHT = 560;
  */
 export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenProfile: (id: string | 'me') => void }) {
   const c = useColors();
-  const { loaded, profile, conversations, following, followers, unread, chat, openChat, closeChat, chatList, refresh } = useSocial();
+  const { loaded, profile, conversations, given, received, unread, chat, openChat, closeChat, chatList, refresh } = useSocial();
+  /** starting a conversation: type the other person's code, see who it is, confirm */
+  const [composing, setComposing] = useState(false);
+  const finder = useCodeLookup();
+  /** the person of a conversation that is not in the lists yet (no message sent so far) */
+  const [fetched, setFetched] = useState<Person | null>(null);
   const { height: winH } = useWindowDimensions();
   const reduced = useReducedMotion();
   const enter = useRef(new Animated.Value(0)).current;
@@ -44,7 +51,14 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chat.open]);
 
-  const peer = chat.with ? [...conversations.map((x) => x.with), ...following, ...followers].find((p) => p.id === chat.with) : undefined;
+  const known = chat.with ? [...conversations.map((x) => x.with), ...given, ...received].find((p) => p.code === chat.with) : undefined;
+  const peer = known ?? (fetched && fetched.code === chat.with ? fetched : undefined);
+  useEffect(() => {
+    if (chat.with && !known && fetched?.code !== chat.with) socialApi.person(chat.with).then((r) => setFetched(r.person)).catch(() => {});
+  }, [chat.with, known, fetched?.code]);
+  useEffect(() => {
+    if (!chat.open) setComposing(false);
+  }, [chat.open]);
   const latest = conversations[0]?.with;
   const place = mobile ? { right: spacing.lg, bottom: 88 } : { right: spacing.xl, bottom: spacing.xl };
   const height = Math.min(HEIGHT, winH - 96);
@@ -63,7 +77,19 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
         </View>
       );
     }
-    return <ChatsList onOpen={(h) => openChat(h)} />;
+    if (composing) {
+      return (
+        <View style={{ gap: spacing.lg }}>
+          <Text style={[type.body, { color: c.textMuted }]}>Type the code of the person you want to talk to. You will see who it is before starting.</Text>
+          <CodeInput value={finder.text} onChange={finder.setText} autoFocus />
+          <FoundPerson
+            lookup={finder.lookup}
+            actions={(p) => <Pill label="Start chat" icon="message-circle" primary onPress={() => { setComposing(false); finder.clear(); openChat(p.code); }} />}
+          />
+        </View>
+      );
+    }
+    return <ChatsList onOpen={(code) => openChat(code)} onNew={() => setComposing(true)} />;
   };
 
   return (
@@ -85,7 +111,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
             ) : null}
           </View>
           <Text style={[type.label, { color: c.text }]}>Messages</Text>
-          {latest ? <Avatar name={latest.displayName} id={latest.id} color={latest.color} photo={latest.photo} size={32} /> : null}
+          {latest ? <Avatar name={latest.displayName} id={latest.code} color={latest.color} photo={latest.photo} size={32} /> : null}
         </Pressable>
       ) : null}
 
@@ -106,14 +132,19 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
                   <Feather name="arrow-left" size={22} color={c.text} />
                 </Pressable>
                 <Pressable accessibilityRole="button" onPress={() => chat.with && onOpenProfile(chat.with)} style={s.who}>
-                  {peer ? <Avatar name={peer.displayName} id={peer.id} color={peer.color} photo={peer.photo} size={36} /> : null}
+                  {peer ? <Avatar name={peer.displayName} id={peer.code} color={peer.color} photo={peer.photo} size={36} /> : null}
                   <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{peer?.displayName ?? 'Conversation'}</Text>
                 </Pressable>
               </>
             ) : (
               <View style={[s.who, { paddingLeft: spacing.sm }]}>
-                <Text style={[type.title, { color: c.text }]}>Messages</Text>
-                {unread > 0 ? (
+                {composing ? (
+                  <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => { setComposing(false); finder.clear(); }} style={[s.iconBtn, { marginLeft: -spacing.sm }]}>
+                    <Feather name="arrow-left" size={22} color={c.text} />
+                  </Pressable>
+                ) : null}
+                <Text style={[type.title, { color: c.text }]}>{composing ? 'New chat' : 'Messages'}</Text>
+                {unread > 0 && !composing ? (
                   <View style={[s.count, { backgroundColor: c.expense }]}>
                     <Text style={s.badgeText}>{unread > 99 ? '99+' : unread}</Text>
                   </View>

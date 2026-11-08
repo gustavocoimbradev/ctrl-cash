@@ -11,6 +11,7 @@ import {
   signInWithEmailAndPassword,
   updatePassword,
   signOut as fbSignOut,
+  updateProfile,
 } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { auth } from './auth';
@@ -21,7 +22,8 @@ export type EmailStatus = 'password' | 'google' | 'new';
 export type AuthState =
   | { status: 'loading' }
   | { status: 'out' }
-  | { status: 'in'; uid: string; email: string };
+  /** `name` is the account's display name: the one typed at sign-up, or the one Google gives (empty when there is none) */
+  | { status: 'in'; uid: string; email: string; name: string };
 
 const MESSAGES: Record<string, string> = {
   'auth/invalid-credential': 'Incorrect email or password.',
@@ -84,7 +86,7 @@ export function useAuth() {
   useEffect(
     () =>
       onAuthStateChanged(auth, (user) =>
-        setState(user ? { status: 'in', uid: user.uid, email: user.email ?? '' } : { status: 'out' }),
+        setState(user ? { status: 'in', uid: user.uid, email: user.email ?? '', name: user.displayName ?? '' } : { status: 'out' }),
       ),
     [],
   );
@@ -92,7 +94,13 @@ export function useAuth() {
   return {
     state,
     signIn: (email: string, password: string) => signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password).then(() => undefined),
-    signUp: (email: string, password: string) => createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password).then(() => undefined),
+    /** creates the account with the name the person typed (kept as the account's display name) */
+    signUp: async (email: string, password: string, name: string) => {
+      const { user } = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+      await updateProfile(user, { displayName: name.trim() });
+      // the sign-in event already fired without the name: tell the app the name is there now
+      setState({ status: 'in', uid: user.uid, email: user.email ?? '', name: name.trim() });
+    },
     /**
      * Sign in with Google (web). If the account does not exist yet, Firebase **creates it automatically** on the first
      * access. Popup first; if the browser blocks it (common on phones), uses redirect.

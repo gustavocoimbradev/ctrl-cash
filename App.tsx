@@ -20,22 +20,19 @@ import { StoreProvider, useStore } from './src/store';
 import { SocialProvider, useSocial } from './src/social/SocialProvider';
 import { ChatDock } from './src/social/ChatDock';
 import { Avatar } from './src/social/parts';
-import { PeopleSearch } from './src/social/PeopleSearch';
 import { ProfilePage } from './src/social/ProfilePage';
 import { Transaction } from './src/types';
 import { desktopBreakpoint, maxContentWidth, minTouch, radius, spacing, type, useColors } from './src/theme';
 
 type Page = { name: 'dashboard' } | { name: 'profile'; id: string | 'me' };
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** The page the address asks for: `/` is the dashboard, `/profile/<uuid>` somebody's profile and `/profile` your own. */
+/** The page the address asks for: `/` is the dashboard, `/profile/<code>` somebody's profile and `/profile` your own. */
 function pageFromUrl(): Page {
   if (Platform.OS !== 'web') return { name: 'dashboard' };
   const m = /^\/profile(?:\/([^/]+))?\/?$/.exec(window.location.pathname);
   if (!m) return { name: 'dashboard' };
   if (!m[1]) return { name: 'profile', id: 'me' };
-  return UUID.test(m[1]) ? { name: 'profile', id: m[1].toLowerCase() } : { name: 'profile', id: m[1] };
+  return { name: 'profile', id: m[1].toUpperCase() };
 }
 
 function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOut: () => void }) {
@@ -58,15 +55,14 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   const [seen, setSeen] = useState(() => onboardingSeen(uid));
   const [hidden, setHidden] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   /** the page on screen: the dashboard, or a profile (yours or somebody else's) */
   const [page, setPage] = useState<Page>(pageFromUrl);
   const { profile: myProfile } = useSocial();
-  const myId = myProfile?.id;
+  const myId = myProfile?.code;
   const urlSynced = useRef(false);
   const toDashboard = () => setPage({ name: 'dashboard' });
 
-  // the address follows the page (a profile is /profile/<its uuid>) and the browser's Back and Forward follow the address
+  // the address follows the page (a profile is /profile/<its code>) and the browser's Back and Forward follow the address
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const target = page.name === 'dashboard' ? '/' : page.id === 'me' ? (myId ? `/profile/${myId}` : '/profile') : `/profile/${page.id}`;
@@ -125,11 +121,8 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
                 <Brand size={18} color={c.text} />
               </Pressable>
             </View>
-            {/* people search, centered in the header */}
-            <View style={s.topCenter}>
-              <PeopleSearch onOpenProfile={(h) => setPage({ name: 'profile', id: h })} />
-            </View>
-            <View style={[s.topSide, { justifyContent: 'flex-end' }]}>
+            <View style={{ flex: 1 }} />
+            <View style={[s.topSide, { flex: 0, justifyContent: 'flex-end' }]}>
               {/* my profile: the avatar (it is not highlighted on the profile page) */}
               <Pressable
                 accessibilityRole="button"
@@ -137,7 +130,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
                 onPress={() => setPage({ name: 'profile', id: 'me' })}
                 style={({ pressed, hovered }: any) => [s.avatarBtn, { borderColor: hovered ? c.surfaceAlt : 'transparent', opacity: pressed ? 0.7 : 1 }]}
               >
-                <Avatar name={myProfile?.displayName ?? name} id={myProfile?.id ?? 'me'} color={myProfile?.color} photo={myProfile?.photo} size={36} />
+                <Avatar name={myProfile?.displayName ?? name} id={myProfile?.code ?? 'me'} color={myProfile?.color} photo={myProfile?.photo} size={36} />
               </Pressable>
               <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={onSignOut} style={({ pressed, hovered }: any) => [s.iconBtn, { backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}>
                 <Feather name="log-out" size={20} color={c.textMuted} />
@@ -151,9 +144,6 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
             <Pressable accessibilityRole="button" accessibilityLabel="Account settings" onPress={() => setAccountOpen(true)} style={{ flex: 1, minWidth: 0 }}>
               <Text style={[type.label, { color: c.text, lineHeight: 22 }]} numberOfLines={1}>{name}</Text>
             </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Search people" onPress={() => setSearchOpen((v) => !v)} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: searchOpen ? `${c.primary}1A` : c.surface, opacity: pressed ? 0.7 : 1 }]}>
-              <Feather name="search" size={20} color={searchOpen ? c.primary : c.textMuted} />
-            </Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={() => setPage({ name: 'profile', id: 'me' })} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}>
               <Feather name="user" size={20} color={c.textMuted} />
             </Pressable>
@@ -165,11 +155,6 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
             </Pressable>
           </View>
         )}
-        {!desktop && searchOpen ? (
-          <View style={s.mobileSearch}>
-            <PeopleSearch autoFocus onDone={() => setSearchOpen(false)} onOpenProfile={(h) => setPage({ name: 'profile', id: h })} />
-          </View>
-        ) : null}
       </View>
       </Reveal>
       <ScrollView contentContainerStyle={[s.content, desktop ? { padding: spacing.xxl, paddingTop: spacing.lg } : { paddingTop: spacing.lg, paddingBottom: 120 }]}>
@@ -186,7 +171,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
             </View>
           ) : null}
           {ready && page.name === 'profile' ? (
-            <ProfilePage id={page.id} email={email} onEditAccount={() => setAccountOpen(true)} onBack={toDashboard} onOpen={(h) => setPage({ name: 'profile', id: h })} />
+            <ProfilePage id={page.id} email={email} onEditAccount={() => setAccountOpen(true)} onOpen={(h) => setPage({ name: 'profile', id: h })} />
           ) : null}
           {ready && page.name === 'dashboard' ? (
             <Dashboard
@@ -256,7 +241,7 @@ export default function App() {
   return (
     <StoreProvider uid={state.uid}>
       <HelpProvider>
-        <SocialProvider>
+        <SocialProvider account={{ email: state.email, name: state.name }}>
           <Shell uid={state.uid} email={state.email} onSignOut={signOut} />
         </SocialProvider>
       </HelpProvider>
@@ -270,8 +255,6 @@ const s = StyleSheet.create({
   topBar: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, borderBottomWidth: 1 },
   topInner: { width: '100%', maxWidth: maxContentWidth, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 52 },
   topSide: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  topCenter: { width: '100%', maxWidth: 520, flexShrink: 1 },
-  mobileSearch: { paddingBottom: spacing.sm },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   topBtn: { minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: 'rgba(15,27,51,0.10)' },
   iconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },

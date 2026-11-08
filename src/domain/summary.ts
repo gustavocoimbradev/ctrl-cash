@@ -21,6 +21,7 @@ export function buildSummary(data: AppData, now = Date.now()): Summary {
   const first = addMonthsToKey(current, -(SUMMARY_MONTHS - 1));
   const occ = buildOccurrences(data, current);
   const months: Summary['months'] = [];
+  const incomes: number[] = [];
   const overall = new Map<string, number>();
   let totalIncome = 0;
   let totalSpent = 0;
@@ -43,8 +44,10 @@ export function buildSummary(data: AppData, now = Date.now()): Summary {
     for (const [slug, amount] of byCategory) overall.set(slug, (overall.get(slug) ?? 0) + amount);
     totalIncome += income;
     totalSpent += spent;
+    incomes.push(income);
     months.push({
       key: k,
+      incomeRel: 0, // filled below, once the average is known
       spent: round1((spent / income) * 100),
       saved: round1(100 - (spent / income) * 100),
       categories: [...byCategory]
@@ -54,6 +57,10 @@ export function buildSummary(data: AppData, now = Date.now()): Summary {
         .map(([slug, amount]) => ({ slug, label: categoryLabel(slug).slice(0, 40), pct: round1((amount / income) * 100) })),
     });
   }
+
+  // each month's income against the person's own average month: the shape of the income without any amount
+  const average = totalIncome / Math.max(incomes.length, 1);
+  months.forEach((m, i) => { m.incomeRel = average > 0 ? round1((incomes[i] / average) * 100) : 100; });
 
   const categories = totalIncome > 0
     ? [...overall]

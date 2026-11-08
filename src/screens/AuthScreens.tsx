@@ -168,7 +168,7 @@ function AuthField({ label, icon, error, message, messageColor, right, inputRef,
 
 interface LoginProps {
   onSignIn: (email: string, password: string) => Promise<void>;
-  onSignUp: (email: string, password: string) => Promise<void>;
+  onSignUp: (email: string, password: string, name: string) => Promise<void>;
   onReset: (email: string) => Promise<void>;
   /** sign in with Google (web): creates the account automatically if it does not exist yet */
   onGoogle: (email?: string) => Promise<void>;
@@ -213,10 +213,12 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
   const creating = step === 'new';
   const request = useRef(0);
   const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const confirmRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const passwordRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const nameRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const [show, setShow] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -265,13 +267,14 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
     if (!EMAIL_RE.test(value)) return fail('Enter a valid email.');
     if (step === 'idle') return check(value, ++request.current);
     if (step === 'google') return google(value);
+    if (creating && !name.trim()) return fail('Enter your name.');
     if (!password) return fail(creating ? 'Choose a password.' : 'Enter your password.');
     if (creating && confirm !== password) return fail(confirm ? 'The passwords do not match.' : 'Repeat the password to confirm it.');
     setBusy(true);
     setError('');
     setInfo('');
     try {
-      await (creating ? onSignUp : onSignIn)(value, password);
+      await (creating ? onSignUp(value, password, name) : onSignIn(value, password));
     } catch (e) {
       fail(authMessage(e));
     } finally {
@@ -313,15 +316,16 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
   // centered inside it: no layout shift between steps, no big empty gaps between items.
   const gap = tight ? spacing.md : spacing.lg;
   const emailErr = !!error && !email.trim();
+  const nameErr = !!error && creating && !name.trim();
   const passwordErr = !!error && !password;
   const confirmErr = !!error && (!confirm || confirm !== password);
   // the message goes on the label row of the field it is about; one that is about none goes on the last visible field
   const note = error || info;
-  const target: 'email' | 'password' | 'confirm' | null = !note ? null : emailErr ? 'email' : passwordErr ? 'password' : confirmErr ? 'confirm' : step === 'new' ? 'confirm' : step === 'exists' ? 'password' : 'email';
+  const target: 'email' | 'name' | 'password' | 'confirm' | null = !note ? null : emailErr ? 'email' : nameErr ? 'name' : passwordErr ? 'password' : confirmErr ? 'confirm' : step === 'new' ? 'confirm' : step === 'exists' ? 'password' : 'email';
   const extra = fieldH + gap;
   const baseH = useRef(0);
-  if (contentH > 0 && step !== 'google') baseH.current = contentH - (step === 'exists' ? extra : step === 'new' ? 2 * extra : 0);
-  const boxMin = baseH.current > 0 ? baseH.current + 2 * extra : undefined;
+  if (contentH > 0 && step !== 'google') baseH.current = contentH - (step === 'exists' ? extra : step === 'new' ? 3 * extra : 0);
+  const boxMin = baseH.current > 0 ? baseH.current + 3 * extra : undefined;
 
   // Phone: no fixed size, the white box follows its content and the height change is animated. (The desktop
   // card keeps the size of its tallest step, above.)
@@ -347,7 +351,7 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
           <View style={{ gap: spacing.xs }}>
             <Text style={s.title}>{creating ? 'Create your account' : step === 'exists' || step === 'google' ? 'Welcome back' : 'Welcome'}</Text>
             <Text style={[type.body, { color: c.textMuted, minHeight: 48 }]}>
-              {creating ? 'Choose a password to get started.' : step === 'exists' ? 'Enter your password to continue.' : step === 'google' ? '' : 'Enter your email to sign in or create your account.'}
+              {creating ? 'Tell us your name and choose a password.' : step === 'exists' ? 'Enter your password to continue.' : step === 'google' ? '' : 'Enter your email to sign in or create your account.'}
             </Text>
           </View>
         </Reveal>
@@ -371,13 +375,34 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
         />
        </View>
       </Reveal>
+      {step === 'new' && (
+        <Reveal distance={6} duration={400}>
+          <AuthField
+            label="Name"
+            icon="user"
+            inputRef={nameRef}
+            autoFocus
+            value={name}
+            onChangeText={setName}
+            autoComplete="name"
+            autoCapitalize="words"
+            autoCorrect={false}
+            onSubmitEditing={() => passwordRef.current?.focus()}
+            returnKeyType="next"
+            maxLength={40}
+            error={nameErr}
+            message={target === 'name' ? note : undefined}
+            messageColor={error ? c.expense : BLUE}
+          />
+        </Reveal>
+      )}
       {(step === 'exists' || step === 'new') && (
         <Reveal key={step === 'new' ? 'pw-new' : 'pw'} distance={6} duration={400}>
           <AuthField
             label="Password"
             icon="lock"
             inputRef={passwordRef}
-            autoFocus
+            autoFocus={!creating}
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!show}

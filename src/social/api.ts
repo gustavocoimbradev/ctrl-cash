@@ -1,34 +1,24 @@
 import { call } from '../store/sync';
 
-/** The social layer of the API (profiles, follows, messages and the shared summary). People are identified by a public id (a uuid, also the one in the profile URL), never by the account id. */
+/** The social layer of the API (profiles, follows, messages and the shared summary). People are identified by a short code (6 characters, also the one in the profile URL), never by the account id. */
 
-export interface Relation {
-  following: boolean;
-  followsMe: boolean;
-  mutual: boolean;
-}
+/** A person as other people see them. `code` is the short code people type to find them. */
 export interface Person {
-  id: string;
+  code: string;
   displayName: string;
   color: string | null;
   /** a small square JPEG as a data URL */
   photo: string | null;
-  relation: Relation;
 }
-export interface MyProfile {
-  id: string;
-  displayName: string;
-  color: string | null;
-  photo: string | null;
-}
+export interface MyProfile extends Person {}
 export interface PersonDetail extends Person {
-  followers: number;
-  following: number;
   self: boolean;
   /** I can read their summary now */
   summaryAccess: boolean;
   /** I currently share mine with them */
   sharedWithThem: boolean;
+  /** they currently share theirs with me */
+  sharesWithMe: boolean;
 }
 export interface Message {
   id: string;
@@ -61,7 +51,8 @@ export interface Summary {
   spent: number;
   saved: number;
   /** oldest first; only months that had income */
-  months: { key: string; spent: number; saved: number; categories: CategoryShare[] }[];
+  /** `incomeRel`: the month's income as a % of the person's average month (100 = average); older snapshots may lack it */
+  months: { key: string; spent: number; saved: number; incomeRel?: number; categories: CategoryShare[] }[];
   /** overall spending by category, % of income, biggest first */
   categories: CategoryShare[];
 }
@@ -70,21 +61,18 @@ const post = <T>(path: string, body: unknown) => call<T>(path, { method: 'POST',
 const enc = encodeURIComponent;
 
 export const socialApi = {
-  profile: () => call<{ profile: MyProfile | null; followers: number; following: number }>('/profile'),
+  profile: () => call<{ profile: MyProfile | null }>('/profile'),
   saveProfile: (p: { displayName: string; color?: string; /** a data URL sets it, null clears it, absent leaves it */ photo?: string | null }) => call<{ profile: MyProfile }>('/profile', { method: 'PUT', body: p }),
-  search: (q: string) => call<{ people: Person[] }>(`/people?q=${enc(q)}`),
-  person: (id: string) => call<{ person: PersonDetail }>(`/people/${enc(id)}`),
-  follow: (id: string) => post<{ ok: true }>('/follow', { id }),
-  unfollow: (id: string) => post<{ ok: true }>('/unfollow', { id }),
-  follows: () => call<{ following: Person[]; followers: Person[] }>('/follows'),
+  /** who a code belongs to (404 when nobody) */
+  person: (code: string) => call<{ person: PersonDetail }>(`/people/${enc(code)}`),
   conversations: () => call<{ conversations: Conversation[] }>('/conversations'),
-  messages: (id: string, since?: number) => call<{ messages: Message[]; canSend: boolean }>(`/messages/${enc(id)}${since ? `?since=${since}` : ''}`),
+  messages: (code: string, since?: number) => call<{ messages: Message[]; canSend: boolean }>(`/messages/${enc(code)}${since ? `?since=${since}` : ''}`),
   send: (to: string, body: string) => post<{ message: Message }>('/messages', { to, body }),
-  markRead: (id: string) => post<{ ok: true }>('/messages/read', { id }),
+  markRead: (code: string) => post<{ ok: true }>('/messages/read', { code }),
   unread: () => call<{ unread: number }>('/unread'),
   shares: () => call<{ given: Person[]; received: Person[] }>('/shares'),
-  share: (id: string) => post<{ ok: true }>('/shares', { id }),
-  revoke: (id: string) => post<{ ok: true }>('/shares/revoke', { id }),
+  share: (code: string) => post<{ ok: true }>('/shares', { code }),
+  revoke: (code: string) => post<{ ok: true }>('/shares/revoke', { code }),
   publishSummary: (summary: Summary) => call<{ ok: true }>('/summary', { method: 'PUT', body: summary }),
-  summaryOf: (id: string) => call<{ summary: Summary | null; updatedAt: number | null }>(`/people/${enc(id)}/summary`),
+  summaryOf: (code: string) => call<{ summary: Summary | null; updatedAt: number | null }>(`/people/${enc(code)}/summary`),
 };
