@@ -459,11 +459,11 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
             })}
           </View>
           {/* the result: what is left over right now, and what it will be once everything pending happens */}
-          <View style={[s.resultRow, { borderTopColor: c.border }]}>
-            <Text style={[type.body, { color: c.textMuted }]}>Left over</Text>
-            <View style={s.valueRow}>
-              <Text style={[type.label, { color: summary.leftNow < 0 ? c.expense : c.primary, fontSize: 20, flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{formatMoney(summary.leftNow)}</Text>
-              <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>Pending {formatMoney(summary.left - summary.leftNow)}</Text>
+          <View style={[s.resultRow, { backgroundColor: c.card, borderTopColor: c.border }]}>
+            <Text style={[type.title, { color: c.text }]}>Left over</Text>
+            <View style={s.resultValue}>
+              <Text style={[type.title, { color: summary.leftNow < 0 ? c.expense : c.primary, fontSize: 22 }]} numberOfLines={1}>{formatMoney(summary.leftNow)}</Text>
+              <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{formatMoney(summary.left)} when everything is paid</Text>
             </View>
           </View>
         </View>
@@ -749,7 +749,8 @@ const s = StyleSheet.create({
   /** phone: Income and Expenses side by side, small columns */
   summaryPair: { flexDirection: 'row', gap: spacing.lg, paddingHorizontal: spacing.xl - 4, paddingTop: spacing.md, paddingBottom: spacing.md },
   summaryCol: { flex: 1, minWidth: 0, gap: 4 },
-  resultRow: { gap: 4, borderTopWidth: 1, marginHorizontal: spacing.xl - 4, paddingTop: spacing.md, paddingBottom: spacing.md },
+  resultRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, borderTopWidth: 1, paddingHorizontal: spacing.xl - 4, paddingVertical: spacing.md },
+  resultValue: { alignItems: 'flex-end', flexShrink: 1, minWidth: 0 },
   
   summaryStack: { flexDirection: 'column', gap: spacing.md },
   valueRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.sm },
