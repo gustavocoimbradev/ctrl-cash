@@ -430,13 +430,13 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       </View>
       {visibleGroups.length > 0 && (
         // month summary, inside the card: Income and Expenses share one format (stacked on the phone):
-        // the confirmed amount big on the left, the pending one (clock) on the right and a thin confirmed/total bar.
+        // the confirmed amount big on the left, the pending one ("Pending $X") on the right and a thin confirmed/total bar.
         // The totals live in the "?" help.
         <View style={[s.summary, { borderTopColor: c.border }, mobile && s.summaryMobile]}>
           <View style={[s.summaryPair, !mobile && s.summaryTriple, mobile && s.summaryStack]}>
             {[
-              { label: 'Income', confirmed: summary.income.confirmed, pending: summary.income.pending, color: c.income, help: 'Everything you earn this month. The big amount already came in; the clock is still expected. Refunds and loans are not counted.', total: summary.income.total },
-              { label: 'Expenses', confirmed: summary.expense.confirmed, pending: summary.expense.pending, color: c.expense, help: "All of this month's expenses, card invoices due this month included. The big amount already happened; the clock is still to pay.", total: summary.expense.total },
+              { label: 'Income', confirmed: summary.income.confirmed, pending: summary.income.pending, color: c.income, help: 'Everything you earn this month. The big amount already came in; the pending amount is still expected. Refunds and loans are not counted.', total: summary.income.total },
+              { label: 'Expenses', confirmed: summary.expense.confirmed, pending: summary.expense.pending, color: c.expense, help: "All of this month's expenses, card invoices due this month included. The big amount already happened; the pending amount is still to pay.", total: summary.expense.total },
             ].map((x) => {
               const ratio = x.total > 0 ? Math.min(1, Math.max(0, x.confirmed / x.total)) : 0;
               return (
@@ -448,8 +448,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
                   <View style={s.valueRow}>
                     <Text style={[type.label, { color: x.color, fontSize: 20, flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{formatMoney(x.confirmed)}</Text>
                     <View style={s.splitItem}>
-                      <Feather name="clock" size={14} color={c.textMuted} />
-                      <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{formatMoney(x.pending)}</Text>
+                      <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>Pending {formatMoney(x.pending)}</Text>
                     </View>
                   </View>
                   <View style={s.splitBar}>
