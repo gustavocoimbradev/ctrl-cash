@@ -222,7 +222,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   const pieTotal = pieRows.reduce((a, x) => a + x.value, 0) || 1;
 
   const chart = (
-    <View style={{ gap: spacing.sm, flex: wide ? 1.7 : undefined, minWidth: 0 }}>
+    <View style={{ gap: spacing.sm, minWidth: 0 }}>
       <ProjectionChart
         series={[
           { values: months.map((m) => (m.incomeRel === undefined ? 100 : m.incomeRel)), color: c.income, area: true, label: t('Income') },
@@ -230,7 +230,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
           { values: months.map((m) => (weight(m) * m.saved) / 100), color: c.primary, label: t('Saved') },
         ]}
         areaColor={c.income}
-        height={wide && pieBox.h > 0 ? Math.max(230, pieBox.h - 112) : 230}
+        height={wide ? 260 : 230}
         labels={months.map((m) => formatMonth(m.key))}
         nowIndex={half}
         selected={sel}
@@ -289,11 +289,13 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   );
 
   const pie = (
-    <View onLayout={(e) => setPieBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })} style={{ gap: spacing.md, flex: wide ? 1 : undefined, minWidth: 0 }}>
+    <View style={[{ gap: spacing.lg }, wide && { flexDirection: 'row', alignItems: 'center' }]}>
       {pieRows.length === 0 ? (
         <Text style={[type.body, { color: c.textMuted }]}>{t('No expenses in this period.')}</Text>
       ) : (
         <>
+          {/* the donut on the left (on top, on a phone) */}
+          <View onLayout={(e) => setPieBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })} style={{ width: wide ? 340 : undefined, flexShrink: 0 }}>
           <Pie
             slices={pieRows}
             selected={slice}
@@ -307,7 +309,9 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
               </>
             }
           />
-          <View style={{ gap: 2 }}>
+          </View>
+          {/* the legend: a grid that fills the width beside the donut */}
+          <View style={s.legendGrid}>
             {pieRows.map((x) => (
               <Pressable
                 key={x.key}
@@ -315,7 +319,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
                 accessibilityLabel={`${x.label}: ${pct(r1((x.value / pieTotal) * 100))}`}
                 onPress={() => setSlice(slice === x.key ? null : x.key)}
                 {...({ onHoverIn: () => setSlice(x.key), onHoverOut: () => setSlice(null) } as object)}
-                style={({ hovered }: any) => [s.legendRow, { backgroundColor: hovered || slice === x.key ? c.surface : 'transparent' }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '180ms' } as object)]}
+                style={({ hovered }: any) => [s.legendRow, s.legendCell, { backgroundColor: hovered || slice === x.key ? c.surface : 'transparent' }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '180ms' } as object)]}
               >
                 <View style={[s.swatch, { backgroundColor: x.color }]} />
                 <Text style={[type.body, { color: c.text, flex: 1 }]} numberOfLines={1}>{x.label}</Text>
@@ -334,7 +338,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
         {wide ? <Text style={[type.label, { color: c.text }]}>{t('Month by month')}</Text> : null}
         <PillToggle stretch={!wide} value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: h === 'month' ? t('This month') : t('{n} months', { n: h }) }))} />
       </View>
-      <View style={[{ gap: spacing.xl }, wide && { flexDirection: 'row', alignItems: 'flex-start' }]}>
+      <View style={{ gap: spacing.xl }}>
         {chart}
         {pie}
       </View>
@@ -351,6 +355,8 @@ const s = StyleSheet.create({
   tipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   miniTrack: { flex: 1, height: 8, borderRadius: 4, overflow: 'hidden' },
   pieCenter: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  legendGrid: { flex: 1, minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.md },
+  legendCell: { flexGrow: 1, flexBasis: 220, minWidth: 0 },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44, paddingHorizontal: spacing.sm, borderRadius: 12 },
   swatch: { width: 12, height: 12, borderRadius: 6 },
 });
