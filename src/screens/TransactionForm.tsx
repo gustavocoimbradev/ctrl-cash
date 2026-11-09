@@ -309,23 +309,6 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
         />
       )}
 
-      {kind === 'expense' && pickable.length > 0 && !transaction?.fixed ? (
-        <ToggleRow
-          label={t('I lent my card')}
-          hint={t('Someone else uses your card and pays you back. It is not your debt, so it does not count as one.')}
-          value={lent}
-          onChange={(on) => {
-            if (on) {
-              setCategory(LOAN_CATEGORY);
-              if (!cardId && pickable[0]) {
-                setCardId(pickable[0].id);
-                setPurchaseInvoice(nextInvoiceKey(pickable[0]));
-              }
-            } else setCategory('');
-          }}
-        />
-      ) : null}
-
       {invoiceMode ? (
         <>
           {!cardLocked && (
@@ -412,6 +395,15 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
               onChange={setPurchaseInvoice}
             />
           )}
+          {/* only on a card, right under the invoice: somebody else uses it and pays me back, so it is not MY debt (the Loan category) */}
+          {kind === 'expense' && usesCard && !transaction?.fixed ? (
+            <ToggleRow
+              label={t('I lent my card')}
+              hint={t('Someone else uses your card and pays you back. It is not your debt, so it does not count as one.')}
+              value={lent}
+              onChange={(on) => setCategory(on ? LOAN_CATEGORY : '')}
+            />
+          ) : null}
           {usesCard && !isRefund && (
             <Text style={[type.body, { color: c.warning }]}>
               {t('A card purchase is debt. Only buy what you can pay off on the full invoice, without installments.')}
