@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text } from 'react-native';
 import { Button } from '../components/Button';
 import { t } from '../i18n';
-import { DEFAULT_CATEGORY, activeCategories, allCategories } from '../domain/categories';
+import { DEFAULT_CATEGORY, LOAN_CATEGORY, activeCategories, allCategories } from '../domain/categories';
 import { Segmented, ToggleRow } from '../components/Controls';
 import { DateField } from '../components/DateField';
 import { MoneyField, TextField } from '../components/Fields';
@@ -147,11 +147,13 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
     amount: cents > 0 ? undefined : t('Enter an amount greater than zero'),
     card: cardId ? undefined : t('Select a card'),
   };
+  /** "I lent my card": somebody else uses it and pays me back, so it is not MY debt (the Loan category, which every sum ignores) */
+  const lent = kind === 'expense' && category === LOAN_CATEGORY;
   const valid = invoiceMode
     ? !errors.amount && !errors.card
-    : !errors.description && !errors.amount && !errors.category;
+    : !errors.description && !errors.amount && !errors.category && (!lent || !!cardId);
   const cardOptions = [
-    { value: '', label: t('Bank account'), group: t('Direct payment') },
+    ...(lent ? [] : [{ value: '', label: t('Bank account'), group: t('Direct payment') }]),
     ...pickable.map((card) => ({ value: card.id, label: card.name, group: t('Credit cards') })),
   ];
   const payWith = cardId;
@@ -307,6 +309,23 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
         />
       )}
 
+      {kind === 'expense' && pickable.length > 0 && !transaction?.fixed ? (
+        <ToggleRow
+          label={t('I lent my card')}
+          hint={t('Someone else uses your card and pays you back. It is not your debt, so it does not count as one.')}
+          value={lent}
+          onChange={(on) => {
+            if (on) {
+              setCategory(LOAN_CATEGORY);
+              if (!cardId && pickable[0]) {
+                setCardId(pickable[0].id);
+                setPurchaseInvoice(nextInvoiceKey(pickable[0]));
+              }
+            } else setCategory('');
+          }}
+        />
+      ) : null}
+
       {invoiceMode ? (
         <>
           {!cardLocked && (
@@ -331,7 +350,7 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
       ) : (
         <>
           <TextField label={t('Description')} value={description} onChangeText={setDescription} maxLength={100} error={tried ? errors.description : undefined} />
-          {needsCategory && (
+          {needsCategory && !lent && (
             <Select
               label={t('Category')}
               value={category || undefined}

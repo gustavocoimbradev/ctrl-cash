@@ -1,4 +1,5 @@
 import { AppData, Occurrence, Transaction } from '../types';
+import { LOAN_CATEGORY } from './categories';
 import { buildInvoices } from './invoices';
 import { addMonthsToKey, currentMonthKey, monthKey, parseISO } from './dates';
 import { buildOccurrences, fixedFieldsAt, monthOccurrences, monthTotals } from './transactions';
@@ -148,7 +149,8 @@ export function debtsSummary(data: AppData): DebtsSummary {
   const txById = new Map(data.transactions.map((x) => [x.id, x]));
   const groups = new Map<string, Occurrence[]>();
   for (const o of occ) {
-    if (!o.installment || o.type !== 'expense') continue;
+    // a card lent to somebody who pays it back (the Loan category) is not MY debt
+    if (!o.installment || o.type !== 'expense' || o.category === LOAN_CATEGORY) continue;
     const list = groups.get(o.installment.groupId) ?? [];
     list.push(o);
     groups.set(o.installment.groupId, list);

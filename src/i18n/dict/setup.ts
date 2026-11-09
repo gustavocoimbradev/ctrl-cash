@@ -3,6 +3,8 @@ import type { Dict } from '../index';
 /** Quick setup, account settings, the language/currency fields and the app shell. */
 export const dict: Dict = {
   pt: {
+    "I lent my card": "Emprestei o cartão",
+    "Someone else uses your card and pays you back. It is not your debt, so it does not count as one.": "Outra pessoa usa seu cartão e te paga de volta. Não é dívida sua, então não conta como dívida.",
     "{n} mo.": "{n} m",
     "Data sharing request": "Pedido de compartilhamento de dados",
     "You asked to see their data.": "Você pediu para ver os dados dela.",
@@ -233,6 +235,8 @@ export const dict: Dict = {
     "Cloud storage": "Armazenamento na nuvem",
   },
   es: {
+    "I lent my card": "Presté mi tarjeta",
+    "Someone else uses your card and pays you back. It is not your debt, so it does not count as one.": "Otra persona usa tu tarjeta y te paga de vuelta. No es deuda tuya, así que no cuenta como deuda.",
     "{n} mo.": "{n} m",
     "Data sharing request": "Solicitud de compartir datos",
     "You asked to see their data.": "Pediste ver sus datos.",
@@ -463,6 +467,8 @@ export const dict: Dict = {
     "Cloud storage": "Almacenamiento en la nube",
   },
   de: {
+    "I lent my card": "Ich habe meine Karte verliehen",
+    "Someone else uses your card and pays you back. It is not your debt, so it does not count as one.": "Jemand anderes nutzt deine Karte und zahlt dir das Geld zurück. Das ist nicht deine Schuld und zählt daher nicht als Schuld.",
     "{n} mo.": "{n} Mon.",
     "Data sharing request": "Anfrage zum Teilen von Daten",
     "You asked to see their data.": "Du hast darum gebeten, ihre Daten zu sehen.",
@@ -693,6 +699,8 @@ export const dict: Dict = {
     "Cloud storage": "Cloud-Speicher",
   },
   fr: {
+    "I lent my card": "J'ai prêté ma carte",
+    "Someone else uses your card and pays you back. It is not your debt, so it does not count as one.": "Quelqu'un d'autre utilise votre carte et vous rembourse. Ce n'est pas votre dette, donc elle ne compte pas comme telle.",
     "{n} mo.": "{n} mois",
     "Data sharing request": "Demande de partage de données",
     "You asked to see their data.": "Vous avez demandé à voir ses données.",
@@ -923,6 +931,8 @@ export const dict: Dict = {
     "Cloud storage": "Stockage cloud",
   },
   it: {
+    "I lent my card": "Ho prestato la mia carta",
+    "Someone else uses your card and pays you back. It is not your debt, so it does not count as one.": "Un'altra persona usa la tua carta e ti ripaga. Non è un tuo debito, quindi non conta come debito.",
     "{n} mo.": "{n} m",
     "Data sharing request": "Richiesta di condivisione dei dati",
     "You asked to see their data.": "Hai chiesto di vedere i suoi dati.",
