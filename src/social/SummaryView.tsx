@@ -178,38 +178,17 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
     setSlice(null);
   }, [horizon]);
 
-  // the months of the range, half behind and half ahead of now; a month the summary does not have is an empty one
+  // the months of the range, ending in this one: what actually happened, never a projection. A month the summary does not have is an empty one
   const current = currentMonthKey();
-  // "this month" narrows the percentages to the current month; the line chart keeps a 6 month window around it
+  // "this month" narrows the percentages to the current month; the line chart then shows its days (and keeps a 6 month window as a fallback)
   const span = horizon === 'month' ? 6 : horizon;
-  const half = span / 2;
   const months: Month[] = useMemo(() => {
     const byKey = new Map(summary.months.map((m) => [m.key, m]));
-    const w = (m: Month) => (m.incomeRel === undefined ? (m.spent > 0 || m.saved !== 0 ? 100 : 0) : m.incomeRel);
-    // what is known up to now: a month ahead with nothing planned is projected from it (an average month of the history
-    // available, however short), instead of showing an empty future
-    const known = summary.months.filter((m) => m.key <= current && w(m) > 0);
-    const total = known.reduce((a, m) => a + w(m), 0);
-    let typical: Month | null = null;
-    if (total > 0) {
-      const shares = new Map<string, { label: string; pct: number; tone?: Tone }>();
-      for (const m of known) for (const x of m.categories) shares.set(x.slug, { label: x.label, tone: x.tone, pct: (shares.get(x.slug)?.pct ?? 0) + (x.pct * w(m)) / total });
-      typical = {
-        key: '',
-        incomeRel: 100,
-        spent: known.reduce((a, m) => a + m.spent * w(m), 0) / total,
-        saved: known.reduce((a, m) => a + m.saved * w(m), 0) / total,
-        categories: [...shares].map(([slug, v]) => ({ slug, label: v.label, pct: v.pct, tone: v.tone })).sort((x, y) => y.pct - x.pct),
-      };
-    }
     return Array.from({ length: span }, (_, i) => {
-      const k = addMonthsToKey(current, i - half);
-      const own = byKey.get(k);
-      if (own && w(own) > 0) return own;
-      if (typical && k > current) return { ...typical, key: k };
-      return own ?? { key: k, spent: 0, saved: 0, incomeRel: 0, categories: [] };
+      const k = addMonthsToKey(current, i - (span - 1));
+      return byKey.get(k) ?? { key: k, spent: 0, saved: 0, incomeRel: 0, categories: [] };
     });
-  }, [summary, span, half, current]);
+  }, [summary, span, current]);
   const weight = (m: Month) => (m.incomeRel === undefined ? (m.spent > 0 || m.saved !== 0 ? 100 : 0) : m.incomeRel);
 
   // where the spending goes in the range: each month's category shares weighted by that month's income
@@ -227,7 +206,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   const hasData = months.some((m) => weight(m) > 0);
   // the line chart starts where the history starts: months before the first one with income are left out (never past today)
   const firstWithData = months.findIndex((m) => weight(m) > 0);
-  const start = firstWithData > 0 ? Math.min(firstWithData, half) : 0;
+  const start = firstWithData > 0 ? firstWithData : 0;
   const chartMonths = months.slice(start);
   if (!hasData) return <Text style={[type.body, { color: c.textMuted }]}>{t('Nothing to show yet: add some income and expenses.')}</Text>;
 
@@ -255,18 +234,21 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   // "this month": the days of the month, 1 to the last, with what came in and went out so far (percent of that month's income)
   const days = summary.days && summary.days.month === current ? summary.days : undefined;
   const dayMode = horizon === 'month' && !!days;
-  const dayLabels = days ? days.income.map((_, i) => String(i + 1)) : [];
-  const dayTips = days ? days.income.map((_, i) => formatDate(`${current}-${pad(i + 1)}`)) : [];
+  // only up to today: what is still to come is not drawn
   const todayIndex = Number(todayISO().slice(8, 10)) - 1;
+  const dayIncome = days ? days.income.slice(0, todayIndex + 1) : [];
+  const daySpent = days ? days.spent.slice(0, todayIndex + 1) : [];
+  const dayLabels = dayIncome.map((_, i) => String(i + 1));
+  const dayTips = dayIncome.map((_, i) => formatDate(`${current}-${pad(i + 1)}`));
 
   const chart = (
     <View style={{ gap: spacing.sm, minWidth: 0 }}>
       <ProjectionChart
         series={dayMode
           ? [
-              { values: days!.income, color: c.income, area: true, label: t('Income') },
-              { values: days!.spent, color: c.expense, dashed: true, label: t('Spent') },
-              { values: days!.income.map((v, i) => v - days!.spent[i]!), color: c.primary, label: t('Saved') },
+              { values: dayIncome, color: c.income, area: true, label: t('Income') },
+              { values: daySpent, color: c.expense, dashed: true, label: t('Spent') },
+              { values: dayIncome.map((v, i) => v - daySpent[i]!), color: c.primary, label: t('Saved') },
             ]
           : [
               { values: chartMonths.map((m) => (m.incomeRel === undefined ? 100 : m.incomeRel)), color: c.income, area: true, label: t('Income') },
@@ -277,7 +259,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
         height={wide ? 260 : 230}
         labels={dayMode ? dayLabels : chartMonths.map((m) => formatMonth(m.key))}
         tipLabels={dayMode ? dayTips : undefined}
-        nowIndex={dayMode ? todayIndex : half - start}
+        nowIndex={dayMode ? todayIndex : chartMonths.length - 1}
         selected={sel}
         onSelect={setSel}
         format={pct}
