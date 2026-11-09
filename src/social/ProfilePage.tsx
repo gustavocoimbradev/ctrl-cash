@@ -4,7 +4,7 @@ import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from
 import { Card } from '../components/Card';
 import { AnimatedBar } from '../components/Motion';
 import { Sheet } from '../components/Sheet';
-import { buildSummary } from '../domain/summary';
+import { buildOwnChart, buildSummary } from '../domain/summary';
 import { useStore } from '../store';
 import { desktopBreakpoint, maxContentWidth, radius, spacing, type, useColors } from '../theme';
 import { Person, PersonDetail, SHARE_REQUEST, Summary, socialApi } from './api';
@@ -219,6 +219,8 @@ function OwnProfile({ onOpen, onEditAccount, email }: { onOpen: (code: string) =
   const [editing, setEditing] = useState(false);
   const [dialog, setDialog] = useState<'share' | 'received' | null>(null);
   const summary = useMemo<Summary>(() => buildSummary(data), [data]);
+  /** only on my own profile: the line chart with real money */
+  const ownChart = useMemo(() => buildOwnChart(data), [data]);
 
   // the profile is made automatically; this only shows while it is on its way (or if it could not be made)
   if (!profile) {
@@ -251,7 +253,7 @@ function OwnProfile({ onOpen, onEditAccount, email }: { onOpen: (code: string) =
       />
       <Card>
         <Text style={[type.title, { color: c.text }]}>{t('Your summary')}</Text>
-        <SummaryView summary={summary} />
+        <SummaryView summary={summary} real={ownChart} />
       </Card>
 
       <Sheet visible={editing} title={t('Edit profile')} onClose={() => setEditing(false)}>

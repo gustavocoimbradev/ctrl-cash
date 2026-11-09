@@ -7,6 +7,8 @@ import { addMonthsToKey, currentMonthKey, formatDate, formatMonth, pad, shortDat
 import { desktopBreakpoint, fontFamily, spacing, type, useColors } from '../theme';
 import { motion, useGlide, useTween, useTweenList } from '../theme/motion';
 import { CategoryShare, Summary } from './api';
+import type { OwnChart } from '../domain/summary';
+import { formatMoney } from '../domain/money';
 import type { Tone } from '../types';
 import { TONE_COLORS, categoryColor, defaultTone, sharedCategoryLabel, toneLabel } from '../domain/categories';
 import { t, usePrefsVersion } from '../i18n';
@@ -162,7 +164,7 @@ const pieTotalOf = (slices: { value: number }[]) => slices.reduce((a, b) => a + 
  * what is already planned, with a dotted line at "now"), and beside it a pie of where the spending goes in that same period.
  * Used for the own profile (live) and for the summary somebody shared.
  */
-export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedAt?: number | null }) {
+export function SummaryView({ summary, updatedAt, real }: { summary: Summary; updatedAt?: number | null; /** my own profile: the line chart in real money instead of percent (never part of what is shared) */ real?: OwnChart }) {
   const c = useColors();
   const { width } = useWindowDimensions();
   const wide = width >= desktopBreakpoint;
@@ -238,13 +240,27 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   const todayIndex = Number(todayISO().slice(8, 10)) - 1;
   const dayIncome = days ? days.income.slice(0, todayIndex + 1) : [];
   const daySpent = days ? days.spent.slice(0, todayIndex + 1) : [];
+  // my own chart in real money: the days so far (kept to the days the summary draws)
+  const realDays = { income: real ? real.days.income.slice(0, dayIncome.length) : [], spent: real ? real.days.spent.slice(0, dayIncome.length) : [] };
   const dayLabels = dayIncome.map((_, i) => String(i + 1));
   const dayTips = dayIncome.map((_, i) => formatDate(`${current}-${pad(i + 1)}`));
 
   const chart = (
     <View style={{ gap: spacing.sm, minWidth: 0 }}>
       <ProjectionChart
-        series={dayMode
+        series={real && dayMode
+          ? [
+              { values: realDays.income, color: c.income, area: true, label: t('Income') },
+              { values: realDays.spent, color: c.expense, dashed: true, label: t('Spent') },
+              { values: realDays.income.map((v, i) => v - realDays.spent[i]!), color: c.primary, label: t('Saved') },
+            ]
+          : real
+          ? [
+              { values: chartMonths.map((m) => real.months[m.key]?.income ?? 0), color: c.income, area: true, label: t('Income') },
+              { values: chartMonths.map((m) => real.months[m.key]?.expense ?? 0), color: c.expense, dashed: true, label: t('Spent') },
+              { values: chartMonths.map((m) => (real.months[m.key]?.income ?? 0) - (real.months[m.key]?.expense ?? 0)), color: c.primary, label: t('Saved') },
+            ]
+          : dayMode
           ? [
               { values: dayIncome, color: c.income, area: true, label: t('Income') },
               { values: daySpent, color: c.expense, dashed: true, label: t('Spent') },
@@ -259,13 +275,12 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
         height={wide ? 260 : 230}
         labels={dayMode ? dayLabels : chartMonths.map((m) => formatMonth(m.key))}
         tipLabels={dayMode ? dayTips : undefined}
-        nowIndex={dayMode ? todayIndex : chartMonths.length - 1}
         selected={sel}
         onSelect={setSel}
-        format={pct}
+        format={real ? formatMoney : pct}
         fill
-        tipWidth={310}
-        renderTip={dayMode ? undefined : (i) => {
+        tipWidth={real ? 230 : 310}
+        renderTip={dayMode || real ? undefined : (i) => {
           const m = chartMonths[i];
           if (!m || weight(m) <= 0) return <Text style={[type.body, { color: c.textMuted }]}>{t('No income planned.')}</Text>;
           // the tooltip speaks in percent of THAT month's income (the lines are drawn scaled by how big the income was)
