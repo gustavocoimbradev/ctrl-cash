@@ -136,8 +136,8 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
     ? !errors.amount && !errors.card
     : !errors.description && !errors.amount && !errors.category;
   const cardOptions = [
-    { value: '', label: t('Bank account') },
-    ...pickable.map((card) => ({ value: card.id, label: card.name })),
+    { value: '', label: t('Bank account'), group: t('Direct payment') },
+    ...pickable.map((card) => ({ value: card.id, label: t('Credit card: {name}', { name: card.name }), group: t('Credit cards') })),
   ];
   const payWith = cardId;
   const usesCard = (kind === 'expense' || kind === 'income') && cardId !== '';

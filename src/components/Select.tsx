@@ -9,6 +9,8 @@ import { t } from '../i18n';
 export interface Option<T extends string | number> {
   value: T;
   label: string;
+  /** a heading the option is listed under; consecutive options with the same group share one heading */
+  group?: string;
 }
 
 interface Props<T extends string | number> {
@@ -119,7 +121,11 @@ export function Select<T extends string | number>({ label, value, options, onCha
             </View>
             <ScrollView keyboardShouldPersistTaps="handled" style={{ flexGrow: 0 }} contentContainerStyle={{ padding: spacing.xs }}>
               {filtered.length === 0 && <Text style={[type.body, { color: c.textMuted, padding: spacing.md }]}>{t('Nothing found')}</Text>}
-              {filtered.map((item) => (
+              {filtered.map((item, idx) => (
+                <React.Fragment key={String(item.value)}>
+                {item.group && item.group !== filtered[idx - 1]?.group ? (
+                  <Text style={[type.label, { color: c.textMuted, paddingHorizontal: spacing.md, paddingTop: idx === 0 ? spacing.xs : spacing.md, paddingBottom: spacing.xs }]}>{item.group}</Text>
+                ) : null}
                 <Pressable
                   key={String(item.value)}
                   accessibilityRole="menuitem"
@@ -132,6 +138,7 @@ export function Select<T extends string | number>({ label, value, options, onCha
                   <Text style={[type.body, { color: c.text, flex: 1 }]}>{item.label}</Text>
                   {item.value === value && <Feather name="check" size={20} color={c.primary} />}
                 </Pressable>
+                </React.Fragment>
               ))}
             </ScrollView>
           </Animated.View>
