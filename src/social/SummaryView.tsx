@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import Svg, { Path, Text as SvgText } from 'react-native-svg';
+import Svg, { Path, Rect, Text as SvgText } from 'react-native-svg';
 import { ChartLegend, ProjectionChart } from '../components/Charts';
 import { PillToggle } from '../components/Controls';
 import { addMonthsToKey, currentMonthKey, formatMonth, shortDate } from '../domain/dates';
@@ -115,7 +115,19 @@ function Pie({ slices, selected, onSelect, size, compact, center }: { slices: { 
             <>
               <SvgText x={x} y={p2.y + 6} fontSize={compact ? 16 : 17} fontWeight="700" fontFamily={fontFamily} fill={chosen.color} fillOpacity={lead} textAnchor={anchor}>{pct(r1(((target ?? chosen).value / pieTotalOf(slices)) * 100))}</SvgText>
               {chosen.name ? <SvgText x={x} y={yName} fontSize={16} fontFamily={fontFamily} fill={c.text} fillOpacity={lead} textAnchor={anchor}>{cut(chosen.name)}</SvgText> : null}
-              {chosen.tone ? <SvgText x={x} y={yTone} fontSize={16} fontFamily={fontFamily} fill={chosen.tone.color} fillOpacity={lead} textAnchor={anchor}>{chosen.tone.label}</SvgText> : null}
+              {chosen.tone ? (
+                // a badge, like the one in the legend: a soft pill in the tone's color with the name inside
+                (() => {
+                  const bw = chosen.tone.label.length * 8.4 + 18;
+                  const bx = side > 0 ? x : x - bw;
+                  return (
+                    <>
+                      <Rect x={bx} y={yTone - 17} width={bw} height={24} rx={12} fill={chosen.tone.color} fillOpacity={0.14 * lead} />
+                      <SvgText x={bx + bw / 2} y={yTone} fontSize={16} fontFamily={fontFamily} fill={chosen.tone.color} fillOpacity={lead} textAnchor="middle">{chosen.tone.label}</SvgText>
+                    </>
+                  );
+                })()
+              ) : null}
             </>
           );
         })()}
