@@ -5,6 +5,7 @@ import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastif
 import type { Verifier } from './auth.js';
 import { readAll, upsertDocs, withTransaction, type Docs, type Pool } from './db.js';
 import { registerAssistant } from './assistant.js';
+import type { Mailer } from './email-report.js';
 import { registerMcp } from './mcp.js';
 import { registerSettings } from './settings.js';
 import { registerSocial } from './social.js';
@@ -13,6 +14,8 @@ import { COLLECTIONS, validate, type Doc } from './validate.js';
 declare module 'fastify' {
   interface FastifyRequest {
     uid: string;
+    /** the verified email of the signed-in account, when it has one */
+    email?: string;
   }
 }
 
@@ -26,6 +29,8 @@ export interface AppOptions {
   trustProxy?: boolean;
   /** the public address of the site (PUBLIC_URL), for the OAuth and MCP addresses */
   publicUrl?: string;
+  /** sends the reports an assistant emails to the person (absent: that tool says email is not set up) */
+  mailer?: Mailer;
   rateLimitMax?: number;
   logger?: FastifyServerOptions['logger'];
 }
@@ -79,7 +84,9 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     const m = /^Bearer (\S+)$/.exec(req.headers.authorization ?? '');
     if (m?.[1]) {
       try {
-        req.uid = (await opts.verify(m[1])).uid;
+        const who = await opts.verify(m[1]);
+        req.uid = who.uid;
+        req.email = who.email;
         return;
       } catch {
         // falls through to 401
@@ -93,7 +100,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
 
   registerSettings(app, opts.pool, authenticate);
   registerAssistant(app, { pool: opts.pool, publicUrl: opts.publicUrl, strictMax: opts.rateLimitMax }, authenticate);
-  registerMcp(app, opts.pool, opts.publicUrl);
+  registerMcp(app, opts.pool, opts.publicUrl, opts.mailer);
 
   app.route({
     method: 'GET',

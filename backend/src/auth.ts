@@ -1,6 +1,7 @@
 import { createRemoteJWKSet, decodeJwt, jwtVerify, type JWTVerifyGetKey } from 'jose';
 
-export type Verifier = (token: string) => Promise<{ uid: string }>;
+/** `email` is only given when the account's address is verified. */
+export type Verifier = (token: string) => Promise<{ uid: string; email?: string }>;
 
 const GOOGLE_JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
 
@@ -18,7 +19,8 @@ export function createFirebaseVerifier(projectId: string, jwks?: JWTVerifyGetKey
       algorithms: ['RS256'],
     });
     if (typeof payload.sub !== 'string' || payload.sub.length === 0) throw new Error('missing sub');
-    return { uid: payload.sub };
+    const email = typeof payload.email === 'string' && payload.email_verified === true ? payload.email : undefined;
+    return { uid: payload.sub, ...(email ? { email } : {}) };
   };
 }
 
@@ -31,6 +33,6 @@ export function createEmulatorVerifier(projectId: string): Verifier {
     if (!aud.includes(projectId)) throw new Error('bad audience');
     if (typeof p.exp !== 'number' || p.exp * 1000 <= Date.now()) throw new Error('expired');
     if (typeof p.sub !== 'string' || p.sub.length === 0) throw new Error('missing sub');
-    return { uid: p.sub };
+    return { uid: p.sub, ...(typeof p.email === 'string' ? { email: p.email } : {}) };
   };
 }

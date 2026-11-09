@@ -7,16 +7,19 @@ import type { Doc } from '../validate.js';
 
 export const DATABASE_URL = process.env.DATABASE_URL ?? 'postgres://postgres:pg@localhost:55432/postgres';
 
-export async function setup(): Promise<{ pool: Pool; app: FastifyInstance }> {
+export async function setup(extra: Partial<Parameters<typeof buildApp>[0]> = {}): Promise<{ pool: Pool; app: FastifyInstance }> {
   const pool = createPool(DATABASE_URL);
   await migrate(pool);
   // fake verifier: the token "tok:<uid>" belongs to <uid>
   const app = await buildApp({
     pool,
     rateLimitMax: 100000,
+    ...extra,
     verify: async (t) => {
       if (!t.startsWith('tok:')) throw new Error('bad token');
-      return { uid: t.slice(4) };
+      // `tok:<uid>` or `tok:<uid>|<email>` (a verified address)
+      const [uid, email] = t.slice(4).split('|');
+      return { uid: uid!, ...(email ? { email } : {}) };
     },
   });
   return { pool, app };

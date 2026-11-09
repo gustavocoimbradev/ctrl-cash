@@ -5,6 +5,7 @@ import { GUIDE } from './assistant-guide.js';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './assistant-write.js';
 import { REGISTRY, toolByName, type McpTool } from './mcp-tools.js';
 import type { Pool } from './db.js';
+import type { Mailer } from './email-report.js';
 import { ValidationError } from './validate.js';
 
 const PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
@@ -40,7 +41,7 @@ const readToolDef = (t: Tool) => ({
 
 const registryToolDef = (t: McpTool) => ({
   name: t.name,
-  description: `${t.description}${t.scope === 'write' ? ' (changes the person\'s finances; only if they allowed it.)' : t.scope === 'social' ? ' (acts on the person\'s social side: profile, sharing, messages; only if they allowed it.)' : ''}`,
+  description: `${t.description}${t.scope === 'write' ? ' (changes the person\'s finances; only if they allowed it.)' : t.scope === 'social' ? ' (acts on the person\'s social side: profile, sharing, messages; only if they allowed it.)' : t.scope === 'email' ? ' (sends an email to the person; only if they allowed it.)' : ''}`,
   inputSchema: t.inputSchema,
   annotations: { readOnlyHint: t.scope === 'read', destructiveHint: false, idempotentHint: false, openWorldHint: false },
 });
@@ -52,8 +53,8 @@ type Rpc = { jsonrpc?: string; id?: string | number | null; method?: string; par
 const reply = (id: Rpc['id'], result: unknown) => ({ jsonrpc: '2.0', id: id ?? null, result });
 const fail = (id: Rpc['id'], code: number, message: string) => ({ jsonrpc: '2.0', id: id ?? null, error: { code, message } });
 
-export function registerMcp(app: FastifyInstance, pool: Pool, publicUrl?: string) {
-  async function handle(req0: FastifyRequest, msg: Rpc, who: { userId: string; connectionId: string; canWrite: boolean; canSocial: boolean }): Promise<object | null> {
+export function registerMcp(app: FastifyInstance, pool: Pool, publicUrl?: string, mailer?: Mailer) {
+  async function handle(req0: FastifyRequest, msg: Rpc, who: { userId: string; connectionId: string; canWrite: boolean; canSocial: boolean; canEmail: boolean; email: string | null }): Promise<object | null> {
     const userId = who.userId;
     const { id, method, params } = msg;
     if (typeof method !== 'string' || msg.jsonrpc !== '2.0') return fail(id, -32600, 'Invalid request');
@@ -74,6 +75,7 @@ export function registerMcp(app: FastifyInstance, pool: Pool, publicUrl?: string
         if (reg) {
           if (reg.scope === 'write' && !who.canWrite) return text('This connection is read-only. The person can allow changing their finances in Ctrl+Cash, in Ask Claude, then you can try again.', true);
           if (reg.scope === 'social' && !who.canSocial) return text('This connection may not act on the social side (profile, sharing, messages). The person can allow it in Ctrl+Cash, in Ask Claude, then you can try again.', true);
+          if (reg.scope === 'email' && !who.canEmail) return text('This connection may not email reports. The person can allow it in Ctrl+Cash, in Ask Claude, then you can try again.', true);
           if (reg.scope !== 'read') {
             const recent = await pool.query('select count(*)::int as n from assistant_actions where connection_id = $1 and created_at_ms > $2', [who.connectionId, Date.now() - 3_600_000]);
             if ((recent.rows[0]?.n as number) >= ACTIONS_PER_HOUR) return text('Too many changes in the last hour. Wait a while, or ask the person to review what was done.', true);
@@ -81,7 +83,7 @@ export function registerMcp(app: FastifyInstance, pool: Pool, publicUrl?: string
           const snap = await pool.query("select snapshot->>'today' as today from assistant_snapshots where user_id = $1", [userId]);
           const today = (snap.rows[0]?.today as string | undefined) ?? new Date().toISOString().slice(0, 10);
           try {
-            const out = await reg.handler({ pool, userId, connectionId: who.connectionId, today, publicUrl: publicUrlOf(req0, publicUrl) }, (params?.arguments ?? {}) as Record<string, unknown>);
+            const out = await reg.handler({ pool, userId, connectionId: who.connectionId, today, publicUrl: publicUrlOf(req0, publicUrl), email: who.canEmail ? who.email : null, mailer: mailer ?? null }, (params?.arguments ?? {}) as Record<string, unknown>);
             if (reg.scope !== 'read') await pool.query('insert into assistant_actions (user_id, connection_id, tool, summary, created_at_ms) values ($1, $2, $3, $4, $5)', [userId, who.connectionId, reg.name, out.replace(/\s+/g, ' ').slice(0, 300), Date.now()]);
             return text(out);
           } catch (e) {

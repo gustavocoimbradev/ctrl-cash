@@ -45,6 +45,8 @@ services:
       FIREBASE_PROJECT_ID: "${FIREBASE_PROJECT_ID:?FIREBASE_PROJECT_ID is empty, set it in .env.prod}"
       RUN_MIGRATIONS: "1"
       PUBLIC_URL: "${PUBLIC_URL:-}"
+      SMTP_URL: "${SMTP_URL:-}"
+      MAIL_FROM: "${MAIL_FROM:-}"
     depends_on:
       postgres:
         condition: service_healthy

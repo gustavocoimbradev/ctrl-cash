@@ -12,6 +12,8 @@ export interface MenuItem {
   label: string;
   onPress: () => void;
   danger?: boolean;
+  /** replaces the icon (for a brand mark) */
+  iconNode?: React.ReactNode;
 }
 
 /**
@@ -71,7 +73,7 @@ export function MenuDrawer({ visible, onClose, header, items, side = 'right' }: 
                 style={({ pressed }) => [s.item, { backgroundColor: pressed ? c.surface : 'transparent' }]}
               >
                 <View style={[s.iconBox, { backgroundColor: it.danger ? `${c.expense}14` : c.surface }]}>
-                  <Feather name={it.icon} size={20} color={it.danger ? c.expense : c.textMuted} />
+                  {it.iconNode ?? <Feather name={it.icon} size={20} color={it.danger ? c.expense : c.textMuted} />}
                 </View>
                 <Text style={[type.label, { color: it.danger ? c.expense : c.text }]}>{it.label}</Text>
               </Pressable>

@@ -13,6 +13,7 @@ import { WishlistSheet } from './src/screens/WishlistSheet';
 import { ConnectPage, ConnectParams } from './src/screens/ConnectPage';
 import { AssistantSheet } from './src/screens/AssistantSheet';
 import { AssistantPromo } from './src/screens/AssistantPromo';
+import { CLAUDE, ClaudeMark } from './src/components/ClaudeMark';
 import { AssistantProvider } from './src/assistant/AssistantProvider';
 import { DebtsSheet } from './src/screens/DebtsSheet';
 import type { AreaKey } from './src/domain/areas';
@@ -96,7 +97,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
     { key: 'bills', icon: 'file-text' as const, label: t('Utility bills'), onPress: () => setArea('bills') },
     { key: 'delivery', icon: 'package' as const, label: t('Delivery'), onPress: () => setArea('delivery') },
     // Claude: highlighted, so it is plain that it can be connected
-    { key: 'claude', icon: 'message-circle' as const, label: t('Ask Claude'), onPress: () => setAssistantOpen(true), accent: true },
+    { key: 'claude', icon: 'message-circle' as const, label: t('Ask Claude'), onPress: () => setAssistantOpen(true), accent: true, iconNode: <ClaudeMark size={20} /> },
   ];
 
   // the address follows the page (a profile is /profile/<its code>) and the browser's Back and Forward follow the address
@@ -157,7 +158,8 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
               {[
                 { key: 'cards', icon: 'credit-card' as const, label: t('Cards'), onPress: () => setCardsOpen(true) },
                 { key: 'categories', icon: 'tag' as const, label: t('Categories'), onPress: () => setCategoriesOpen(true) },
-                ...places,
+                // Claude has its own card on the dashboard, and a place in the phone menu and in Account settings
+                ...places.filter((p) => p.key !== 'claude'),
               ].map((it) => (
                 <Pressable
                   key={it.key}
@@ -168,8 +170,8 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
                 >
                   {({ hovered }: any) => (
                     <>
-                      <Feather name={it.icon} size={18} color={'accent' in it && it.accent ? c.primary : hovered ? c.text : c.textMuted} />
-                      <Text style={[type.label, { color: 'accent' in it && it.accent ? c.primary : hovered ? c.text : c.textMuted }]} numberOfLines={1}>{it.label}</Text>
+                      {'iconNode' in it && it.iconNode ? <ClaudeMark size={18} /> : <Feather name={it.icon} size={18} color={hovered ? c.text : c.textMuted} />}
+                      <Text style={[type.label, { color: 'accent' in it && it.accent ? CLAUDE.orangeDark : hovered ? c.text : c.textMuted }]} numberOfLines={1}>{it.label}</Text>
                     </>
                   )}
                 </Pressable>
@@ -227,7 +229,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
               <Skeleton height={220} />
             </View>
           ) : null}
-          {ready && page.name === 'dashboard' ? <AssistantPromo onOpen={() => setAssistantOpen(true)} /> : null}
+          {ready && page.name === 'dashboard' ? <AssistantPromo /> : null}
           {ready && page.name === 'connect' ? (
             <ConnectPage params={page.params} onBack={() => { if (Platform.OS === 'web') window.history.replaceState(null, '', '/'); setPage({ name: 'dashboard' }); }} />
           ) : null}

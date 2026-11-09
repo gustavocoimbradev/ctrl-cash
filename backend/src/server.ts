@@ -2,6 +2,7 @@ import { buildApp } from './app.js';
 import { createEmulatorVerifier, createFirebaseVerifier } from './auth.js';
 import { loadConfig } from './config.js';
 import { createPool } from './db.js';
+import { createSmtpMailer } from './email-report.js';
 import { migrate } from './migrate.js';
 
 const config = loadConfig(); // throws (and the process exits) on a missing or forbidden setting
@@ -18,6 +19,7 @@ const app = await buildApp({
   allowedOrigins: config.allowedOrigins,
   trustProxy: config.trustProxy,
   publicUrl: config.publicUrl,
+  mailer: config.smtpUrl && config.mailFrom ? createSmtpMailer(config.smtpUrl, config.mailFrom) : undefined,
   logger: { level: process.env.LOG_LEVEL ?? 'info' },
 });
 if (config.emulator) app.log.warn('FIREBASE_AUTH_EMULATOR=1: tokens are NOT cryptographically verified (development only)');

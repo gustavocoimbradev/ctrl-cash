@@ -4,7 +4,7 @@ import { Platform, Text, View } from 'react-native';
 import { useAssistant } from '../assistant/AssistantProvider';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import { ToggleRow } from '../components/Controls';
+import { ClaudeBadge } from '../components/ClaudeMark';
 import { t } from '../i18n';
 import { call } from '../store/sync';
 import { spacing, type, useColors } from '../theme';
@@ -25,8 +25,6 @@ export function ConnectPage({ params, onBack }: { params: ConnectParams; onBack:
   const { publishNow, refresh } = useAssistant();
   const [name, setName] = useState<string | null>(null);
   const [state, setState] = useState<'idle' | 'busy' | 'failed'>('idle');
-  /** it may also add transactions (it asks the person each time inside Claude) */
-  const [write, setWrite] = useState(true);
   const valid = !!(params.client_id && params.redirect_uri && params.code_challenge);
 
   useEffect(() => {
@@ -41,7 +39,7 @@ export function ConnectPage({ params, onBack }: { params: ConnectParams; onBack:
     try {
       const res = await call<{ redirect: string }>(allow ? '/oauth/approve' : '/oauth/deny', {
         method: 'POST',
-        body: { client_id: params.client_id, redirect_uri: params.redirect_uri, state: params.state, code_challenge: params.code_challenge, write: allow ? write : undefined },
+        body: { client_id: params.client_id, redirect_uri: params.redirect_uri, state: params.state, code_challenge: params.code_challenge, write: allow || undefined, social: allow || undefined, email: allow || undefined },
       });
       // the connection exists now: the picture of the finances is published before going back, so the first question already has data
       if (allow) {
@@ -67,15 +65,15 @@ export function ConnectPage({ params, onBack }: { params: ConnectParams; onBack:
   return (
     <Card style={{ maxWidth: 560, width: '100%', alignSelf: 'center', gap: spacing.lg }}>
       <View style={{ alignItems: 'center', gap: spacing.sm }}>
-        <Feather name="link" size={32} color={c.primary} />
+        <ClaudeBadge size={64} />
         <Text style={[type.title, { color: c.text, textAlign: 'center' }]}>{t('Connect {name}', { name: who })}</Text>
-        <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>{t('{name} wants to read your Ctrl+Cash data to answer questions about your finances, using its own account.', { name: who })}</Text>
+        <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>{t('{name} wants to connect to your Ctrl+Cash.', { name: who })}</Text>
       </View>
       <View style={{ gap: spacing.sm }}>
         {[
-          { icon: 'eye' as const, text: t('It can read: your balance, cards, debts, subscriptions, bills, delivery, categories, score and recent transactions.') },
-          { icon: 'lock' as const, text: write ? t('It can add transactions when you ask it to, never edit or remove them, and never sees your password.') : t('It cannot change anything, and never sees your password.') },
-          { icon: 'x-circle' as const, text: t('You can disconnect at any time in Account settings.') },
+          { icon: 'eye' as const, text: t('It reads your finances to answer your questions.') },
+          { icon: 'edit-3' as const, text: t('When you ask, it adds entries, manages your sharing and messages, and emails you reports. It never deletes anything.') },
+          { icon: 'x-circle' as const, text: t('You can disconnect at any time.') },
         ].map((r) => (
           <View key={r.icon} style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' }}>
             <Feather name={r.icon} size={20} color={c.textMuted} style={{ marginTop: 2 }} />
@@ -83,7 +81,6 @@ export function ConnectPage({ params, onBack }: { params: ConnectParams; onBack:
           </View>
         ))}
       </View>
-      <ToggleRow label={t('Let it add transactions')} hint={t('You still confirm each one in Claude. You can turn this off at any time.')} value={write} onChange={setWrite} />
       {state === 'failed' ? <Text style={[type.body, { color: c.expense }]}>{t('Could not complete the connection. Try again.')}</Text> : null}
       <View style={{ flexDirection: 'row', gap: spacing.md }}>
         <Button label={t('Cancel')} variant="secondary" onPress={() => void decide(false)} disabled={state === 'busy'} flex />

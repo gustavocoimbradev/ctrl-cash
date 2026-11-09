@@ -9,6 +9,9 @@ export interface Config {
   production: boolean;
   trustProxy: boolean;
   publicUrl?: string;
+  /** SMTP to send the reports an assistant emails (smtps://user:pass@host:465) and the From address */
+  smtpUrl?: string;
+  mailFrom?: string;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -34,5 +37,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     production,
     trustProxy: env.TRUST_PROXY === '1',
     publicUrl: env.PUBLIC_URL || undefined,
+    smtpUrl: env.SMTP_URL || undefined,
+    mailFrom: env.MAIL_FROM || undefined,
   };
 }

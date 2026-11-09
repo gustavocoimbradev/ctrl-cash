@@ -46,18 +46,18 @@ export interface AssistantOptions {
 }
 
 /** Looks a bearer access token up: its person and connection, or null when unknown, expired or revoked. */
-export async function userOfAccessToken(pool: Pool, header: string | undefined): Promise<{ userId: string; connectionId: string; canWrite: boolean; canSocial: boolean } | null> {
+export async function userOfAccessToken(pool: Pool, header: string | undefined): Promise<{ userId: string; connectionId: string; canWrite: boolean; canSocial: boolean; canEmail: boolean; email: string | null } | null> {
   const m = /^Bearer (\S+)$/.exec(header ?? '');
   if (!m?.[1]) return null;
   const res = await pool.query(
-    `select c.user_id, c.id, c.can_write, c.can_social from oauth_tokens t join assistant_connections c on c.id = t.connection_id
+    `select c.user_id, c.id, c.can_write, c.can_social, c.can_email, c.email from oauth_tokens t join assistant_connections c on c.id = t.connection_id
       where t.token_hash = $1 and t.kind = 'access' and t.expires_at_ms > $2 and c.revoked_at_ms is null`,
     [sha256(m[1]), Date.now()],
   );
   const r = res.rows[0];
   if (!r) return null;
   await pool.query('update assistant_connections set last_used_ms = $2 where id = $1', [r.id, Date.now()]).catch(() => {});
-  return { userId: r.user_id as string, connectionId: r.id as string, canWrite: r.can_write === true, canSocial: r.can_social === true };
+  return { userId: r.user_id as string, connectionId: r.id as string, canWrite: r.can_write === true, canSocial: r.can_social === true, canEmail: r.can_email === true, email: (r.email as string | null) ?? null };
 }
 
 export function registerAssistant(app: FastifyInstance, opts: AssistantOptions, authenticate: Authn) {
@@ -179,7 +179,7 @@ export function registerAssistant(app: FastifyInstance, opts: AssistantOptions, 
         await db.query('begin');
         // one live connection per assistant: the older one of the same client is revoked
         await db.query('update assistant_connections set revoked_at_ms = $3 where user_id = $1 and client_id = $2 and revoked_at_ms is null', [req.uid, client.id, now]);
-        await db.query('insert into assistant_connections (id, user_id, client_id, client_name, created_at_ms, can_write, can_social) values ($1, $2, $3, $4, $5, $6, $7)', [connectionId, req.uid, client.id, client.name, now, b.write === true, b.social === true]);
+        await db.query('insert into assistant_connections (id, user_id, client_id, client_name, created_at_ms, can_write, can_social, can_email, email) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)', [connectionId, req.uid, client.id, client.name, now, b.write === true, b.social === true, b.email === true && !!req.email, req.email ?? null]);
         await db.query('insert into oauth_codes (code_hash, connection_id, client_id, redirect_uri, code_challenge, expires_at_ms) values ($1, $2, $3, $4, $5, $6)', [sha256(code), connectionId, client.id, client.redirectUri, challenge, now + CODE_TTL_MS]);
         await db.query('commit');
       } catch (e) {
@@ -263,10 +263,10 @@ export function registerAssistant(app: FastifyInstance, opts: AssistantOptions, 
     url: '/api/assistant/connections',
     onRequest: authenticate,
     handler: async (req) => {
-      const res = await pool.query('select id, client_name, created_at_ms, last_used_ms, can_write, can_social from assistant_connections where user_id = $1 and revoked_at_ms is null order by created_at_ms desc', [req.uid]);
+      const res = await pool.query('select id, client_name, created_at_ms, last_used_ms, can_write, can_social, can_email, email from assistant_connections where user_id = $1 and revoked_at_ms is null order by created_at_ms desc', [req.uid]);
       const snap = await pool.query('select updated_at_ms from assistant_snapshots where user_id = $1', [req.uid]);
       return {
-        connections: res.rows.map((r) => ({ id: r.id as string, name: r.client_name as string, createdAt: Number(r.created_at_ms), lastUsedAt: r.last_used_ms === null ? null : Number(r.last_used_ms), canWrite: r.can_write === true, canSocial: r.can_social === true })),
+        connections: res.rows.map((r) => ({ id: r.id as string, name: r.client_name as string, createdAt: Number(r.created_at_ms), lastUsedAt: r.last_used_ms === null ? null : Number(r.last_used_ms), canWrite: r.can_write === true, canSocial: r.can_social === true, canEmail: r.can_email === true, email: (r.email as string | null) ?? null })),
         snapshotAt: snap.rows[0] ? Number(snap.rows[0].updated_at_ms) : null,
         mcpUrl: `${base(req)}/api/mcp`,
       };
@@ -295,11 +295,15 @@ export function registerAssistant(app: FastifyInstance, opts: AssistantOptions, 
       const id = str(b.id, 100);
       const hasWrite = typeof b.write === 'boolean';
       const hasSocial = typeof b.social === 'boolean';
-      if (!id || (!hasWrite && !hasSocial)) return reply.code(400).send({ error: 'invalid' });
+      const hasEmail = typeof b.email === 'boolean';
+      if (!id || (!hasWrite && !hasSocial && !hasEmail)) return reply.code(400).send({ error: 'invalid' });
+      // emailing needs the person's verified address; it is refreshed from the account each time they allow it
+      if (hasEmail && b.email === true && !req.email) return reply.code(400).send({ error: 'no_verified_email' });
       const res = await pool.query(
-        `update assistant_connections set can_write = coalesce($3, can_write), can_social = coalesce($4, can_social)
+        `update assistant_connections set can_write = coalesce($3, can_write), can_social = coalesce($4, can_social), can_email = coalesce($5, can_email),
+                email = case when $5 is true then $6 else email end
           where id = $1 and user_id = $2 and revoked_at_ms is null`,
-        [id, req.uid, hasWrite ? b.write : null, hasSocial ? b.social : null],
+        [id, req.uid, hasWrite ? b.write : null, hasSocial ? b.social : null, hasEmail ? b.email : null, req.email ?? null],
       );
       return res.rowCount ? { ok: true } : reply.code(404).send({ error: 'not_found' });
     },

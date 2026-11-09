@@ -8,13 +8,13 @@ import type pg from 'pg';
 import { generateCode, normalizeCode } from './code.js';
 import type { Pool } from './db.js';
 import { ValidationError } from './validate.js';
-import { parseCodeBody, parseMessage, parseProfile, parseSummary } from './validate-social.js';
+import { parseCodeBody, parseMessage, parseProfile, parseSummary, type ProfileInput } from './validate-social.js';
 
 type Authn = (req: FastifyRequest, reply: FastifyReply) => Promise<unknown>;
 type Db = pg.Pool | pg.PoolClient;
-type Row = Record<string, any>;
+export type Row = Record<string, any>;
 
-interface Person {
+export interface Person {
   code: string;
   displayName: string;
   color: string | null;
@@ -23,21 +23,21 @@ interface Person {
 }
 
 /** A public card. Built field by field so the internal user id can never leak. */
-const toPerson = (r: Row): Person => ({
+export const toPerson = (r: Row): Person => ({
   code: r.code,
   displayName: r.display_name,
   color: r.color ?? null,
   photo: r.photo ?? null,
 });
 
-const CARD_COLUMNS = 'p.user_id, p.code, p.display_name, p.color, p.photo';
+export const CARD_COLUMNS = 'p.user_id, p.code, p.display_name, p.color, p.photo';
 
-async function profileByCode(db: Db, code: string): Promise<Row | null> {
+export async function profileByCode(db: Db, code: string): Promise<Row | null> {
   const res = await db.query(`select ${CARD_COLUMNS} from profiles p where p.code = $1`, [code]);
   return res.rows[0] ?? null;
 }
 
-async function hasShare(db: Db, owner: string, viewer: string): Promise<boolean> {
+export async function hasShare(db: Db, owner: string, viewer: string): Promise<boolean> {
   const res = await db.query('select 1 from summary_shares where owner_id = $1 and viewer_id = $2 and revoked_at_ms is null', [owner, viewer]);
   return (res.rowCount ?? 0) > 0;
 }
@@ -62,12 +62,136 @@ async function assignCode(pool: Pool, uid: string): Promise<string> {
 }
 
 /** My profile row, with its code assigned if it was still missing; null when I have none. */
-async function myProfile(pool: Pool, uid: string): Promise<Row | null> {
+export async function myProfile(pool: Pool, uid: string): Promise<Row | null> {
   const res = await pool.query('select user_id, code, display_name, color, photo from profiles where user_id = $1', [uid]);
   const r = res.rows[0];
   if (!r) return null;
   if (r.code === null) r.code = await assignCode(pool, uid);
   return r;
+}
+
+/** Creates or updates my profile. The code is assigned once and never changes; the photo column is only touched when `p.photo` is given. */
+export async function upsertProfile(pool: Pool, uid: string, p: ProfileInput): Promise<Person> {
+  const photoGiven = p.photo !== undefined;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const existing = (await pool.query('select code from profiles where user_id = $1', [uid])).rows[0];
+    const code = existing?.code ?? (await generateCode({ exists: (c) => codeExists(pool, c) }));
+    try {
+      const res = await pool.query(
+        `insert into profiles (user_id, display_name, color, photo, code, created_at_ms) values ($1, $2, $3, $4, $5, $7)
+         on conflict (user_id) do update set display_name = excluded.display_name, color = excluded.color,
+           photo = case when $6::boolean then excluded.photo else profiles.photo end,
+           code = coalesce(profiles.code, excluded.code), updated_at = now()
+         returning code, display_name, color, photo`,
+        [uid, p.displayName, p.color, photoGiven ? p.photo : null, code, photoGiven, Date.now()],
+      );
+      return toPerson(res.rows[0]);
+    } catch (e) {
+      // two requests picked the same free code at once: pick another
+      if (!isUniqueViolation(e)) throw e;
+    }
+  }
+  throw new Error('could not create the profile');
+}
+
+export type ActionResult<T = object> = ({ kind: 'ok' } & T) | { kind: 'no_profile' } | { kind: 'not_found' } | { kind: 'self' };
+
+/** Sends a message from `uid` to the person with this code (a profile of my own is required). */
+export async function sendMessageTo(pool: Pool, uid: string, to: string, body: string): Promise<ActionResult<{ message: { id: string; mine: true; body: string; createdAt: number; readAt: null } }>> {
+  if (!(await myProfile(pool, uid))) return { kind: 'no_profile' };
+  const peer = await profileByCode(pool, to);
+  if (!peer) return { kind: 'not_found' };
+  if (peer.user_id === uid) return { kind: 'self' };
+  const id = randomUUID();
+  const createdAt = Date.now();
+  await pool.query('insert into messages (id, sender_id, recipient_id, body, created_at_ms) values ($1, $2, $3, $4, $5)', [id, uid, peer.user_id, body, createdAt]);
+  return { kind: 'ok', message: { id, mine: true, body, createdAt, readAt: null } };
+}
+
+/** Starts (or restarts) sharing my summary with the person with this code. */
+export async function shareSummaryWith(pool: Pool, uid: string, code: string): Promise<ActionResult> {
+  if (!(await myProfile(pool, uid))) return { kind: 'no_profile' };
+  const target = await profileByCode(pool, code);
+  if (!target) return { kind: 'not_found' };
+  if (target.user_id === uid) return { kind: 'self' };
+  await pool.query(
+    `insert into summary_shares (owner_id, viewer_id, created_at_ms) values ($1, $2, $3)
+     on conflict (owner_id, viewer_id) do update set
+       created_at_ms = case when summary_shares.revoked_at_ms is not null then excluded.created_at_ms else summary_shares.created_at_ms end,
+       revoked_at_ms = null`,
+    [uid, target.user_id, Date.now()],
+  );
+  return { kind: 'ok' };
+}
+
+/** Stops sharing with this person: the share is stamped revoked, never deleted. */
+export async function revokeSummaryShare(pool: Pool, uid: string, code: string): Promise<ActionResult> {
+  const target = await profileByCode(pool, code);
+  if (!target) return { kind: 'not_found' };
+  await pool.query('update summary_shares set revoked_at_ms = $3 where owner_id = $1 and viewer_id = $2 and revoked_at_ms is null', [uid, target.user_id, Date.now()]);
+  return { kind: 'ok' };
+}
+
+/** The people I share with (`given`) and the people who share with me (`received`). */
+export async function listShares(db: Db, uid: string): Promise<{ given: Person[]; received: Person[] }> {
+  const given = await db.query(
+    `select ${CARD_COLUMNS} from profiles p
+       join summary_shares s on s.viewer_id = p.user_id and s.owner_id = $1 and s.revoked_at_ms is null
+      where p.code is not null order by s.created_at_ms desc, p.code`,
+    [uid],
+  );
+  const received = await db.query(
+    `select ${CARD_COLUMNS} from profiles p
+       join summary_shares s on s.owner_id = p.user_id and s.viewer_id = $1 and s.revoked_at_ms is null
+      where p.code is not null order by s.created_at_ms desc, p.code`,
+    [uid],
+  );
+  return { given: given.rows.map(toPerson), received: received.rows.map(toPerson) };
+}
+
+/** The shared summary of the owner with this code, as seen by `uid`: null when not shared with them (or no such person). */
+export async function sharedSummaryOf(db: Db, uid: string, code: string): Promise<{ owner: Person; summary: unknown; updatedAt: number | null } | null> {
+  const owner = await profileByCode(db, code);
+  if (!owner) return null;
+  if (owner.user_id !== uid && !(await hasShare(db, owner.user_id, uid))) return null;
+  const r = (await db.query('select summary, updated_at_ms from profile_summaries where user_id = $1', [owner.user_id])).rows[0];
+  return { owner: toPerson(owner), summary: r ? r.summary : null, updatedAt: r ? Number(r.updated_at_ms) : null };
+}
+
+/** My conversations, newest first, with the last message and the unread count. */
+export async function listConversations(db: Db, uid: string) {
+  const res = await db.query(
+    `with m as (
+       select id, seq, body, created_at_ms, sender_id = $1 as mine,
+              case when sender_id = $1 then recipient_id else sender_id end as peer
+         from messages where sender_id = $1 or recipient_id = $1
+     ), last as (
+       select distinct on (peer) * from m order by peer, created_at_ms desc, seq desc
+     )
+     select ${CARD_COLUMNS}, l.id as last_id, l.mine as last_mine, l.body as last_body, l.created_at_ms as last_at,
+            (select count(*)::int from messages x where x.recipient_id = $1 and x.sender_id = l.peer and x.read_at_ms is null) as unread
+       from last l join profiles p on p.user_id = l.peer and p.code is not null
+      order by l.created_at_ms desc, l.seq desc`,
+    [uid],
+  );
+  return res.rows.map((r) => ({
+    with: toPerson(r),
+    last: { id: r.last_id as string, mine: r.last_mine as boolean, body: r.last_body as string, createdAt: Number(r.last_at) },
+    unread: r.unread as number,
+  }));
+}
+
+export const messageOut = (r: Row) => ({ id: r.id as string, mine: r.mine as boolean, body: r.body as string, createdAt: Number(r.created_at_ms), readAt: r.read_at_ms === null ? null : Number(r.read_at_ms) });
+
+/** The last `limit` messages between me and this peer (oldest first). Does not mark anything as read. */
+export async function recentMessages(db: Db, uid: string, peerId: string, limit: number) {
+  const res = await db.query(
+    `select * from (select id, seq, body, created_at_ms, read_at_ms, sender_id = $1 as mine from messages
+       where ((sender_id = $1 and recipient_id = $2) or (sender_id = $2 and recipient_id = $1))
+       order by created_at_ms desc, seq desc limit $3) t order by created_at_ms, seq`,
+    [uid, peerId, limit],
+  );
+  return res.rows.map(messageOut);
 }
 
 export interface SocialOptions {
@@ -103,12 +227,6 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
       },
     });
 
-  /** Writes need a profile of your own: deny by default. */
-  const needProfile = async (req: FastifyRequest, reply: FastifyReply): Promise<boolean> => {
-    if (await myProfile(pool, req.uid)) return true;
-    reply.code(403).send({ error: 'profile_required' });
-    return false;
-  };
   const notFound = (reply: FastifyReply) => reply.code(404).send({ error: 'not_found' });
   const codeParam = (req: FastifyRequest) => normalizeCode((req.params as { code?: string }).code ?? '');
 
@@ -120,27 +238,7 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
 
   route('PUT', '/api/profile', async (req) => {
     const p = parseProfile(req.body);
-    // the code is assigned once and never changes; the photo column is only touched when the body carries the key
-    const photoGiven = p.photo !== undefined;
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const existing = (await pool.query('select code from profiles where user_id = $1', [req.uid])).rows[0];
-      const code = existing?.code ?? (await generateCode({ exists: (c) => codeExists(pool, c) }));
-      try {
-        const res = await pool.query(
-          `insert into profiles (user_id, display_name, color, photo, code, created_at_ms) values ($1, $2, $3, $4, $5, $7)
-           on conflict (user_id) do update set display_name = excluded.display_name, color = excluded.color,
-             photo = case when $6::boolean then excluded.photo else profiles.photo end,
-             code = coalesce(profiles.code, excluded.code), updated_at = now()
-           returning code, display_name, color, photo`,
-          [req.uid, p.displayName, p.color, photoGiven ? p.photo : null, code, photoGiven, Date.now()],
-        );
-        return { profile: toPerson(res.rows[0]) };
-      } catch (e) {
-        // two requests picked the same free code at once: pick another
-        if (!isUniqueViolation(e)) throw e;
-      }
-    }
-    throw new Error('could not create the profile');
+    return { profile: await upsertProfile(pool, req.uid, p) };
   });
 
   // ---- look somebody up by code
@@ -168,30 +266,9 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
 
   // ---- messages
   route('GET', '/api/conversations', async (req) => {
-    const res = await pool.query(
-      `with m as (
-         select id, seq, body, created_at_ms, sender_id = $1 as mine,
-                case when sender_id = $1 then recipient_id else sender_id end as peer
-           from messages where sender_id = $1 or recipient_id = $1
-       ), last as (
-         select distinct on (peer) * from m order by peer, created_at_ms desc, seq desc
-       )
-       select ${CARD_COLUMNS}, l.id as last_id, l.mine as last_mine, l.body as last_body, l.created_at_ms as last_at,
-              (select count(*)::int from messages x where x.recipient_id = $1 and x.sender_id = l.peer and x.read_at_ms is null) as unread
-         from last l join profiles p on p.user_id = l.peer and p.code is not null
-        order by l.created_at_ms desc, l.seq desc`,
-      [req.uid],
-    );
-    return {
-      conversations: res.rows.map((r) => ({
-        with: toPerson(r),
-        last: { id: r.last_id, mine: r.last_mine, body: r.last_body, createdAt: Number(r.last_at) },
-        unread: r.unread,
-      })),
-    };
+    return { conversations: await listConversations(pool, req.uid) };
   });
 
-  const messageOut = (r: Row) => ({ id: r.id, mine: r.mine, body: r.body, createdAt: Number(r.created_at_ms), readAt: r.read_at_ms === null ? null : Number(r.read_at_ms) });
 
   route('GET', '/api/messages/:code', async (req, reply) => {
     const code = codeParam(req);
@@ -218,14 +295,11 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
     '/api/messages',
     async (req, reply) => {
       const m = parseMessage(req.body);
-      if (!(await needProfile(req, reply))) return reply;
-      const peer = await profileByCode(pool, m.to);
-      if (!peer) return notFound(reply);
-      if (peer.user_id === req.uid) return bad(reply, 'you cannot message yourself');
-      const id = randomUUID();
-      const createdAt = Date.now();
-      await pool.query('insert into messages (id, sender_id, recipient_id, body, created_at_ms) values ($1, $2, $3, $4, $5)', [id, req.uid, peer.user_id, m.body, createdAt]);
-      return reply.code(201).send({ message: { id, mine: true, body: m.body, createdAt, readAt: null } });
+      const r = await sendMessageTo(pool, req.uid, m.to, m.body);
+      if (r.kind === 'no_profile') return reply.code(403).send({ error: 'profile_required' });
+      if (r.kind === 'not_found') return notFound(reply);
+      if (r.kind === 'self') return bad(reply, 'you cannot message yourself');
+      return reply.code(201).send({ message: r.message });
     },
     30,
   );
@@ -247,44 +321,20 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
 
   // ---- shared summary
   route('GET', '/api/shares', async (req) => {
-    const given = await pool.query(
-      `select ${CARD_COLUMNS} from profiles p
-         join summary_shares s on s.viewer_id = p.user_id and s.owner_id = $1 and s.revoked_at_ms is null
-        where p.code is not null order by s.created_at_ms desc, p.code`,
-      [req.uid],
-    );
-    const received = await pool.query(
-      `select ${CARD_COLUMNS} from profiles p
-         join summary_shares s on s.owner_id = p.user_id and s.viewer_id = $1 and s.revoked_at_ms is null
-        where p.code is not null order by s.created_at_ms desc, p.code`,
-      [req.uid],
-    );
-    return { given: given.rows.map(toPerson), received: received.rows.map(toPerson) };
+    return await listShares(pool, req.uid);
   });
 
   route('POST', '/api/shares', async (req, reply) => {
     const code = parseCodeBody(req.body);
-    if (!(await needProfile(req, reply))) return reply;
-    const target = await profileByCode(pool, code);
-    if (!target) return notFound(reply);
-    if (target.user_id === req.uid) return bad(reply, 'you cannot share with yourself');
-    await pool.query(
-      `insert into summary_shares (owner_id, viewer_id, created_at_ms) values ($1, $2, $3)
-       on conflict (owner_id, viewer_id) do update set
-         created_at_ms = case when summary_shares.revoked_at_ms is not null then excluded.created_at_ms else summary_shares.created_at_ms end,
-         revoked_at_ms = null`,
-      [req.uid, target.user_id, Date.now()],
-    );
+    const r = await shareSummaryWith(pool, req.uid, code);
+    if (r.kind === 'no_profile') return reply.code(403).send({ error: 'profile_required' });
+    if (r.kind === 'not_found') return notFound(reply);
+    if (r.kind === 'self') return bad(reply, 'you cannot share with yourself');
     return { ok: true };
   });
 
   route('POST', '/api/shares/revoke', async (req, reply) => {
-    const target = await profileByCode(pool, parseCodeBody(req.body));
-    if (!target) return notFound(reply);
-    await pool.query(
-      'update summary_shares set revoked_at_ms = $3 where owner_id = $1 and viewer_id = $2 and revoked_at_ms is null',
-      [req.uid, target.user_id, Date.now()],
-    );
+    if ((await revokeSummaryShare(pool, req.uid, parseCodeBody(req.body))).kind === 'not_found') return notFound(reply);
     return { ok: true };
   });
 
@@ -302,12 +352,8 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
     const denied = () => reply.code(403).send({ error: 'not_shared' });
     const code = codeParam(req);
     if (!code) return denied();
-    const owner = await profileByCode(pool, code);
-    if (!owner) return denied();
-    // mine, or an active share from them to me
-    if (owner.user_id !== req.uid && !(await hasShare(pool, owner.user_id, req.uid))) return denied();
-    const res = await pool.query('select summary, updated_at_ms from profile_summaries where user_id = $1', [owner.user_id]);
-    const r = res.rows[0];
-    return r ? { summary: r.summary, updatedAt: Number(r.updated_at_ms) } : { summary: null, updatedAt: null };
+    const r = await sharedSummaryOf(pool, req.uid, code);
+    if (!r) return denied();
+    return { summary: r.summary, updatedAt: r.updatedAt };
   });
 }
