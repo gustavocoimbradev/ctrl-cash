@@ -1,8 +1,9 @@
 // The MCP server (Streamable HTTP, JSON responses): read-only tools over the snapshot of the signed-in person's finances.
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { publicUrlOf, userOfAccessToken } from './assistant.js';
 import { GUIDE } from './assistant-guide.js';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, addTransactions } from './assistant-write.js';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './assistant-write.js';
+import { REGISTRY, toolByName, type McpTool } from './mcp-tools.js';
 import type { Pool } from './db.js';
 import { ValidationError } from './validate.js';
 
@@ -27,41 +28,32 @@ const TOOLS: Tool[] = [
   { name: 'get_delivery', description: 'Delivery spending: the monthly average of the last 3 months, per year, and the orders by date.', keys: ['delivery'] },
   { name: 'get_recent_transactions', description: 'The most recent transactions (date, type, description, amount, category, whether it is confirmed).', keys: ['recent'] },
   { name: 'list_categories_and_cards', description: 'The categories (built-in and the person\'s own, for expenses and for income) and the registered cards, with the exact names to use when adding a transaction.', keys: [] },
-  { name: 'add_transaction', description: 'Adds a transaction for the person (only when they allowed adding in Ctrl+Cash). Confirm amount, date, category and card with the person before calling. It never edits or removes anything.', keys: [] },
   { name: 'get_guide', description: 'How Ctrl+Cash works and how to answer the person well. Read it once at the start.', keys: [] },
 ];
 
-const ADD_SCHEMA = {
-  type: 'object',
-  properties: {
-    type: { type: 'string', enum: ['expense', 'income'] },
-    description: { type: 'string', description: 'What it was, 1 to 100 characters, in the person\'s words (for example "Pharmacy").' },
-    amount: { type: 'number', description: 'Positive, in whole units of the currency, like 49.90. The total when in installments.' },
-    date: { type: 'string', description: 'YYYY-MM-DD, the day it happened (use `today` from the data when it is today).' },
-    category: { type: 'string', description: 'A category slug or name; see list_categories_and_cards. Expenses default to Other; income needs one.' },
-    confirmed: { type: 'boolean', description: 'true when it already happened (paid or received), false when it is still to come. Default true. Card purchases are always pending.' },
-    card: { type: 'string', description: 'The name of the credit card, for a card purchase.' },
-    installments: { type: 'integer', minimum: 1, maximum: 48, description: 'Number of monthly installments (default 1).' },
-    fixed: { type: 'boolean', description: 'true for something that repeats every month (rent, a subscription).' },
-    invoice: { type: 'string', enum: ['next', 'open'], description: 'For a card purchase: the invoice after the open one (default, where purchases usually land) or the open one.' },
-  },
-  required: ['type', 'description', 'amount'],
-  additionalProperties: false,
-};
+const readToolDef = (t: Tool) => ({
+  name: t.name,
+  description: t.description,
+  inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+});
 
-const WRITE_TOOLS = new Set(['add_transaction']);
+const registryToolDef = (t: McpTool) => ({
+  name: t.name,
+  description: `${t.description}${t.scope === 'write' ? ' (changes the person\'s finances; only if they allowed it.)' : t.scope === 'social' ? ' (acts on the person\'s social side: profile, sharing, messages; only if they allowed it.)' : ''}`,
+  inputSchema: t.inputSchema,
+  annotations: { readOnlyHint: t.scope === 'read', destructiveHint: false, idempotentHint: false, openWorldHint: false },
+});
 
-const toolDef = (t: Tool) =>
-  WRITE_TOOLS.has(t.name)
-    ? { name: t.name, description: t.description, inputSchema: ADD_SCHEMA, annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } }
-    : { name: t.name, description: t.description, inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } };
+/** At most this many changes per connection per hour: a runaway assistant cannot flood an account. */
+const ACTIONS_PER_HOUR = 120;
 
 type Rpc = { jsonrpc?: string; id?: string | number | null; method?: string; params?: Record<string, unknown> };
 const reply = (id: Rpc['id'], result: unknown) => ({ jsonrpc: '2.0', id: id ?? null, result });
 const fail = (id: Rpc['id'], code: number, message: string) => ({ jsonrpc: '2.0', id: id ?? null, error: { code, message } });
 
 export function registerMcp(app: FastifyInstance, pool: Pool, publicUrl?: string) {
-  async function handle(msg: Rpc, who: { userId: string; canWrite: boolean }): Promise<object | null> {
+  async function handle(req0: FastifyRequest, msg: Rpc, who: { userId: string; connectionId: string; canWrite: boolean; canSocial: boolean }): Promise<object | null> {
     const userId = who.userId;
     const { id, method, params } = msg;
     if (typeof method !== 'string' || msg.jsonrpc !== '2.0') return fail(id, -32600, 'Invalid request');
@@ -75,12 +67,31 @@ export function registerMcp(app: FastifyInstance, pool: Pool, publicUrl?: string
       case 'ping':
         return reply(id, {});
       case 'tools/list':
-        return reply(id, { tools: TOOLS.map(toolDef) });
+        return reply(id, { tools: [...TOOLS.map(readToolDef), ...REGISTRY.map(registryToolDef)] });
       case 'tools/call': {
+        const text = (t: string, isError = false) => reply(id, { content: [{ type: 'text', text: t }], ...(isError ? { isError: true } : {}) });
+        const reg = toolByName(params?.name);
+        if (reg) {
+          if (reg.scope === 'write' && !who.canWrite) return text('This connection is read-only. The person can allow changing their finances in Ctrl+Cash, in Ask Claude, then you can try again.', true);
+          if (reg.scope === 'social' && !who.canSocial) return text('This connection may not act on the social side (profile, sharing, messages). The person can allow it in Ctrl+Cash, in Ask Claude, then you can try again.', true);
+          if (reg.scope !== 'read') {
+            const recent = await pool.query('select count(*)::int as n from assistant_actions where connection_id = $1 and created_at_ms > $2', [who.connectionId, Date.now() - 3_600_000]);
+            if ((recent.rows[0]?.n as number) >= ACTIONS_PER_HOUR) return text('Too many changes in the last hour. Wait a while, or ask the person to review what was done.', true);
+          }
+          const snap = await pool.query("select snapshot->>'today' as today from assistant_snapshots where user_id = $1", [userId]);
+          const today = (snap.rows[0]?.today as string | undefined) ?? new Date().toISOString().slice(0, 10);
+          try {
+            const out = await reg.handler({ pool, userId, connectionId: who.connectionId, today, publicUrl: publicUrlOf(req0, publicUrl) }, (params?.arguments ?? {}) as Record<string, unknown>);
+            if (reg.scope !== 'read') await pool.query('insert into assistant_actions (user_id, connection_id, tool, summary, created_at_ms) values ($1, $2, $3, $4, $5)', [userId, who.connectionId, reg.name, out.replace(/\s+/g, ' ').slice(0, 300), Date.now()]);
+            return text(out);
+          } catch (e) {
+            if (e instanceof ValidationError) return text(`Not done: ${e.message}`, true);
+            throw e;
+          }
+        }
         const tool = TOOLS.find((t) => t.name === params?.name);
         if (!tool) return fail(id, -32602, 'Unknown tool');
         if (tool.name === 'get_guide') return reply(id, { content: [{ type: 'text', text: GUIDE }] });
-        const text = (t: string, isError = false) => reply(id, { content: [{ type: 'text', text: t }], ...(isError ? { isError: true } : {}) });
         if (tool.name === 'list_categories_and_cards') {
           const cats = await pool.query('select slug, kind, name, archived_at_ms from categories where user_id = $1', [userId]);
           const cards = await pool.query('select name, due_day from cards where user_id = $1 and archived_at_ms is null order by created_at_ms nulls last', [userId]);
@@ -90,26 +101,15 @@ export function registerMcp(app: FastifyInstance, pool: Pool, publicUrl?: string
           ];
           return text(JSON.stringify({ expenseCategories: list('expense', EXPENSE_CATEGORIES), incomeCategories: list('income', INCOME_CATEGORIES), cards: cards.rows.map((r) => ({ name: r.name, dueDay: Number(r.due_day) })) }));
         }
-        if (tool.name === 'add_transaction') {
-          if (!who.canWrite) return text('This connection is read-only. The person can allow adding transactions in Ctrl+Cash, in Ask Claude (or Account settings), then you can try again.', true);
-          const snap = await pool.query("select snapshot->>'today' as today from assistant_snapshots where user_id = $1", [userId]);
-          const today = (snap.rows[0]?.today as string | undefined) ?? new Date().toISOString().slice(0, 10);
-          try {
-            return text(await addTransactions(pool, userId, (params?.arguments ?? {}) as Record<string, unknown>, today));
-          } catch (e) {
-            if (e instanceof ValidationError) return text(`Not added: ${e.message}`, true);
-            throw e;
-          }
-        }
         const res = await pool.query('select snapshot, updated_at_ms from assistant_snapshots where user_id = $1', [userId]);
         const row = res.rows[0];
         if (!row) {
-          return reply(id, { content: [{ type: 'text', text: 'There is no data yet. Ask the person to open Ctrl+Cash once, so the app can publish their finances for you, then try again.' }] });
+          return text('There is no data yet. Ask the person to open Ctrl+Cash once, so the app can publish their finances for you, then try again.');
         }
         const snap = row.snapshot as Record<string, unknown>;
         const out: Record<string, unknown> = { currency: snap.currency, generatedAt: snap.generatedAt, today: snap.today };
         for (const k of tool.keys) out[k] = snap[k] ?? null;
-        return reply(id, { content: [{ type: 'text', text: JSON.stringify(out) }] });
+        return text(JSON.stringify(out));
       }
       default:
         return fail(id, -32601, 'Method not found');
@@ -126,11 +126,11 @@ export function registerMcp(app: FastifyInstance, pool: Pool, publicUrl?: string
     }
     const body = req.body;
     if (Array.isArray(body)) {
-      const out = (await Promise.all(body.slice(0, 20).map((m) => handle(m as Rpc, who)))).filter((x): x is object => x !== null);
+      const out = (await Promise.all(body.slice(0, 20).map((m) => handle(req, m as Rpc, who)))).filter((x): x is object => x !== null);
       return out.length ? out : rep.code(202).send();
     }
     if (typeof body !== 'object' || body === null) return rep.code(400).send(fail(null, -32700, 'Parse error'));
-    const out = await handle(body as Rpc, who);
+    const out = await handle(req, body as Rpc, who);
     return out ?? rep.code(202).send();
   });
 

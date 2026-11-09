@@ -46,18 +46,18 @@ export interface AssistantOptions {
 }
 
 /** Looks a bearer access token up: its person and connection, or null when unknown, expired or revoked. */
-export async function userOfAccessToken(pool: Pool, header: string | undefined): Promise<{ userId: string; connectionId: string; canWrite: boolean } | null> {
+export async function userOfAccessToken(pool: Pool, header: string | undefined): Promise<{ userId: string; connectionId: string; canWrite: boolean; canSocial: boolean } | null> {
   const m = /^Bearer (\S+)$/.exec(header ?? '');
   if (!m?.[1]) return null;
   const res = await pool.query(
-    `select c.user_id, c.id, c.can_write from oauth_tokens t join assistant_connections c on c.id = t.connection_id
+    `select c.user_id, c.id, c.can_write, c.can_social from oauth_tokens t join assistant_connections c on c.id = t.connection_id
       where t.token_hash = $1 and t.kind = 'access' and t.expires_at_ms > $2 and c.revoked_at_ms is null`,
     [sha256(m[1]), Date.now()],
   );
   const r = res.rows[0];
   if (!r) return null;
   await pool.query('update assistant_connections set last_used_ms = $2 where id = $1', [r.id, Date.now()]).catch(() => {});
-  return { userId: r.user_id as string, connectionId: r.id as string, canWrite: r.can_write === true };
+  return { userId: r.user_id as string, connectionId: r.id as string, canWrite: r.can_write === true, canSocial: r.can_social === true };
 }
 
 export function registerAssistant(app: FastifyInstance, opts: AssistantOptions, authenticate: Authn) {
@@ -179,7 +179,7 @@ export function registerAssistant(app: FastifyInstance, opts: AssistantOptions, 
         await db.query('begin');
         // one live connection per assistant: the older one of the same client is revoked
         await db.query('update assistant_connections set revoked_at_ms = $3 where user_id = $1 and client_id = $2 and revoked_at_ms is null', [req.uid, client.id, now]);
-        await db.query('insert into assistant_connections (id, user_id, client_id, client_name, created_at_ms, can_write) values ($1, $2, $3, $4, $5, $6)', [connectionId, req.uid, client.id, client.name, now, b.write === true]);
+        await db.query('insert into assistant_connections (id, user_id, client_id, client_name, created_at_ms, can_write, can_social) values ($1, $2, $3, $4, $5, $6, $7)', [connectionId, req.uid, client.id, client.name, now, b.write === true, b.social === true]);
         await db.query('insert into oauth_codes (code_hash, connection_id, client_id, redirect_uri, code_challenge, expires_at_ms) values ($1, $2, $3, $4, $5, $6)', [sha256(code), connectionId, client.id, client.redirectUri, challenge, now + CODE_TTL_MS]);
         await db.query('commit');
       } catch (e) {
@@ -263,10 +263,10 @@ export function registerAssistant(app: FastifyInstance, opts: AssistantOptions, 
     url: '/api/assistant/connections',
     onRequest: authenticate,
     handler: async (req) => {
-      const res = await pool.query('select id, client_name, created_at_ms, last_used_ms, can_write from assistant_connections where user_id = $1 and revoked_at_ms is null order by created_at_ms desc', [req.uid]);
+      const res = await pool.query('select id, client_name, created_at_ms, last_used_ms, can_write, can_social from assistant_connections where user_id = $1 and revoked_at_ms is null order by created_at_ms desc', [req.uid]);
       const snap = await pool.query('select updated_at_ms from assistant_snapshots where user_id = $1', [req.uid]);
       return {
-        connections: res.rows.map((r) => ({ id: r.id as string, name: r.client_name as string, createdAt: Number(r.created_at_ms), lastUsedAt: r.last_used_ms === null ? null : Number(r.last_used_ms), canWrite: r.can_write === true })),
+        connections: res.rows.map((r) => ({ id: r.id as string, name: r.client_name as string, createdAt: Number(r.created_at_ms), lastUsedAt: r.last_used_ms === null ? null : Number(r.last_used_ms), canWrite: r.can_write === true, canSocial: r.can_social === true })),
         snapshotAt: snap.rows[0] ? Number(snap.rows[0].updated_at_ms) : null,
         mcpUrl: `${base(req)}/api/mcp`,
       };
@@ -285,7 +285,7 @@ export function registerAssistant(app: FastifyInstance, opts: AssistantOptions, 
     },
   });
 
-  // what a connection may do: read only, or also add transactions
+  // what a connection may do: read only, change my finances (write), act on my social side (social)
   app.route({
     method: 'POST',
     url: '/api/assistant/connections/permissions',
@@ -293,9 +293,30 @@ export function registerAssistant(app: FastifyInstance, opts: AssistantOptions, 
     handler: async (req, reply) => {
       const b = (req.body ?? {}) as Record<string, unknown>;
       const id = str(b.id, 100);
-      if (!id || typeof b.write !== 'boolean') return reply.code(400).send({ error: 'invalid' });
-      const res = await pool.query('update assistant_connections set can_write = $3 where id = $1 and user_id = $2 and revoked_at_ms is null', [id, req.uid, b.write]);
+      const hasWrite = typeof b.write === 'boolean';
+      const hasSocial = typeof b.social === 'boolean';
+      if (!id || (!hasWrite && !hasSocial)) return reply.code(400).send({ error: 'invalid' });
+      const res = await pool.query(
+        `update assistant_connections set can_write = coalesce($3, can_write), can_social = coalesce($4, can_social)
+          where id = $1 and user_id = $2 and revoked_at_ms is null`,
+        [id, req.uid, hasWrite ? b.write : null, hasSocial ? b.social : null],
+      );
       return res.rowCount ? { ok: true } : reply.code(404).send({ error: 'not_found' });
+    },
+  });
+
+  // what the assistants did for this person, newest first
+  app.route({
+    method: 'GET',
+    url: '/api/assistant/actions',
+    onRequest: authenticate,
+    handler: async (req) => {
+      const res = await pool.query(
+        `select a.tool, a.summary, a.created_at_ms, c.client_name from assistant_actions a join assistant_connections c on c.id = a.connection_id
+          where a.user_id = $1 order by a.created_at_ms desc, a.id desc limit 30`,
+        [req.uid],
+      );
+      return { actions: res.rows.map((r) => ({ tool: r.tool as string, summary: r.summary as string, at: Number(r.created_at_ms), by: r.client_name as string })) };
     },
   });
 
