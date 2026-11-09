@@ -62,3 +62,21 @@ export function formatMoneyShort(cents: number): string {
   }
   return f.format(cents / minorUnit());
 }
+
+const inCache = new Map<string, { digits: number; full: Intl.NumberFormat; short: Intl.NumberFormat }>();
+/** An amount in somebody else's currency (the owner of a shared summary): the same short style, in the language on screen. */
+export function formatMoneyShortIn(cents: number, currency: string): string {
+  const key = `${getLocale()}|${currency}`;
+  let f = inCache.get(key);
+  if (!f) {
+    try {
+      const full = new Intl.NumberFormat(getLocale(), { style: 'currency', currency });
+      f = { digits: full.resolvedOptions().maximumFractionDigits ?? 2, full, short: new Intl.NumberFormat(getLocale(), { style: 'currency', currency, notation: 'compact', maximumFractionDigits: 1 }) };
+    } catch {
+      return formatMoneyShort(cents);
+    }
+    inCache.set(key, f);
+  }
+  const whole = cents / 10 ** f.digits;
+  return Math.abs(whole) < 1000 ? f.full.format(whole) : f.short.format(whole);
+}

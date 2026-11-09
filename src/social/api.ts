@@ -1,11 +1,17 @@
 import { call } from '../store/sync';
+import type { OwnChart } from '../domain/summary';
 import type { Tone } from '../types';
 
 /** The social layer of the API (profiles, follows, messages and the shared summary). People are identified by a short code (6 characters, also the one in the profile URL), never by the account id. */
 
 /** A person as other people see them. `code` is the short code people type to find them. */
+/** What a share shows: percentages and the score, or the real values too. */
+export type ShareMode = 'percent' | 'amounts';
+
 export interface Person {
   code: string;
+  /** only on the people of my share lists */
+  mode?: ShareMode;
   displayName: string;
   color: string | null;
   /** a small square JPEG as a data URL */
@@ -93,8 +99,8 @@ export const socialApi = {
   markRead: (code: string) => post<{ ok: true }>('/messages/read', { code }),
   unread: () => call<{ unread: number }>('/unread'),
   shares: () => call<{ given: Person[]; received: Person[] }>('/shares'),
-  share: (code: string) => post<{ ok: true }>('/shares', { code }),
+  share: (code: string, mode: ShareMode = 'percent') => post<{ ok: true }>('/shares', { code, mode }),
   revoke: (code: string) => post<{ ok: true }>('/shares/revoke', { code }),
-  publishSummary: (summary: Summary) => call<{ ok: true }>('/summary', { method: 'PUT', body: summary }),
-  summaryOf: (code: string) => call<{ summary: Summary | null; updatedAt: number | null }>(`/people/${enc(code)}/summary`),
+  publishSummary: (summary: Summary & { amounts?: OwnChart & { currency: string } }) => call<{ ok: true }>('/summary', { method: 'PUT', body: summary }),
+  summaryOf: (code: string) => call<{ summary: Summary | null; updatedAt: number | null; mode?: ShareMode; /** the real values, only when they chose to show them to me */ amounts?: (OwnChart & { currency: string }) | null }>(`/people/${enc(code)}/summary`),
 };

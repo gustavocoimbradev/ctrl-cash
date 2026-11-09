@@ -3,11 +3,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Card } from '../components/Card';
 import { AnimatedBar } from '../components/Motion';
+import { PillToggle } from '../components/Controls';
 import { Sheet } from '../components/Sheet';
 import { buildOwnChart, buildSummary } from '../domain/summary';
 import { useStore } from '../store';
 import { desktopBreakpoint, maxContentWidth, radius, spacing, type, useColors } from '../theme';
-import { Person, PersonDetail, SHARE_REQUEST, Summary, socialApi } from './api';
+import { Person, PersonDetail, SHARE_REQUEST, ShareMode, Summary, socialApi } from './api';
 import { CodeInput, FoundPerson, useCodeLookup } from './code';
 import { ProfileForm } from './ProfileForm';
 import { useSocial } from './SocialProvider';
@@ -184,8 +185,13 @@ function ShareDialog({ visible, onClose }: { visible: boolean; onClose: () => vo
   const { given, share, revoke } = useSocial();
   const finder = useCodeLookup();
   const [busy, setBusy] = useState<string | null>(null);
+  /** what a new share shows: percentages and the score, or the real values too */
+  const [mode, setMode] = useState<ShareMode>('percent');
   useEffect(() => {
-    if (!visible) finder.clear();
+    if (!visible) {
+      finder.clear();
+      setMode('percent');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
   const run = async (code: string, fn: () => Promise<void>) => {
@@ -196,11 +202,20 @@ function ShareDialog({ visible, onClose }: { visible: boolean; onClose: () => vo
       setBusy(null);
     }
   };
+  const modes = [
+    { value: 'percent' as ShareMode, label: t('Percentages') },
+    { value: 'amounts' as ShareMode, label: t('Amounts') },
+  ];
   return (
     <Sheet visible={visible} title={t('Share your data')} onClose={onClose}>
       <Text style={[type.body, { color: c.textMuted }]}>
-        {t('Type the code of the person you want to share your summary with. They see percentages only (never single transactions), and you can stop at any time.')}
+        {t('Type the code of the person you want to share your summary with, and choose what they see. Never single transactions, and you can stop at any time.')}
       </Text>
+      <View style={{ gap: spacing.xs }}>
+        <Text style={[type.label, { color: c.text }]}>{t('What they see')}</Text>
+        <PillToggle<ShareMode> stretch value={mode} onChange={setMode} options={modes} />
+        <Text style={[type.body, { color: c.textMuted }]}>{mode === 'percent' ? t('Percentages and your score: no amounts.') : t('The real amounts too: what you receive, spend and owe by category.')}</Text>
+      </View>
       <CodeInput value={finder.text} onChange={finder.setText} placeholder={t('Their code')} />
       <FoundPerson
         lookup={finder.lookup}
@@ -208,7 +223,7 @@ function ShareDialog({ visible, onClose }: { visible: boolean; onClose: () => vo
           p.sharedWithThem ? (
             <Text style={[type.body, { color: c.textMuted }]}>{t('You already share your data with {name}.', { name: p.displayName })}</Text>
           ) : (
-            <Pill label={t('Share my data')} icon="share-2" primary disabled={busy === p.code} onPress={() => void run(p.code, async () => { await share(p.code); finder.clear(); })} />
+            <Pill label={t('Share my data')} icon="share-2" primary disabled={busy === p.code} onPress={() => void run(p.code, async () => { await share(p.code, mode); finder.clear(); })} />
           )
         }
       />
@@ -216,7 +231,17 @@ function ShareDialog({ visible, onClose }: { visible: boolean; onClose: () => vo
         <Text style={[type.label, { color: c.text }]}>{t('Sharing with · {n}', { n: given.length })}</Text>
         {given.length === 0 ? <Text style={[type.body, { color: c.textMuted }]}>{t('Nobody yet.')}</Text> : null}
         {given.map((p) => (
-          <PersonRow key={p.code} person={p} right={<Pill label={t('Stop sharing')} danger disabled={busy === p.code} onPress={() => void run(p.code, () => revoke(p.code))} />} />
+          <PersonRow
+            key={p.code}
+            person={p}
+            subtitle={p.mode === 'amounts' ? t('Sees amounts') : t('Sees percentages')}
+            right={
+              <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <Pill label={p.mode === 'amounts' ? t('Show percentages') : t('Show amounts')} disabled={busy === p.code} onPress={() => void run(p.code, () => share(p.code, p.mode === 'amounts' ? 'percent' : 'amounts'))} />
+                <Pill label={t('Stop sharing')} danger disabled={busy === p.code} onPress={() => void run(p.code, () => revoke(p.code))} />
+              </View>
+            }
+          />
         ))}
       </View>
     </Sheet>
@@ -293,7 +318,7 @@ function OtherProfile({ code }: { code: string }) {
   const narrow = width < desktopBreakpoint;
   const { share, revoke, openChat } = useSocial();
   const [person, setPerson] = useState<PersonDetail | null>(null);
-  const [summary, setSummary] = useState<{ summary: Summary | null; updatedAt: number | null } | null>(null);
+  const [summary, setSummary] = useState<{ summary: Summary | null; updatedAt: number | null; amounts?: Awaited<ReturnType<typeof socialApi.summaryOf>>['amounts'] } | null>(null);
   const [missing, setMissing] = useState(false);
   const [busy, setBusy] = useState(false);
   /** the request to share their data was sent from this page */
@@ -352,7 +377,7 @@ function OtherProfile({ code }: { code: string }) {
       {summary?.summary ? (
         <Card>
           <Text style={[type.title, { color: c.text }]}>{t("{name}'s summary", { name: first })}</Text>
-          <SummaryView summary={summary.summary} updatedAt={summary.updatedAt} />
+          <SummaryView summary={summary.summary} updatedAt={summary.updatedAt} real={summary.amounts ?? undefined} realCurrency={summary.amounts?.currency} />
         </Card>
       ) : (
         // nothing real to show: the page is drawn whole with invented numbers, blurred, with the way to ask for the real ones on top

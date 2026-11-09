@@ -100,7 +100,7 @@ const findPerson: McpTool = {
 
 const shareMyData: McpTool = {
   name: 'share_my_data',
-  description: 'Starts sharing the person\'s summary (percentages and financial health score, never amounts or transactions) with the person who has this code. Confirm with the person first.',
+  description: 'Starts sharing the person\'s summary (percentages and financial health score, never amounts or transactions) with the person who has this code. Always percentages: showing the real amounts is a choice the person makes in the app (Share your data). Confirm with the person first.',
   inputSchema: CODE_SCHEMA,
   scope: 'social',
   handler: async (ctx, args) => {

@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { buildSummary } from '../domain/summary';
+import { getCurrency } from '../i18n';
+import { buildOwnChart, buildSummary } from '../domain/summary';
 import { useStore } from '../store';
-import { Conversation, MyProfile, Person, socialApi } from './api';
+import { Conversation, MyProfile, Person, ShareMode, socialApi } from './api';
 import { fallbackName } from './names';
 
 interface Social {
@@ -17,7 +18,7 @@ interface Social {
   /** fresh lists (the chat polls faster while it is open) */
   refresh: () => Promise<void>;
   saveProfile: (p: { displayName: string; color?: string; photo?: string | null; discoverable?: boolean }) => Promise<void>;
-  share: (id: string) => Promise<void>;
+  share: (id: string, mode?: ShareMode) => Promise<void>;
   revoke: (id: string) => Promise<void>;
   /** the floating chat: open or collapsed, and which conversation it shows (null = the list) */
   chat: { open: boolean; with: string | null };
@@ -104,16 +105,19 @@ export function SocialProvider({ children, account }: { children: React.ReactNod
 
   // publishing the summary: only while somebody can read it, and only when it changed
   const lastPublished = useRef('');
+  const wantsAmounts = given.some((p) => p.mode === 'amounts');
   useEffect(() => {
     if (!ready || given.length === 0) return;
     const timer = setTimeout(() => {
       const summary = buildSummary(data);
-      const fingerprint = JSON.stringify({ s: summary.spent, v: summary.saved, m: summary.months, c: summary.categories, h: summary.health, d: summary.days });
+      // the real values go along only when somebody I share with was given them (the server keeps them only for those people)
+      const amounts = wantsAmounts ? { ...buildOwnChart(data), currency: getCurrency() } : undefined;
+      const fingerprint = JSON.stringify({ s: summary.spent, v: summary.saved, m: summary.months, c: summary.categories, h: summary.health, d: summary.days, a: amounts });
       if (fingerprint === lastPublished.current) return;
-      socialApi.publishSummary(summary).then(() => { lastPublished.current = fingerprint; }).catch(() => {});
+      socialApi.publishSummary(amounts ? { ...summary, amounts } : summary).then(() => { lastPublished.current = fingerprint; }).catch(() => {});
     }, PUBLISH_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [ready, data, given.length]);
+  }, [ready, data, given.length, wantsAmounts]);
 
   const value = useMemo<Social>(
     () => ({
@@ -125,7 +129,7 @@ export function SocialProvider({ children, account }: { children: React.ReactNod
       received,
       refresh,
       saveProfile: then(async (p: Parameters<Social['saveProfile']>[0]) => { await socialApi.saveProfile(p); }),
-      share: then(async (h: string) => { await socialApi.share(h); lastPublished.current = ''; }),
+      share: then(async (h: string, mode?: ShareMode) => { await socialApi.share(h, mode); lastPublished.current = ''; }),
       revoke: then(async (h: string) => { await socialApi.revoke(h); }),
       chat,
       openChat: (id?: string) => setChat((c) => ({ open: true, with: id ?? c.with })),

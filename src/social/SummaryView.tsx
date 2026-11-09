@@ -8,7 +8,7 @@ import { desktopBreakpoint, fontFamily, spacing, type, useColors } from '../them
 import { motion, useGlide, useTween, useTweenList } from '../theme/motion';
 import { CategoryShare, Summary } from './api';
 import type { OwnChart } from '../domain/summary';
-import { formatMoney, formatMoneyShort } from '../domain/money';
+import { formatMoney, formatMoneyShort, formatMoneyShortIn } from '../domain/money';
 import type { Tone } from '../types';
 import { TONE_COLORS, categoryColor, defaultTone, sharedCategoryLabel, toneLabel } from '../domain/categories';
 import { t, usePrefsVersion } from '../i18n';
@@ -191,7 +191,8 @@ const pieTotalOf = (slices: { value: number }[]) => slices.reduce((a, b) => a + 
  * what is already planned, with a dotted line at "now"), and beside it a pie of where the spending goes in that same period.
  * Used for the own profile (live) and for the summary somebody shared.
  */
-export function SummaryView({ summary, updatedAt, real }: { summary: Summary; updatedAt?: number | null; /** my own profile: the line chart in real money instead of percent (never part of what is shared) */ real?: OwnChart }) {
+export function SummaryView({ summary, updatedAt, real, realCurrency }: { summary: Summary; updatedAt?: number | null; /** real money instead of percent: my own profile, or the profile of somebody who chose to show me their amounts */ real?: OwnChart; /** the currency of `real` when it is somebody else's (mine is the one on screen) */ realCurrency?: string }) {
+  const money = (cents: number) => (realCurrency ? formatMoneyShortIn(cents, realCurrency) : formatMoneyShort(cents));
   const c = useColors();
   const { width } = useWindowDimensions();
   const wide = width >= desktopBreakpoint;
@@ -270,7 +271,7 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
     ? realCats.map((x) => ({ key: x.slug, label: x.label, value: x.amount, color: colorOf(x.slug), name: x.label, tone: toneOf({ slug: x.slug, label: x.label, pct: 0, tone: x.tone }) }))
     : categories.filter((x) => r1(x.pct) > 0).map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug), name: x.label, tone: toneOf(x) }));
   /** how a slice's value is written: money on my own profile, a share of the pie otherwise */
-  const sliceText = (v: number) => (realCats ? formatMoneyShort(v) : pct(r1((v / (pieRows.reduce((a, x) => a + x.value, 0) || 1)) * 100)));
+  const sliceText = (v: number) => (realCats ? money(v) : pct(r1((v / (pieRows.reduce((a, x) => a + x.value, 0) || 1)) * 100)));
   // two columns on desktop, one on a phone (names, badges and percentages need the room)
   const legendW = wide ? Math.max(0, rowW - Math.min(PIE_MAX + MARGIN_X_FULL * 2, Math.max(360, rowW * 0.55)) - spacing.lg) : rowW;
   const legendCols = wide ? 2 : 1;
@@ -324,7 +325,7 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
         tipLabels={dayMode ? dayTips : undefined}
         selected={sel}
         onSelect={setSel}
-        format={real ? formatMoneyShort : pct}
+        format={real ? money : pct}
         fill
         tipWidth={real ? 230 : 310}
         renderTip={dayMode || real ? undefined : (i) => {
@@ -414,7 +415,7 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
   const listHead = (label: string, total: number, color: string) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.sm, paddingBottom: 2 }}>
       <Text style={[type.label, { color }]}>{label}</Text>
-      <Text style={[type.label, { color }]}>{formatMoneyShort(total)}</Text>
+      <Text style={[type.label, { color }]}>{money(total)}</Text>
     </View>
   );
 
@@ -436,7 +437,7 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
             size={Math.max(170, Math.min(PIE_MAX, (pieBox.w || PIE_MAX + MARGIN_X_FULL * 2) - (wide ? MARGIN_X_FULL : MARGIN_X_COMPACT) * 2))}
             center={
               <>
-                <Text style={[type.title, { color: c.expense, fontSize: wide ? 20 : 22 }]}>{realCats ? formatMoneyShort(realTotal) : pct(r1(shownSpent))}</Text>
+                <Text style={[type.title, { color: c.expense, fontSize: wide ? 20 : 22 }]}>{realCats ? money(realTotal) : pct(r1(shownSpent))}</Text>
                 <Text style={[type.body, { color: c.textMuted }]}>{wide && !realCats && pieBox.w - MARGIN_X_FULL * 2 >= 240 ? t('of income spent') : t('spent')}</Text>
               </>
             }
