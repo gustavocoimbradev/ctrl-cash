@@ -32,6 +32,8 @@ export interface FormPreset {
   amount?: number;
   /** start as a fixed (monthly) transaction */
   fixed?: boolean;
+  /** start as a purchase in installments */
+  installments?: boolean;
   /** called once the new transaction is saved */
   onSaved?: () => void;
 }
@@ -99,7 +101,7 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
     setDay(eff?.day ?? 1);
     setScopeOpen(false);
     setDate(transaction?.date ?? todayISO());
-    setMode(transaction ? (transaction.fixed ? 'fixed' : transaction.installment ? 'installments' : 'single') : preset?.fixed ? 'fixed' : 'single');
+    setMode(transaction ? (transaction.fixed ? 'fixed' : transaction.installment ? 'installments' : 'single') : preset?.fixed ? 'fixed' : preset?.installments ? 'installments' : 'single');
     setInstallments(2);
     setConfirmed(transaction?.confirmed ?? preset?.confirmed ?? true);
     setTried(false);

@@ -43,6 +43,18 @@ export interface AreaSummary {
   next: AreaItem | null;
 }
 
+/** Average monthly income of the last 3 months that had income (0 when unknown): the base of "how much of my income is this". */
+function recentIncome(occ: Occurrence[], invoices: ReturnType<typeof buildInvoices>): number {
+  const cur = currentMonthKey();
+  const incomes: number[] = [];
+  for (let k = 0; k < 3; k++) {
+    const key = addMonthsToKey(cur, -k);
+    const inc = monthTotals(monthOccurrences(occ, key).filter((o) => !o.cardId), invoices.filter((i) => monthKey(i.dueDate) === key)).income;
+    if (inc > 0) incomes.push(inc);
+  }
+  return incomes.length ? Math.round(incomes.reduce((a, b) => a + b, 0) / incomes.length) : 0;
+}
+
 export function areaSummary(data: AppData, area: AreaKey): AreaSummary {
   const cur = currentMonthKey();
   const slug = AREA_CATEGORY[area];
@@ -50,14 +62,7 @@ export function areaSummary(data: AppData, area: AreaKey): AreaSummary {
   const invoices = buildInvoices(data, occ);
   const txById = new Map(data.transactions.map((x) => [x.id, x]));
 
-  // income of the last 3 months: the base of "how much of my income is this"
-  const incomes: number[] = [];
-  for (let k = 0; k < 3; k++) {
-    const key = addMonthsToKey(cur, -k);
-    const inc = monthTotals(monthOccurrences(occ, key).filter((o) => !o.cardId), invoices.filter((i) => monthKey(i.dueDate) === key)).income;
-    if (inc > 0) incomes.push(inc);
-  }
-  const income = incomes.length ? Math.round(incomes.reduce((a, b) => a + b, 0) / incomes.length) : 0;
+  const income = recentIncome(occ, invoices);
 
   let items: AreaItem[];
   let monthly: number;
@@ -99,4 +104,78 @@ export function areaSummary(data: AppData, area: AreaKey): AreaSummary {
     biggest: items.length ? items.reduce((a, b) => (b.amount > a.amount ? b : a)) : null,
     next,
   };
+}
+
+/** One purchase paid in installments (on a card or not): what is left of it. */
+export interface DebtItem {
+  groupId: string;
+  /** the transaction of the next installment, to open it for editing */
+  transaction: Transaction;
+  month: string;
+  description: string;
+  cardId?: string;
+  /** installments still to pay, of `total` */
+  left: number;
+  total: number;
+  /** what the next installment costs */
+  next: number;
+  /** what is still to pay in all */
+  remaining: number;
+  /** month (YYYY-MM) of the last installment */
+  endsAt: string;
+}
+
+export interface DebtsSummary {
+  items: DebtItem[];
+  /** everything still to pay in installments */
+  owed: number;
+  /** what falls due this month */
+  thisMonth: number;
+  income: number;
+  /** thisMonth / income, 0 when income is unknown */
+  share: number;
+}
+
+/**
+ * Debts: everything bought in installments, on a card or not, that still has installments to pay. An installment is still
+ * to pay when it falls in this month or later, or when it is an earlier one on the account not yet confirmed.
+ */
+export function debtsSummary(data: AppData): DebtsSummary {
+  const cur = currentMonthKey();
+  const occ = buildOccurrences(data, addMonthsToKey(cur, 60));
+  const invoices = buildInvoices(data, occ);
+  const txById = new Map(data.transactions.map((x) => [x.id, x]));
+  const groups = new Map<string, Occurrence[]>();
+  for (const o of occ) {
+    if (!o.installment || o.type !== 'expense') continue;
+    const list = groups.get(o.installment.groupId) ?? [];
+    list.push(o);
+    groups.set(o.installment.groupId, list);
+  }
+  const items: DebtItem[] = [];
+  let thisMonth = 0;
+  for (const [groupId, list] of groups) {
+    const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date));
+    const left = sorted.filter((o) => monthKey(o.date) >= cur || (!o.cardId && !o.confirmed));
+    if (left.length === 0) continue;
+    const first = left[0];
+    const tx = txById.get(first.transactionId);
+    if (!tx) continue;
+    items.push({
+      groupId,
+      transaction: tx,
+      month: first.monthKey,
+      description: first.description,
+      cardId: first.cardId,
+      left: left.length,
+      total: first.installment!.total,
+      next: first.amount,
+      remaining: left.reduce((s, o) => s + o.amount, 0),
+      endsAt: monthKey(sorted[sorted.length - 1].date),
+    });
+    thisMonth += sorted.filter((o) => monthKey(o.date) === cur).reduce((s, o) => s + o.amount, 0);
+  }
+  items.sort((a, b) => a.endsAt.localeCompare(b.endsAt) || a.description.localeCompare(b.description));
+  const income = recentIncome(occ, invoices);
+  return { items, owed: items.reduce((s, x) => s + x.remaining, 0), thisMonth, income, share: income > 0 ? thisMonth / income : 0 };
 }

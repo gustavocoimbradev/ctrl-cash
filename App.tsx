@@ -10,6 +10,7 @@ import { CategoriesSheet } from './src/screens/CategoriesSheet';
 import { ShoppingSheet } from './src/screens/ShoppingSheet';
 import { AreaSheet } from './src/screens/AreaSheet';
 import { WishlistSheet } from './src/screens/WishlistSheet';
+import { DebtsSheet } from './src/screens/DebtsSheet';
 import type { AreaKey } from './src/domain/areas';
 import { Dashboard } from './src/screens/Dashboard';
 import { AccountSheet } from './src/screens/AccountSheet';
@@ -53,6 +54,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   const [cardsOpen, setCardsOpen] = useState(false);
   const [shoppingOpen, setShoppingOpen] = useState(false);
   const [wishOpen, setWishOpen] = useState(false);
+  const [debtsOpen, setDebtsOpen] = useState(false);
   const [area, setArea] = useState<AreaKey | null>(null);
   const lastArea = useRef<AreaKey>('subscriptions');
   if (area) lastArea.current = area;
@@ -79,6 +81,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
     // Shopping lists and Wishlist are built (ShoppingSheet, WishlistSheet) but switched off for now: to bring them back, add
     // { key: 'shopping', icon: 'shopping-cart', label: t('Shopping lists'), onPress: () => setShoppingOpen(true) } and
     // { key: 'wishlist', icon: 'gift', label: t('Wishlist'), onPress: () => setWishOpen(true) } here.
+    { key: 'debts', icon: 'layers' as const, label: t('Debts'), onPress: () => setDebtsOpen(true) },
     { key: 'subscriptions', icon: 'repeat' as const, label: t('Subscriptions'), onPress: () => setArea('subscriptions') },
     { key: 'bills', icon: 'file-text' as const, label: t('Utility bills'), onPress: () => setArea('bills') },
     { key: 'delivery', icon: 'package' as const, label: t('Delivery'), onPress: () => setArea('delivery') },
@@ -278,6 +281,21 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
           // bought it: the expense opens with what was on the list, and the wish is marked bought once it is saved
           setEditing(undefined);
           setPreset({ kind: 'expense', description: item.name, amount: item.price, onSaved: () => saveWish({ ...item, boughtAt: Date.now() }) });
+          setFormOpen(true);
+        }}
+      />
+      <DebtsSheet
+        visible={debtsOpen}
+        onClose={() => setDebtsOpen(false)}
+        onAdd={(p) => {
+          setEditing(undefined);
+          setPreset(p);
+          setFormOpen(true);
+        }}
+        onEdit={(tx, m) => {
+          setPreset(undefined);
+          setEditing(tx);
+          setEditingMonth(m);
           setFormOpen(true);
         }}
       />
