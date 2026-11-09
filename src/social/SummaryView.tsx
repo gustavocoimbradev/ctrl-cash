@@ -408,7 +408,7 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
     <View style={{ gap: spacing.lg }}>
       <View style={s.head}>
         <Text style={[type.label, { color: c.text, flexShrink: 1 }]}>{rangeTitle}</Text>
-        <PillToggle stretch={!wide} value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: h === 'month' ? t('This month') : h === 'all' ? (wide ? t('Since the start') : t('All')) : wide ? t('{n} months', { n: h }) : t('{n} mo.', { n: h }) }))} />
+        <PillToggle stretch={!wide} value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: h === 'month' ? t('This month') : h === 'all' ? t('Beginning') : wide ? t('{n} months', { n: h }) : t('{n} mo.', { n: h }) }))} />
       </View>
       <View style={{ gap: spacing.xl }}>
         {chart}
