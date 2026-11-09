@@ -124,7 +124,7 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
               <>
                 <Line x1={x(nowIndex)} y1={top} x2={x(nowIndex)} y2={height - bottom} stroke={c.text} strokeOpacity={0.45 * progress} strokeDasharray="2 5" strokeWidth={1.5} strokeLinecap="round" />
                 <Rect x={x(nowIndex) + 3} y={top - 2} width={46} height={22} rx={6} fill="#FFFFFF" fillOpacity={0.85 * progress} />
-                <SvgText x={x(nowIndex) + 8} y={top + 14} fontSize={16} fontWeight="600" fontFamily={fontFamily} fill={c.textMuted} fillOpacity={progress}>{t('Now')}</SvgText>
+                <SvgText x={x(nowIndex) + 8} y={top + 14} fontSize={16} fontWeight="600" fontFamily={fontFamily} fill={c.textMuted} fillOpacity={progress}>{t('Today')}</SvgText>
               </>
             )}
             {min < 0 && <Line x1={0} y1={zeroY} x2={w} y2={zeroY} stroke={c.textMuted} strokeOpacity={0.4} strokeDasharray="4 4" strokeWidth={1} />}
