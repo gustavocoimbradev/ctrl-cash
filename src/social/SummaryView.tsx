@@ -242,7 +242,8 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
   const daySpent = days ? days.spent.slice(0, todayIndex + 1) : [];
   // my own chart in real money: the days so far (kept to the days the summary draws)
   const realDays = { income: real ? real.days.income.slice(0, dayIncome.length) : [], spent: real ? real.days.spent.slice(0, dayIncome.length) : [] };
-  const dayLabels = dayIncome.map((_, i) => String(i + 1));
+  // "Day 1", "Day 2"...: long enough to lie on a diagonal, with every Nth shown when the days are tight
+  const dayLabels = dayIncome.map((_, i) => t('Day {day}', { day: i + 1 }));
   const dayTips = dayIncome.map((_, i) => formatDate(`${current}-${pad(i + 1)}`));
 
   const chart = (
