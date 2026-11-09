@@ -127,11 +127,25 @@ function ScoreBadge({ health, wide }: { health: Score; wide: boolean }) {
 /** Where the score will be, while the person's app has not published it yet (it does so the next time it is open). */
 function PendingScore({ wide }: { wide: boolean }) {
   const c = useColors();
+  // the same layout as the real score, with the number as "--" and the four bars empty
+  const parts = [t('Wealth'), t('Debt-free'), t('Healthy spending'), t('Month result')];
   return (
-    <View style={[s.score, { alignItems: 'center', gap: spacing.xs }, wide && { paddingLeft: spacing.xl, borderLeftWidth: 1, borderLeftColor: c.border, maxWidth: 260 }]}>
-      <Text style={[type.body, { color: c.textMuted }]}>{t('Financial health')}</Text>
-      <Text style={[type.hero, { color: c.textMuted, fontSize: 40, lineHeight: 46 }]}>--</Text>
-      <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>{t('Shows up as soon as their app publishes it.')}</Text>
+    <View style={[s.score, { flexDirection: wide ? 'row' : 'column', alignItems: 'center', gap: wide ? spacing.xl : spacing.md }, wide && { paddingLeft: spacing.xl, borderLeftWidth: 1, borderLeftColor: c.border }, !wide && { alignSelf: 'stretch' }]}>
+      <View style={{ alignItems: 'center', gap: spacing.xs, minWidth: 150, maxWidth: 200 }}>
+        <Text style={[type.body, { color: c.textMuted }]}>{t('Financial health')}</Text>
+        <Text style={[type.hero, { color: c.textMuted, fontSize: wide ? 48 : 40, lineHeight: wide ? 54 : 46 }]}>--</Text>
+        <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>{t('Shows up as soon as their app publishes it.')}</Text>
+      </View>
+      <View style={{ gap: spacing.sm, width: wide ? 250 : '100%' }}>
+        {parts.map((label) => (
+          <View key={label} style={{ gap: 2 }}>
+            <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{label}</Text>
+            <View style={{ flexDirection: 'row' }}>
+              <AnimatedBar ratio={0} color={c.primary} />
+            </View>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
