@@ -3,7 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from
 import Svg, { Path, Text as SvgText } from 'react-native-svg';
 import { ChartLegend, ProjectionChart } from '../components/Charts';
 import { PillToggle } from '../components/Controls';
-import { addMonthsToKey, currentMonthKey, formatDate, formatMonth, pad, shortDate, todayISO } from '../domain/dates';
+import { addMonthsToKey, currentMonthKey, formatDate, formatMonth, monthLabel, pad, shortDate, todayISO } from '../domain/dates';
 import { desktopBreakpoint, fontFamily, spacing, type, useColors } from '../theme';
 import { motion, useGlide, useTween, useTweenList } from '../theme/motion';
 import { CategoryShare, Summary } from './api';
@@ -246,6 +246,9 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
   const dayLabels = dayIncome.map((_, i) => t('Day {day}', { day: i + 1 }));
   const dayTips = dayIncome.map((_, i) => formatDate(`${current}-${pad(i + 1)}`));
 
+  // the title says the range that is selected: the month with its year, or the first and the last month of the range
+  const rangeTitle = horizon === 'month' ? monthLabel(current) : `${monthLabel(addMonthsToKey(current, -(span - 1)))} – ${monthLabel(current)}`;
+
   const chart = (
     <View style={{ gap: spacing.sm, minWidth: 0 }}>
       <ProjectionChart
@@ -387,7 +390,7 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
   return (
     <View style={{ gap: spacing.lg }}>
       <View style={s.head}>
-        {wide ? <Text style={[type.label, { color: c.text }]}>{t('Month by month')}</Text> : null}
+        <Text style={[type.label, { color: c.text, flexShrink: 1 }]}>{rangeTitle}</Text>
         <PillToggle stretch={!wide} value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: h === 'month' ? t('This month') : wide ? t('{n} months', { n: h }) : t('{n} mo.', { n: h }) }))} />
       </View>
       <View style={{ gap: spacing.xl }}>
