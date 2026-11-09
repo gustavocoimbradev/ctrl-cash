@@ -47,14 +47,14 @@ export const samples: Record<string, Doc> = {
 export const full: Record<string, Doc> = {
   transactions: tx({
     id: 'f1', fixed: true, confirmedMonths: ['2026-10', '2026-11'], cardId: 'c1', invoiceKey: '2026-11', category: 'shopping',
-    installment: { index: 1, total: 3, groupId: 'g1' }, createdAt: 1790000000000, archivedAt: 1790000001000,
+    installment: { index: 1, total: 3, groupId: 'g1' }, createdAt: 1790000000000, archivedAt: 1790000001000, source: 'claude',
     revisions: [{ from: '2026-12', amount: 12000 }], overrides: { '2026-11': { amount: 9000, day: 5 } },
   }),
-  cards: { id: 'c1', name: 'Nubank', limit: 500000, dueDay: 9, color: '#8B3FD9', createdAt: 1790000000000, archivedAt: 1790000001000 },
-  payments: { id: 'p1', cardId: 'c1', invoiceKey: '2026-11', amount: 1000, date: '2026-11-05', archivedAt: 1790000001000 },
+  cards: { id: 'c1', name: 'Nubank', limit: 500000, dueDay: 9, color: '#8B3FD9', createdAt: 1790000000000, archivedAt: 1790000001000, source: 'claude' },
+  payments: { id: 'p1', cardId: 'c1', invoiceKey: '2026-11', amount: 1000, date: '2026-11-05', archivedAt: 1790000001000, source: 'claude' },
   reserves: { id: 'r1', name: 'Trip', goal: 500000, createdAt: 1790000000000, archivedAt: 1790000001000 },
   reserveMoves: { id: 'm1', reserveId: 'r1', type: 'withdraw', amount: 100, date: '2026-10-31', confirmed: false, createdAt: 1790000000001, archivedAt: 1790000001000 },
   shoppingLists: { id: 's1', name: 'Weekly ☕', items: [{ id: 'i1', name: 'Milk', done: true }, { id: 'i2', name: 'Eggs', done: false, archivedAt: 1790000001000 }], finishedAt: 1790000000500, createdAt: 1790000000000, archivedAt: 1790000001000 },
   wishlist: { id: 'w1', name: 'Headphones ☕', price: 25000, url: 'https://example.com/p?id=1', note: 'the black ones', boughtAt: 1790000000500, createdAt: 1790000000000, archivedAt: 1790000001000 },
-  categories: { id: 'income_salary', slug: 'salary', kind: 'expense', name: 'Pay', weight: 0.25, createdAt: 1790000000000, archivedAt: 1790000001000 },
+  categories: { id: 'income_salary', slug: 'salary', kind: 'expense', name: 'Pay', weight: 0.25, createdAt: 1790000000000, archivedAt: 1790000001000, source: 'claude' },
 };

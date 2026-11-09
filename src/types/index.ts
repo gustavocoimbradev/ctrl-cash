@@ -49,6 +49,8 @@ export interface Transaction {
   overrides?: Record<string, OccurrenceFields>;
   /** soft delete: ms since the epoch when it was archived. Nothing is ever deleted; archived items just leave the lists and the math. */
   archivedAt?: number;
+  /** made by an assistant through MCP (a small mark is shown); absent when the person made it */
+  source?: 'claude';
 }
 
 /** Reserve: money set apart from the main wallet. */
@@ -89,6 +91,7 @@ export interface InvoicePayment {
   date: string;
   /** soft delete: ms since the epoch when it was archived. Nothing is ever deleted; archived items just leave the lists and the math. */
   archivedAt?: number;
+  source?: 'claude';
 }
 
 export interface CreditCard {
@@ -102,6 +105,7 @@ export interface CreditCard {
   createdAt?: number;
   /** soft delete: ms since the epoch when it was archived. Nothing is ever deleted; archived items just leave the lists and the math. */
   archivedAt?: number;
+  source?: 'claude';
 }
 
 /** Concrete occurrence of a transaction (fixed ones are expanded per month). */
@@ -145,6 +149,7 @@ export interface CategoryRecord {
   tone?: Tone;
   createdAt?: number;
   archivedAt?: number;
+  source?: 'claude';
 }
 
 /** One thing on a shopping list. Removing it archives it (nothing is ever deleted). */

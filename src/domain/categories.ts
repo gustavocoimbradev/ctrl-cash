@@ -21,6 +21,8 @@ export interface Category {
   system: boolean;
   /** how it counts for financial health (expenses only); the person's choice, else a default */
   tone: Tone | null;
+  /** made by Claude */
+  source?: 'claude';
 }
 
 type Base = { slug: string; label: string; weight: number };
@@ -145,13 +147,14 @@ const build = (records: CategoryRecord[]): Category[] => {
       custom: false,
       system,
       tone: kind === 'expense' ? r?.tone ?? TONES[b.slug] ?? toneFromWeight(r?.weight ?? b.weight) : null,
+      ...(r?.source ? { source: r.source } : {}),
     };
   };
   const builtinIds = new Set([...EXPENSE.map((b) => builtinRecordId('expense', b.slug)), ...INCOME.map((b) => builtinRecordId('income', b.slug))]);
   const custom = records
     .filter((r) => !builtinIds.has(r.id))
     .sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0))
-    .map((r): Category => ({ slug: r.slug, kind: r.kind, label: r.name, weight: r.weight ?? 0.45, archived: !!r.archivedAt, custom: true, system: false, tone: r.kind === 'expense' ? r.tone ?? toneFromWeight(r.weight ?? 0.45) : null }));
+    .map((r): Category => ({ slug: r.slug, kind: r.kind, label: r.name, weight: r.weight ?? 0.45, archived: !!r.archivedAt, custom: true, system: false, tone: r.kind === 'expense' ? r.tone ?? toneFromWeight(r.weight ?? 0.45) : null, ...(r.source ? { source: r.source } : {}) }));
   // "Other" stays last among expenses so it keeps being the fallback
   const exp = EXPENSE.filter((b) => b.slug !== DEFAULT_CATEGORY).map((b) => make('expense', b));
   const other = make('expense', EXPENSE.find((b) => b.slug === DEFAULT_CATEGORY)!);

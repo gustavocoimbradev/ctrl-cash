@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Button } from '../components/Button';
+import { ByClaude } from '../components/ClaudeMark';
 import { Sheet } from '../components/Sheet';
 import { AreaItem, AreaKey, areaSummary } from '../domain/areas';
 import { currentMonthKey, monthName, shortDate } from '../domain/dates';
@@ -55,7 +56,10 @@ export function AreaSheet({ area, visible, onClose, onAdd, onEdit }: { area: Are
       style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 60, backgroundColor: c.surface, borderRadius: radius.control, paddingHorizontal: spacing.lg, opacity: pressed ? 0.7 : 1 })}
     >
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{i.description}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={[type.label, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{i.description}</Text>
+          {i.transaction.source === 'claude' ? <ByClaude /> : null}
+        </View>
         <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>
           {[area === 'delivery' ? shortDate(new Date(`${i.date}T12:00:00`).getTime(), true) : t('Day {day}', { day: i.day }), cardName(i.cardId)].filter(Boolean).join(' · ')}
           {area !== 'delivery' && i.paid ? ` · ${t('Paid')}` : ''}

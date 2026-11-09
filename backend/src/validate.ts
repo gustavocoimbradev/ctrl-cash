@@ -65,6 +65,11 @@ function msTimestamp(d: Doc, k: string) {
   if (has(d, k) && (typeof d[k] !== 'number' || !Number.isSafeInteger(d[k]))) fail(`"${k}" must be an integer number (ms)`);
 }
 
+/** Who made the record: only 'claude' (an assistant through MCP); absent when the person did. */
+function sourceOk(d: Doc) {
+  if (has(d, 'source') && d.source !== 'claude') fail('"source" must be "claude" when present');
+}
+
 function noNul(v: unknown, k: string) {
   // jsonb cannot store \u0000
   if (JSON.stringify(v).includes('\\u0000')) fail(`"${k}" contains an invalid character`);
@@ -87,10 +92,11 @@ function transaction(d: Doc) {
   onlyKeys(
     d,
     ['id', 'type', 'description', 'amount', 'date', 'confirmed', 'fixed', 'confirmedMonths', 'cardId', 'reserveId',
-      'invoiceKey', 'category', 'installment', 'createdAt', 'revisions', 'overrides', 'archivedAt'],
+      'invoiceKey', 'category', 'installment', 'createdAt', 'revisions', 'overrides', 'archivedAt', 'source'],
     ['id', 'type', 'description', 'amount', 'date', 'confirmed', 'fixed', 'confirmedMonths'],
   );
   checkId(d);
+  sourceOk(d);
   if (d.type !== 'income' && d.type !== 'expense') fail('"type" must be income or expense');
   text(d, 'description', 100);
   cents(d, 'amount');
@@ -126,8 +132,9 @@ function transaction(d: Doc) {
 }
 
 function card(d: Doc) {
-  onlyKeys(d, ['id', 'name', 'limit', 'dueDay', 'color', 'createdAt', 'archivedAt'], ['id', 'name', 'limit', 'dueDay']);
+  onlyKeys(d, ['id', 'name', 'limit', 'dueDay', 'color', 'createdAt', 'archivedAt', 'source'], ['id', 'name', 'limit', 'dueDay']);
   checkId(d);
+  sourceOk(d);
   text(d, 'name', 60);
   cents(d, 'limit');
   intRange(d.dueDay, '"dueDay"', 1, 31);
@@ -158,8 +165,9 @@ function reserveMove(d: Doc) {
 }
 
 function payment(d: Doc) {
-  onlyKeys(d, ['id', 'cardId', 'invoiceKey', 'amount', 'date', 'archivedAt'], ['id', 'cardId', 'invoiceKey', 'amount', 'date']);
+  onlyKeys(d, ['id', 'cardId', 'invoiceKey', 'amount', 'date', 'archivedAt', 'source'], ['id', 'cardId', 'invoiceKey', 'amount', 'date']);
   checkId(d);
+  sourceOk(d);
   text(d, 'cardId', 40);
   monthKey(d, 'invoiceKey');
   cents(d, 'amount');
@@ -171,8 +179,9 @@ function payment(d: Doc) {
 export const TONES: string[] = ['healthy', 'necessary', 'comfort', 'luxury', 'unhealthy', 'unknown'];
 
 function category(d: Doc) {
-  onlyKeys(d, ['id', 'slug', 'kind', 'name', 'weight', 'tone', 'createdAt', 'archivedAt'], ['id', 'slug', 'kind', 'name']);
+  onlyKeys(d, ['id', 'slug', 'kind', 'name', 'weight', 'tone', 'createdAt', 'archivedAt', 'source'], ['id', 'slug', 'kind', 'name']);
   checkId(d);
+  sourceOk(d);
   text(d, 'slug', 60);
   if (d.kind !== 'expense' && d.kind !== 'income') fail('"kind" must be expense or income');
   text(d, 'name', 40);

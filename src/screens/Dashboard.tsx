@@ -8,6 +8,7 @@ import { Button } from '../components/Button';
 import { MoneyField } from '../components/Fields';
 import { Sheet } from '../components/Sheet';
 import { AnimatedBar, Counter, Money } from '../components/Motion';
+import { ByClaude, CLAUDE } from '../components/ClaudeMark';
 import { Reveal } from '../components/Reveal';
 import { Fade } from '../components/Fade';
 import { MonthNav } from '../components/MonthNav';
@@ -53,6 +54,8 @@ interface Row {
   check?: { tone: 'income' | 'expense' | 'primary'; label: string; onPress: () => void };
   /** invoice payments: trash can in place of the checkbox */
   onRemove?: () => void;
+  /** made by Claude: a small mark beside the title */
+  byClaude?: boolean;
   /** nested items (purchases and payments of an invoice) */
   children?: Row[];
   onPress: () => void;
@@ -186,6 +189,8 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
     };
   }, [data, occ, month, lang]);
   const { final, totals, avgExpense, quality, commitments, summary, spends } = calc;
+  /** what Claude added: a small mark in the list */
+  const claudeIds = useMemo(() => new Set(data.transactions.filter((x) => x.source === 'claude').map((x) => x.id)), [data.transactions]);
 
   // accumulated wealth projection: from the current month onward (only recalculates when data or horizon change)
   const projection = useMemo(() => projectWealth(data, currentMonthKey(), horizon), [data, horizon]);
@@ -221,6 +226,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
               done: paid,
               group: paid ? 'done' : 'pending',
               category: income ? t('Refund') : categoryLabel(o.category),
+              byClaude: claudeIds.has(o.transactionId),
               onPress: () => edit(o),
             };
           }),
@@ -262,6 +268,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       done: o.confirmed,
       group: o.confirmed ? 'done' : 'pending',
       category: categoryLabel(o.category, o.type),
+      byClaude: claudeIds.has(o.transactionId),
       check: { tone: income ? 'income' : 'expense', label: income ? t('Confirm receipt') : t('Confirm payment'), onPress: () => toggleConfirmed(o.transactionId, o.monthKey) },
       onPress: () => edit(o),
     };
@@ -291,7 +298,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
             {/* same columns as the parent row: the text starts at the same point as the invoice title */}
             <View style={{ flex: wide ? 3 : 1, minWidth: 0 }}>
               <View style={{ marginLeft: wide ? 52 : 16 }}>
-                <Text style={[type.body, { color: c.text }]} numberOfLines={wide ? 1 : undefined}>{r.title}{r.meta ? <Text style={{ color: c.textMuted }}>{`  ${r.meta}`}</Text> : null}</Text>
+                <Text style={[type.body, { color: c.text }]} numberOfLines={wide ? 1 : undefined}>{r.title}{r.byClaude ? <Text style={{ color: CLAUDE.orange }}> ✦</Text> : null}{r.meta ? <Text style={{ color: c.textMuted }}>{`  ${r.meta}`}</Text> : null}</Text>
                 {!wide && <Text style={[type.body, { color: c.textMuted }]}>{[shortDate(r.date), r.category].join(' · ')}</Text>}
               </View>
             </View>
@@ -324,7 +331,10 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
               <Feather name={r.icon} size={18} color={r.color} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[type.label, { color: c.text }]} numberOfLines={wide ? 1 : undefined}>{r.title}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[type.label, { color: c.text, flexShrink: 1 }]} numberOfLines={wide ? 1 : undefined}>{r.title}</Text>
+                {r.byClaude ? <ByClaude /> : null}
+              </View>
               {!wide && <Text style={[type.body, { color: c.textMuted, marginTop: 2 }]}>{[shortDate(r.date), r.category].join(' · ')}</Text>}
               {wide && <MetaPills meta={r.meta} />}
             </View>

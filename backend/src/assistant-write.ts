@@ -120,7 +120,7 @@ export async function addTransactions(pool: Pool, userId: string, args: AddArgs,
   const base = { type, fixed, confirmedMonths: fixed && confirmed ? [monthKeyOf(date)] : [], ...(cardId ? { cardId } : {}), ...(category ? { category } : {}) };
   const docs: Doc[] = [];
   if (fixed || installments <= 1) {
-    docs.push({ ...base, id: newId(), description, amount, date, confirmed, ...(invoiceKey ? { invoiceKey } : {}), createdAt: now });
+    docs.push({ ...base, id: newId(), description, amount, date, confirmed, ...(invoiceKey ? { invoiceKey } : {}), createdAt: now, source: 'claude' });
   } else {
     const groupId = newId();
     const each = Math.floor(amount / installments);
@@ -135,6 +135,7 @@ export async function addTransactions(pool: Pool, userId: string, args: AddArgs,
         confirmed: i === 0 ? confirmed : false,
         ...(invoiceKey ? { invoiceKey: addMonthsToKey(invoiceKey, i) } : {}),
         createdAt: now + i,
+        source: 'claude',
         installment: { index: i + 1, total: installments, groupId },
       });
     }

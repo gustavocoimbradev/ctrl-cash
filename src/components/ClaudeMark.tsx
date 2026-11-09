@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
+import { t } from '../i18n';
 import { radius, spacing, type } from '../theme';
 
 /** Claude's own colors, used wherever the app talks about Claude. */
@@ -52,3 +53,13 @@ export function ClaudeBadge({ size = 64 }: { size?: number }) {
 const s = StyleSheet.create({
   btn: { minHeight: 48, borderRadius: radius.pill, paddingHorizontal: spacing.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
 });
+
+/** A small, quiet mark beside something Claude made: the spark, muted. */
+export function ByClaude({ size = 13 }: { size?: number }) {
+  const label = t('Added by Claude');
+  return (
+    <View accessible accessibilityLabel={label} {...(Platform.OS === 'web' ? ({ title: label } as object) : {})} style={{ opacity: 0.75 }}>
+      <ClaudeMark size={size} />
+    </View>
+  );
+}

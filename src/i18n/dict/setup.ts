@@ -3,6 +3,7 @@ import type { Dict } from '../index';
 /** Quick setup, account settings, the language/currency fields and the app shell. */
 export const dict: Dict = {
   pt: {
+    "Added by Claude": "Adicionado pelo Claude",
     "It uses your own Claude account, so it costs nothing.": "Usa a sua própria conta do Claude, então não custa nada.",
     "Ask about your money and get answers from your own numbers.": "Pergunte sobre o seu dinheiro e receba respostas com os seus próprios números.",
     "Say what you spent and it is added for you.": "Diga o que você gastou e ele lança para você.",
@@ -262,6 +263,7 @@ export const dict: Dict = {
     "Cloud storage": "Armazenamento na nuvem",
   },
   es: {
+    "Added by Claude": "Añadido por Claude",
     "It uses your own Claude account, so it costs nothing.": "Usa tu propia cuenta de Claude, así que no cuesta nada.",
     "Ask about your money and get answers from your own numbers.": "Pregunta sobre tu dinero y recibe respuestas con tus propios números.",
     "Say what you spent and it is added for you.": "Di lo que gastaste y lo añade por ti.",
@@ -521,6 +523,7 @@ export const dict: Dict = {
     "Cloud storage": "Almacenamiento en la nube",
   },
   de: {
+    "Added by Claude": "Von Claude hinzugefügt",
     "It uses your own Claude account, so it costs nothing.": "Es nutzt dein eigenes Claude-Konto, also kostet es nichts.",
     "Ask about your money and get answers from your own numbers.": "Frag nach deinem Geld und bekomme Antworten aus deinen eigenen Zahlen.",
     "Say what you spent and it is added for you.": "Sag, was du ausgegeben hast, und es wird für dich eingetragen.",
@@ -780,6 +783,7 @@ export const dict: Dict = {
     "Cloud storage": "Cloud-Speicher",
   },
   fr: {
+    "Added by Claude": "Ajouté par Claude",
     "It uses your own Claude account, so it costs nothing.": "Il utilise votre propre compte Claude, donc c'est gratuit.",
     "Ask about your money and get answers from your own numbers.": "Posez vos questions sur votre argent et obtenez des réponses à partir de vos propres chiffres.",
     "Say what you spent and it is added for you.": "Dites ce que vous avez dépensé et c'est ajouté pour vous.",
@@ -1039,6 +1043,7 @@ export const dict: Dict = {
     "Cloud storage": "Stockage cloud",
   },
   it: {
+    "Added by Claude": "Aggiunto da Claude",
     "It uses your own Claude account, so it costs nothing.": "Usa il tuo account Claude, quindi non costa nulla.",
     "Ask about your money and get answers from your own numbers.": "Chiedi dei tuoi soldi e ricevi risposte dai tuoi numeri.",
     "Say what you spent and it is added for you.": "Dì cosa hai speso e viene aggiunto per te.",

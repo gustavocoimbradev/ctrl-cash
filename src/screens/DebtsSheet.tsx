@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Button } from '../components/Button';
+import { ByClaude } from '../components/ClaudeMark';
 import { Sheet } from '../components/Sheet';
 import { BarChart } from '../components/Charts';
 import { debtsSummary, debtsTimeline } from '../domain/areas';
@@ -81,7 +82,10 @@ export function DebtsSheet({ visible, onClose, onAdd, onEdit }: { visible: boole
                   style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 64, backgroundColor: c.surface, borderRadius: radius.control, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, opacity: pressed ? 0.7 : 1 })}
                 >
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{i.description}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={[type.label, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{i.description}</Text>
+                      {i.transaction.source === 'claude' ? <ByClaude /> : null}
+                    </View>
                     <Text style={[type.body, { color: c.textMuted }]} numberOfLines={2}>
                       {[i.total > 1 ? t('{left} of {total} left · ends {month}', { left: i.left, total: i.total, month: monthLabel(i.endsAt) }) : t('Due {date}', { date: formatDate(i.dueDate) }), cardName(i.cardId)].filter(Boolean).join(' · ')}
                     </Text>

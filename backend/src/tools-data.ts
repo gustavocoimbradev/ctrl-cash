@@ -508,7 +508,7 @@ const addCard = tool(
     const limit = money(a, 'limit', w.digits) as number;
     const dueDay = dueDayArg(a.dueDay);
     const color = colorArg(a.color) ?? (CARD_COLORS.find((x) => !w.cards.some((c) => c.color === x.value)) ?? CARD_COLORS[0]!).value;
-    await save(ctx, { cards: [{ id: newId(), name, limit, dueDay, color, createdAt: Date.now() }] });
+    await save(ctx, { cards: [{ id: newId(), name, limit, dueDay, color, createdAt: Date.now(), source: 'claude' }] });
     return `Added the card "${name}": limit ${fmt(limit, w)} ${w.currency}, due day ${dueDay}.`;
   },
 );
@@ -603,7 +603,7 @@ const addCategory = tool(
     if (kind === 'income' && (weight !== undefined || tone !== undefined)) fail('impact and tone only apply to expense categories');
     const id = newId();
     const w2 = weight ?? IMPACT_LEVELS.regular;
-    const rec: Doc = clean({ id, slug: id, kind, name, weight: kind === 'expense' ? w2 : undefined, tone: kind === 'expense' ? tone ?? toneFromWeight(w2) : undefined, createdAt: Date.now() });
+    const rec: Doc = clean({ id, slug: id, kind, name, weight: kind === 'expense' ? w2 : undefined, tone: kind === 'expense' ? tone ?? toneFromWeight(w2) : undefined, createdAt: Date.now(), source: 'claude' });
     await save(ctx, { categories: [rec] });
     return `Added the ${kind} category "${name}".`;
   },
@@ -680,7 +680,7 @@ const payInvoice = tool(
     const amount = money(a, 'amount', w.digits) as number;
     const date = optDate(a, 'date', ctx.today) ?? ctx.today;
     const before = findInvoice(invoicesNow(w.txs, w.cards, w.payments, ctx.today), card, key);
-    await save(ctx, { payments: [{ id: newId(), cardId: card.id, invoiceKey: key, amount, date }] });
+    await save(ctx, { payments: [{ id: newId(), cardId: card.id, invoiceKey: key, amount, date, source: 'claude' }] });
     const left = Math.max(before.total - before.paid - amount, 0);
     const over = amount > remaining(before) ? ' (that is more than what was left on it)' : '';
     return `Recorded a payment of ${fmt(amount, w)} ${w.currency} on ${card.name}, invoice ${key}, dated ${date}${over}. Remaining on that invoice: ${fmt(left, w)}.`;
@@ -735,6 +735,7 @@ const adjustInvoice = tool(
       invoiceKey: key,
       ...(diff > 0 ? { category: 'other' } : {}),
       createdAt: Date.now(),
+      source: 'claude',
     };
     // the app files an adjustment credit under Refund too (income on a card), so keep it identical
     if (diff < 0) doc.category = 'refund';

@@ -158,8 +158,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
               {[
                 { key: 'cards', icon: 'credit-card' as const, label: t('Cards'), onPress: () => setCardsOpen(true) },
                 { key: 'categories', icon: 'tag' as const, label: t('Categories'), onPress: () => setCategoriesOpen(true) },
-                // Claude has its own card on the dashboard, and a place in the phone menu and in Account settings
-                ...places.filter((p) => p.key !== 'claude'),
+                ...places,
               ].map((it) => (
                 <Pressable
                   key={it.key}

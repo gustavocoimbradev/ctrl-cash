@@ -19,6 +19,7 @@ const f = (key: string, col: string, kind: Kind): Field => ({ key, col, kind });
 const id = f('id', 'id', 'text');
 const created = f('createdAt', 'created_at_ms', 'int');
 const archived = f('archivedAt', 'archived_at_ms', 'int');
+const source = f('source', 'source', 'text');
 
 function mapper(table: string, fields: Field[], order: string): Mapper {
   return {
@@ -54,15 +55,15 @@ export const mappers: Record<Collection, Mapper> = {
     f('confirmedMonths', 'confirmed_months', 'textarr'), f('cardId', 'card_id', 'text'),
     f('reserveId', 'reserve_id', 'text'), f('invoiceKey', 'invoice_key', 'text'), f('category', 'category', 'text'),
     f('installment', 'installment', 'json'), f('revisions', 'revisions', 'json'), f('overrides', 'overrides', 'json'),
-    created, archived,
+    created, archived, source,
   ], byCreated),
   cards: mapper('cards', [
     id, f('name', 'name', 'text'), f('limit', 'credit_limit', 'int'), f('dueDay', 'due_day', 'int'),
-    f('color', 'color', 'text'), created, archived,
+    f('color', 'color', 'text'), created, archived, source,
   ], byCreated),
   payments: mapper('payments', [
     id, f('cardId', 'card_id', 'text'), f('invoiceKey', 'invoice_key', 'text'), f('amount', 'amount', 'int'),
-    f('date', 'date', 'date'), archived,
+    f('date', 'date', 'date'), archived, source,
   ], byDate),
   reserves: mapper('reserves', [id, f('name', 'name', 'text'), f('goal', 'goal', 'int'), created, archived], byCreated),
   reserveMoves: mapper('reserve_moves', [
@@ -71,7 +72,7 @@ export const mappers: Record<Collection, Mapper> = {
   ], byDate),
   categories: mapper('categories', [
     id, f('slug', 'slug', 'text'), f('kind', 'kind', 'text'), f('name', 'name', 'text'),
-    f('weight', 'weight', 'float'), f('tone', 'tone', 'text'), created, archived,
+    f('weight', 'weight', 'float'), f('tone', 'tone', 'text'), created, archived, source,
   ], byCreated),
   shoppingLists: mapper('shopping_lists', [
     id, f('name', 'name', 'text'), f('items', 'items', 'json'), f('finishedAt', 'finished_at_ms', 'int'), created, archived,

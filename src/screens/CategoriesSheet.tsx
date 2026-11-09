@@ -4,6 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { PillToggle, ToggleRow } from '../components/Controls';
 import { Field, TextField } from '../components/Fields';
+import { ByClaude } from '../components/ClaudeMark';
 import { Select } from '../components/Select';
 import { Sheet } from '../components/Sheet';
 import { t } from '../i18n';
@@ -58,7 +59,10 @@ function CategoriesList({ kind, onKind, onEdit }: { kind: Kind; onKind: (k: Kind
             <Feather name="tag" size={18} color={c.primary} />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{cat.archived ? t('{name}  ·  archived', { name: cat.label }) : cat.label}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[type.label, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{cat.archived ? t('{name}  ·  archived', { name: cat.label }) : cat.label}</Text>
+              {cat.source === 'claude' ? <ByClaude /> : null}
+            </View>
             <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>
               {[cat.kind === 'expense' ? impactText(nearestImpact(cat.weight).value) : null, cat.custom ? t('Yours') : t('Built in')].filter(Boolean).join(' · ')}
             </Text>

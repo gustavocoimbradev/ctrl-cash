@@ -5,6 +5,7 @@ import { Button } from '../components/Button';
 import { ToggleRow } from '../components/Controls';
 import { Sheet } from '../components/Sheet';
 import { t } from '../i18n';
+import { ByClaude } from '../components/ClaudeMark';
 import { cardColor } from '../domain/cards';
 import { currentMonthKey, todayISO } from '../domain/dates';
 import { buildInvoices, cardUsed } from '../domain/invoices';
@@ -43,7 +44,10 @@ function CardsList({ onEdit }: { onEdit: (card: CreditCard) => void }) {
               <Feather name="credit-card" size={20} color={cardColor(card, ci)} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{card.archivedAt ? t('{name}  ·  archived', { name: card.name }) : card.name}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[type.label, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{card.archivedAt ? t('{name}  ·  archived', { name: card.name }) : card.name}</Text>
+                {card.source === 'claude' ? <ByClaude /> : null}
+              </View>
               <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('Limit {limit} · due day {day}', { limit: formatMoney(card.limit), day: card.dueDay })}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
