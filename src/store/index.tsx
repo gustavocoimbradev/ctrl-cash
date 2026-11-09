@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { RemoteMap, push, subscribe } from './sync';
 import { AppData, CategoryRecord, CreditCard, InvoicePayment, OccurrenceFields, Reserve, ReserveMove, Revision, Transaction } from '../types';
 import { allCategories, builtinRecordId, setCategoryRecords } from '../domain/categories';
+import { t } from '../i18n';
 import { newId } from '../domain/money';
 import { NewTransactionInput, createTransactions } from '../domain/transactions';
 
@@ -87,7 +88,7 @@ export function StoreProvider({ uid, children }: { uid: string; children: React.
           setReady(true);
           setSyncError(null);
         },
-        () => setSyncError('Could not sync with the cloud. Check your connection and access.'),
+        () => setSyncError(t('Could not sync with the cloud. Check your connection and access.')),
       ),
     [uid],
   );
@@ -95,7 +96,7 @@ export function StoreProvider({ uid, children }: { uid: string; children: React.
   // writes only what changed since the last remote state
   useEffect(() => {
     if (!ready) return;
-    push(uid, remote.current, raw).catch(() => setSyncError('Could not save the latest change to the cloud.'));
+    push(uid, remote.current, raw).catch(() => setSyncError(t('Could not save the latest change to the cloud.')));
   }, [raw, ready, uid]);
 
   // the category registry (module level) follows the records, before anything renders with them

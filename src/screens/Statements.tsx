@@ -3,11 +3,12 @@ import React, { useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BarChart, ChartLegend } from '../components/Charts';
 import { Segmented } from '../components/Controls';
+import { t } from '../i18n';
 import { Sheet } from '../components/Sheet';
 import { AnimatedBar } from '../components/Motion';
 import { cardColor } from '../domain/cards';
 import { categoryLabel } from '../domain/categories';
-import { addMonthsToKey, currentMonthKey, endOfMonth, monthLabel, parseISO } from '../domain/dates';
+import { addMonthsToKey, currentMonthKey, endOfMonth, monthLabel, monthName, parseISO } from '../domain/dates';
 import { Invoice } from '../domain/invoices';
 import { formatMoney } from '../domain/money';
 import { debtBreakdown, debtTimeline, monthlyLeftovers } from '../domain/statements';
@@ -86,7 +87,7 @@ interface SheetProps {
 }
 
 /** The short explanation under the dialog title (fixed, with the total and the tabs). */
-const Desc = ({ kind }: { kind: StatementKind }) => <Text style={[type.body, { color: c.textMuted }]}>{DESCRIPTIONS[kind]}</Text>;
+const Desc = ({ kind }: { kind: StatementKind }) => <Text style={[type.body, { color: c.textMuted }]}>{t(DESCRIPTIONS[kind])}</Text>;
 
 function Total({ label, value, color, big }: { label?: string; value: string; color: string; big?: boolean }) {
   return (
@@ -112,13 +113,13 @@ const Empty = ({ children }: { children: string }) => <Text style={[type.body, {
 /** The leftovers of every month that make up the wealth, from newest to oldest. */
 function Leftovers({ ctx }: { ctx: StatementContext }) {
   const months = useMemo(() => monthlyLeftovers(ctx.occ, ctx.payments, endOfMonth(currentMonthKey())).reverse(), [ctx.occ, ctx.payments]);
-  if (months.length === 0) return <Empty>No confirmed amounts yet.</Empty>;
+  if (months.length === 0) return <Empty>{t('No confirmed amounts yet.')}</Empty>;
   return (
     <View style={s.table}>
       <View style={[s.line, s.head]}>
-        <Text style={[type.body, { color: c.textMuted, flex: 1.2 }]}>Month</Text>
-        <Text style={[type.body, { color: c.textMuted, flex: 1, textAlign: 'right' }]}>Leftover</Text>
-        <Text style={[type.body, { color: c.textMuted, flex: 1.2, textAlign: 'right' }]}>Accumulated</Text>
+        <Text style={[type.body, { color: c.textMuted, flex: 1.2 }]}>{t('Month')}</Text>
+        <Text style={[type.body, { color: c.textMuted, flex: 1, textAlign: 'right' }]}>{t('Leftover')}</Text>
+        <Text style={[type.body, { color: c.textMuted, flex: 1.2, textAlign: 'right' }]}>{t('Accumulated')}</Text>
       </View>
       {months.map((m) => (
         <View key={m.key} style={[s.line, s.rowBorder]}>
@@ -137,12 +138,12 @@ function Accumulated({ ctx, visible, onClose }: SheetProps) {
   const months = useMemo(() => monthlyLeftovers(ctx.occ, ctx.payments, endOfMonth(currentMonthKey())).slice(-12), [ctx.occ, ctx.payments]);
   const bars = months.map((m, i) => {
     const mi = Number(m.key.slice(5, 7)) - 1;
-    return { label: `${MONTHS_SHORT[mi]}${mi === 0 || i === 0 ? ` ${m.key.slice(2, 4)}` : ''}`, segments: [{ value: m.running, color: m.running < 0 ? c.expense : c.primary }] };
+    return { label: `${shortMonth(mi)}${mi === 0 || i === 0 ? ` ${m.key.slice(2, 4)}` : ''}`, segments: [{ value: m.running, color: m.running < 0 ? c.expense : c.primary }] };
   });
   return (
     <Sheet
       visible={visible}
-      title={TITLES.accumulated}
+      title={t(TITLES.accumulated)}
       onClose={onClose}
       fixed={
         <>
@@ -152,15 +153,15 @@ function Accumulated({ ctx, visible, onClose }: SheetProps) {
             value={tab}
             onChange={setTab}
             options={[
-              { value: 'chart' as const, label: 'Evolution' },
-              { value: 'details' as const, label: 'Details' },
+              { value: 'chart' as const, label: t('Evolution') },
+              { value: 'details' as const, label: t('Details') },
             ]}
           />
         </>
       }
     >
       {tab === 'chart' ? (
-        months.length === 0 ? <Empty>No confirmed amounts yet.</Empty> : <BarChart groups={bars} />
+        months.length === 0 ? <Empty>{t('No confirmed amounts yet.')}</Empty> : <BarChart groups={bars} />
       ) : (
         <>
           <Leftovers ctx={ctx} />
@@ -174,7 +175,7 @@ function Net({ ctx, visible, onClose }: SheetProps) {
   return (
     <Sheet
       visible={visible}
-      title={TITLES.net}
+      title={t(TITLES.net)}
       onClose={onClose}
       fixed={
         <>
@@ -184,17 +185,18 @@ function Net({ ctx, visible, onClose }: SheetProps) {
       }
     >
       <View style={s.table}>
-        <Line label="Accumulated wealth" value={formatMoney(ctx.balance)} color={c.primary} />
-        <Line label="Card debt" value={`- ${formatMoney(ctx.debt)}`} color={c.expense} />
-        <Line label="Pending commitments" value={`- ${formatMoney(ctx.commitments)}`} color={c.warning} />
+        <Line label={t('Accumulated wealth')} value={formatMoney(ctx.balance)} color={c.primary} />
+        <Line label={t('Card debt')} value={`- ${formatMoney(ctx.debt)}`} color={c.expense} />
+        <Line label={t('Pending commitments')} value={`- ${formatMoney(ctx.commitments)}`} color={c.warning} />
         <View style={s.sum} />
-        <Line label="Net worth" value={formatMoney(ctx.worth)} color={ctx.worth < 0 ? c.expense : c.violet} strong />
+        <Line label={t('Net worth')} value={formatMoney(ctx.worth)} color={ctx.worth < 0 ? c.expense : c.violet} strong />
       </View>
     </Sheet>
   );
 }
 
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** the first letters of the month name in the current language */
+const shortMonth = (mi: number) => monthName(mi + 1).slice(0, 3);
 
 function Debt({ ctx, visible, onClose }: SheetProps) {
   const [tab, setTab] = useState<'details' | 'chart'>('chart');
@@ -218,14 +220,14 @@ function Debt({ ctx, visible, onClose }: SheetProps) {
         return [...(x.settled > 0 ? [{ value: x.settled, color, paid: true }] : []), ...(x.debt > 0 ? [{ value: x.debt, color }] : [])];
       });
       const mi = Number(k.slice(5, 7)) - 1;
-      out.push({ label: `${MONTHS_SHORT[mi]}${mi === 0 || out.length === 0 ? ` ${k.slice(2, 4)}` : ''}`, segments });
+      out.push({ label: `${shortMonth(mi)}${mi === 0 || out.length === 0 ? ` ${k.slice(2, 4)}` : ''}`, segments });
     }
     return out;
   }, [ctx.invoices, ctx.cards, ctx.today, hidden]);
   return (
     <Sheet
       visible={visible}
-      title={TITLES.debt}
+      title={t(TITLES.debt)}
       onClose={onClose}
       fixed={
         <>
@@ -236,8 +238,8 @@ function Debt({ ctx, visible, onClose }: SheetProps) {
               value={tab}
               onChange={setTab}
               options={[
-                { value: 'chart' as const, label: 'Evolution' },
-                { value: 'details' as const, label: 'Details' },
+                { value: 'chart' as const, label: t('Evolution') },
+                { value: 'details' as const, label: t('Details') },
               ]}
             />
           ) : null}
@@ -245,7 +247,7 @@ function Debt({ ctx, visible, onClose }: SheetProps) {
       }
     >
       {groups.length === 0 ? (
-        <Empty>No card debt. Keep it up!</Empty>
+        <Empty>{t('No card debt. Keep it up!')}</Empty>
       ) : (
         <>
           {tab === 'details' ? (
@@ -254,14 +256,14 @@ function Debt({ ctx, visible, onClose }: SheetProps) {
                 <Line label={g.card.name} value={formatMoney(g.total)} color={c.expense} strong />
                 {g.invoices.map((inv) => (
                   <View key={inv.key} style={s.sub}>
-                    <Line label={`${monthLabel(inv.key)} invoice · due ${dm(inv.dueDate)}`} value={formatMoney(inv.amount)} muted />
+                    <Line label={t('{month} invoice · due {date}', { month: monthLabel(inv.key), date: dm(inv.dueDate) })} value={formatMoney(inv.amount)} muted />
                     {inv.items.map((o) => (
                       <Line key={o.key} indent label={`${o.description}${o.installment ? ` ${o.installment.index}/${o.installment.total}` : ''} · ${categoryLabel(o.category, o.type)}`} value={`${o.type === 'income' ? '-' : ''}${formatMoney(o.amount)}`} muted />
                     ))}
                     {inv.loans.map((o) => (
-                      <Line key={o.key} indent strike label={`${o.description}${o.installment ? ` ${o.installment.index}/${o.installment.total}` : ''} · loan`} value={formatMoney(o.amount)} muted />
+                      <Line key={o.key} indent strike label={`${o.description}${o.installment ? ` ${o.installment.index}/${o.installment.total}` : ''} · ${t('loan')}`} value={formatMoney(o.amount)} muted />
                     ))}
-                    {inv.paid > 0 && <Line indent label="Already paid on this invoice" value={`- ${formatMoney(inv.paid)}`} muted />}
+                    {inv.paid > 0 && <Line indent label={t('Already paid on this invoice')} value={`- ${formatMoney(inv.paid)}`} muted />}
                   </View>
                 ))}
               </View>
@@ -290,7 +292,7 @@ function Commitments({ ctx, visible, onClose }: SheetProps) {
   return (
     <Sheet
       visible={visible}
-      title={TITLES.commitments}
+      title={t(TITLES.commitments)}
       onClose={onClose}
       fixed={
         <>
@@ -299,12 +301,12 @@ function Commitments({ ctx, visible, onClose }: SheetProps) {
         </>
       }
     >
-      {byMonth.length === 0 ? <Empty>No pending commitments.</Empty> : null}
+      {byMonth.length === 0 ? <Empty>{t('No pending commitments.')}</Empty> : null}
       {byMonth.map(([key, list]) => (
         <View key={key} style={s.block}>
           <Line label={monthLabel(key)} value={formatMoney(list.reduce((sum, o) => sum + o.amount, 0))} color={c.warning} strong />
           {list.map((o) => (
-            <Line key={o.key} indent label={`${o.description}${o.installment ? ` ${o.installment.index}/${o.installment.total}` : ''}${o.fixed ? ' · fixed' : ''} · ${categoryLabel(o.category, o.type)} · ${dm(o.date)}`} value={formatMoney(o.amount)} muted />
+            <Line key={o.key} indent label={`${o.description}${o.installment ? ` ${o.installment.index}/${o.installment.total}` : ''}${o.fixed ? ` · ${t('fixed')}` : ''} · ${categoryLabel(o.category, o.type)} · ${dm(o.date)}`} value={formatMoney(o.amount)} muted />
           ))}
         </View>
       ))}
@@ -317,7 +319,7 @@ function Freedom({ ctx, startKey, visible, onClose }: SheetProps & { startKey: s
   return (
     <Sheet
       visible={visible}
-      title={TITLES.freedom}
+      title={t(TITLES.freedom)}
       onClose={onClose}
       fixed={
         <>
@@ -327,14 +329,14 @@ function Freedom({ ctx, startKey, visible, onClose }: SheetProps & { startKey: s
       }
     >
       {plan.length === 0 ? (
-        <Empty>{ctx.avgExpense <= 0 ? 'No expenses recorded to estimate spending for the coming months.' : 'No positive net worth to cover the coming months.'}</Empty>
+        <Empty>{ctx.avgExpense <= 0 ? t('No expenses recorded to estimate spending for the coming months.') : t('No positive net worth to cover the coming months.')}</Empty>
       ) : (
         <>
           <View style={s.table}>
             <View style={[s.line, s.head]}>
-              <Text style={[type.body, { color: c.textMuted, flex: 1.3 }]}>Month</Text>
-              <Text style={[type.body, { color: c.textMuted, flex: 1, textAlign: 'right' }]}>Spent</Text>
-              <Text style={[type.body, { color: c.textMuted, flex: 1.2, textAlign: 'right' }]}>Left</Text>
+              <Text style={[type.body, { color: c.textMuted, flex: 1.3 }]}>{t('Month')}</Text>
+              <Text style={[type.body, { color: c.textMuted, flex: 1, textAlign: 'right' }]}>{t('Spent')}</Text>
+              <Text style={[type.body, { color: c.textMuted, flex: 1.2, textAlign: 'right' }]}>{t('Left')}</Text>
             </View>
             {plan.map((row) => (
               <View key={row.key} style={s.rowBorder}>
@@ -349,7 +351,7 @@ function Freedom({ ctx, startKey, visible, onClose }: SheetProps & { startKey: s
               </View>
             ))}
           </View>
-          {plan.length >= 24 ? <Note>Showing the first 24 months.</Note> : null}
+          {plan.length >= 24 ? <Note>{t('Showing the first 24 months.')}</Note> : null}
         </>
       )}
     </Sheet>

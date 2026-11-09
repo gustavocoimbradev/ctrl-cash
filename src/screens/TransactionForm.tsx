@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text } from 'react-native';
 import { Button } from '../components/Button';
+import { t } from '../i18n';
 import { DEFAULT_CATEGORY, activeCategories, allCategories } from '../domain/categories';
 import { Segmented, ToggleRow } from '../components/Controls';
 import { DateField } from '../components/DateField';
@@ -36,10 +37,9 @@ interface Props {
 
 const installmentOptions = Array.from({ length: 47 }, (_, i) => ({ value: i + 2, label: `${i + 2}x` }));
 
-const dayOptions = Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: `Day ${i + 1}` }));
-
 export function TransactionForm({ visible, transaction, occurrenceMonth, preset, onClose }: Props) {
   const c = useColors();
+  const dayOptions = Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: t('Day {day}', { day: i + 1 }) }));
   const { data, addTransaction, updateTransaction, updateFixed, archiveTransaction, addPayment } = useStore();
   const [scopeOpen, setScopeOpen] = useState(false);
   const [day, setDay] = useState(1);
@@ -127,16 +127,16 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
   const invoiceMode = kind === 'invoice';
   const cardLocked = !!preset && !editing;
   const errors = {
-    description: description.trim() ? undefined : 'Enter a description',
-    category: kind === 'invoice' || (kind === 'income' && cardId !== '') || category ? undefined : 'Select a category',
-    amount: cents > 0 ? undefined : 'Enter an amount greater than zero',
-    card: cardId ? undefined : 'Select a card',
+    description: description.trim() ? undefined : t('Enter a description'),
+    category: kind === 'invoice' || (kind === 'income' && cardId !== '') || category ? undefined : t('Select a category'),
+    amount: cents > 0 ? undefined : t('Enter an amount greater than zero'),
+    card: cardId ? undefined : t('Select a card'),
   };
   const valid = invoiceMode
     ? !errors.amount && !errors.card
     : !errors.description && !errors.amount && !errors.category;
   const cardOptions = [
-    { value: '', label: 'Bank account' },
+    { value: '', label: t('Bank account') },
     ...pickable.map((card) => ({ value: card.id, label: card.name })),
   ];
   const payWith = cardId;
@@ -152,7 +152,7 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
     const open = openInvoiceKey(payCard, todayISO());
     const keys = Array.from({ length: 22 }, (_, i) => addMonthsToKey(open, i - 3));
     if (purchaseInvoice && !keys.includes(purchaseInvoice)) keys.push(purchaseInvoice);
-    return keys.sort().map((key) => ({ value: key, label: `${monthLabel(key)} · due ${formatDate(dueDateFor(payCard, key))}` }));
+    return keys.sort().map((key) => ({ value: key, label: t('{month} · due {date}', { month: monthLabel(key), date: formatDate(dueDateFor(payCard, key)) }) }));
   }, [payCard, purchaseInvoice]);
   const invoiceOptions = useMemo(() => {
     if (!payCard) return [];
@@ -163,7 +163,7 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
     if (keys.size === 0) keys.add(openInvoiceKey(payCard, todayISO()));
     return [...keys].sort().map((key) => ({
       value: key,
-      label: `${monthLabel(key)} · remaining ${formatMoney(remaining(findInvoice(invoices, payCard, key)))}`,
+      label: t('{month} · remaining {amount}', { month: monthLabel(key), amount: formatMoney(remaining(findInvoice(invoices, payCard, key))) }),
     }));
   }, [invoices, payCard, invoiceKey]);
 
@@ -242,19 +242,19 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
   };
 
   const title = editing
-    ? 'Edit transaction'
+    ? t('Edit transaction')
     : invoiceMode
-      ? 'Invoice payment'
+      ? t('Invoice payment')
       : preset?.kind === 'expense'
-        ? 'New card expense'
+        ? t('New card expense')
         : preset?.kind === 'refund'
-          ? 'Card refund'
-          : 'New transaction';
+          ? t('Card refund')
+          : t('New transaction');
 
   const kindOptions = [
-    { value: 'expense' as Kind, label: 'Expense' },
-    { value: 'income' as Kind, label: 'Income' },
-    ...(pickable.length > 0 ? [{ value: 'invoice' as Kind, label: 'Pay card' }] : []),
+    { value: 'expense' as Kind, label: t('Expense') },
+    { value: 'income' as Kind, label: t('Income') },
+    ...(pickable.length > 0 ? [{ value: 'invoice' as Kind, label: t('Pay card') }] : []),
   ];
 
   return (
@@ -270,14 +270,14 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
               onPress={() => setConfirmDelete(true)}
               style={({ pressed }) => ({ flex: 1, minHeight: 48, justifyContent: 'center', alignItems: 'flex-start', opacity: pressed ? 0.6 : 1 })}
             >
-              <Text style={[type.label, { color: c.expense }]}>Delete</Text>
+              <Text style={[type.label, { color: c.expense }]}>{t('Archive')}</Text>
             </Pressable>
-            <Button label="Save" icon="check" onPress={submit} />
+            <Button label={t('Save')} icon="check" onPress={submit} />
           </>
         ) : (
           <>
-            <Button label="Cancel" variant="secondary" onPress={onClose} flex />
-            <Button label={invoiceMode ? 'Pay' : 'Save'} icon="check" onPress={submit} flex />
+            <Button label={t('Cancel')} variant="secondary" onPress={onClose} flex />
+            <Button label={invoiceMode ? t('Pay') : t('Save')} icon="check" onPress={submit} flex />
           </>
         )
       }
@@ -295,7 +295,7 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
         <>
           {!cardLocked && (
             <Select
-              label="Card"
+              label={t('Card')}
               value={cardId || undefined}
               options={pickable.map((card) => ({ value: card.id, label: card.name }))}
               onChange={pickCardForPayment}
@@ -303,44 +303,44 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
             />
           )}
           <Select
-            label="Invoice"
+            label={t('Invoice')}
             value={invoiceKey || undefined}
             options={invoiceOptions}
             onChange={(key) => payCard && pickInvoice(payCard.id, key)}
           />
-          <MoneyField label="Amount paid" cents={cents} onChange={setCents} error={tried ? errors.amount : undefined} />
-          <DateField label="Payment date" value={date} onChange={setDate} />
-          <Text style={[type.body, { color: c.textMuted }]}>Source: account balance. The amount paid reduces the balance and the used limit.</Text>
+          <MoneyField label={t('Amount paid')} cents={cents} onChange={setCents} error={tried ? errors.amount : undefined} />
+          <DateField label={t('Payment date')} value={date} onChange={setDate} />
+          <Text style={[type.body, { color: c.textMuted }]}>{t('Source: account balance. The amount paid reduces the balance and the used limit.')}</Text>
         </>
       ) : (
         <>
-          <TextField label="Description" value={description} onChangeText={setDescription} maxLength={100} error={tried ? errors.description : undefined} />
+          <TextField label={t('Description')} value={description} onChangeText={setDescription} maxLength={100} error={tried ? errors.description : undefined} />
           {needsCategory && (
             <Select
-              label="Category"
+              label={t('Category')}
               value={category || undefined}
               options={[
                 ...activeCategories(kind === 'income' ? 'income' : 'expense'),
                 // an archived category stays selectable on the transaction that already has it
                 ...allCategories(kind === 'income' ? 'income' : 'expense').filter((x) => x.archived && x.slug === category),
-              ].map((x) => ({ value: x.slug, label: x.archived ? `${x.label} (archived)` : x.label }))}
+              ].map((x) => ({ value: x.slug, label: x.archived ? t('{name} (archived)', { name: x.label }) : x.label }))}
               onChange={setCategory}
-              placeholder="Select"
+              placeholder={t('Select')}
               error={tried ? errors.category : undefined}
             />
           )}
-          <MoneyField label={mode === 'installments' && !editing ? 'Total amount' : editing && transaction?.installment ? 'Installment amount' : 'Amount'} cents={cents} onChange={setCents} error={tried ? errors.amount : undefined} />
+          <MoneyField label={mode === 'installments' && !editing ? t('Total amount') : editing && transaction?.installment ? t('Installment amount') : t('Amount')} cents={cents} onChange={setCents} error={tried ? errors.amount : undefined} />
           {editing && transaction?.fixed ? (
-            <Select label="Day of month" value={day} options={dayOptions} onChange={setDay} />
+            <Select label={t('Day of month')} value={day} options={dayOptions} onChange={setDay} />
           ) : (
-            <DateField label={mode === 'fixed' ? 'Start date' : usesCard ? (isRefund ? 'Refund date' : 'Purchase date') : 'Date'} value={date} onChange={setDate} />
+            <DateField label={mode === 'fixed' ? t('Start date') : usesCard ? (isRefund ? t('Refund date') : t('Purchase date')) : t('Date')} value={date} onChange={setDate} />
           )}
           {editing ? (
             <Text style={[type.body, { color: c.textMuted }]}>
               {transaction?.installment
-                ? `Installment ${transaction.installment.index}/${transaction.installment.total}. Description, type and card apply to all installments; amount, date and status only to this one.`
+                ? t('Installment {index}/{total}. Description, type and card apply to all installments; amount, date and status only to this one.', { index: transaction.installment.index, total: transaction.installment.total })
                 : transaction?.fixed
-                  ? `Fixed transaction, editing ${monthLabel(editMonth)}. When saving, you choose whether the change applies only to this month or to the following ones too.`
+                  ? t('Fixed transaction, editing {month}. When saving, you choose whether the change applies only to this month or to the following ones too.', { month: monthLabel(editMonth) })
                   : null}
             </Text>
           ) : isRefund ? null : (
@@ -348,18 +348,18 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
               value={mode}
               onChange={setMode}
               options={[
-                { value: 'single', label: 'One-time' },
-                { value: 'fixed', label: 'Fixed' },
-                { value: 'installments', label: 'Installments' },
+                { value: 'single', label: t('One-time') },
+                { value: 'fixed', label: t('Fixed') },
+                { value: 'installments', label: t('Installments') },
               ]}
             />
           )}
           {mode === 'installments' && !editing && (
-            <Select label="Installments" value={installments} options={installmentOptions} onChange={setInstallments} />
+            <Select label={t('Installments')} value={installments} options={installmentOptions} onChange={setInstallments} />
           )}
           {kind === 'expense' && pickable.length > 0 && !cardLocked && (
             <Select
-              label="Pay with"
+              label={t('Pay with')}
               value={payWith}
               options={cardOptions}
               onChange={(v) => {
@@ -371,7 +371,7 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
           )}
           {usesCard && (
             <Select
-              label={mode === 'installments' && !editing ? 'First installment on invoice' : isRefund ? 'Apply to invoice' : 'Invoice'}
+              label={mode === 'installments' && !editing ? t('First installment on invoice') : isRefund ? t('Apply to invoice') : t('Invoice')}
               value={purchaseInvoice}
               options={purchaseOptions}
               onChange={setPurchaseInvoice}
@@ -379,13 +379,13 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
           )}
           {usesCard && !isRefund && (
             <Text style={[type.body, { color: c.warning }]}>
-              A card purchase is debt. Only buy what you can pay off on the full invoice, without installments.
+              {t('A card purchase is debt. Only buy what you can pay off on the full invoice, without installments.')}
             </Text>
           )}
           {!usesCard && !transaction?.fixed && (
             <ToggleRow
-              label={kind === 'income' ? 'Already received' : 'Already paid'}
-              hint={mode === 'single' ? undefined : 'Applies to the first transaction'}
+              label={kind === 'income' ? t('Already received') : t('Already paid')}
+              hint={mode === 'single' ? undefined : t('Applies to the first transaction')}
               value={confirmed}
               onChange={setConfirmed}
             />
@@ -393,24 +393,24 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
         </>
       )}
 
-      <Sheet visible={scopeOpen} title="Change fixed transaction" onClose={() => setScopeOpen(false)}>
+      <Sheet visible={scopeOpen} title={t('Change fixed transaction')} onClose={() => setScopeOpen(false)}>
         <Text style={[type.body, { color: c.text }]}>
-          You changed "{description.trim() || transaction?.description}" in {editMonth ? monthLabel(editMonth) : ''}. Apply to:
+          {t('You changed "{description}" in {month}. Apply to:', { description: description.trim() || transaction?.description || '', month: editMonth ? monthLabel(editMonth) : '' })}
         </Text>
-        <Button label="This and following" icon="repeat" onPress={() => applyFixed('forward', pendingChanges())} />
-        <Button label={`Only this (${editMonth ? monthLabel(editMonth) : ''})`} variant="secondary" onPress={() => applyFixed('one', pendingChanges())} />
-        <Button label="Cancel" variant="tertiary" onPress={() => setScopeOpen(false)} />
+        <Button label={t('This and following')} icon="repeat" onPress={() => applyFixed('forward', pendingChanges())} />
+        <Button label={t('Only this ({month})', { month: editMonth ? monthLabel(editMonth) : '' })} variant="secondary" onPress={() => applyFixed('one', pendingChanges())} />
+        <Button label={t('Cancel')} variant="tertiary" onPress={() => setScopeOpen(false)} />
       </Sheet>
 
       <Sheet
         visible={confirmDelete}
-        title="Archive transaction"
+        title={t('Archive transaction')}
         onClose={() => setConfirmDelete(false)}
         footer={
           <>
-            <Button label="Cancel" variant="secondary" onPress={() => setConfirmDelete(false)} flex />
+            <Button label={t('Cancel')} variant="secondary" onPress={() => setConfirmDelete(false)} flex />
             <Button
-              label="Archive"
+              label={t('Archive')}
               danger
               flex
               onPress={() => {
@@ -424,11 +424,11 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
       >
         <Text style={[type.body, { color: c.text }]}>
           {transaction?.installment
-            ? `All ${transaction.installment.total} installments of "${transaction.description}" will be archived.`
+            ? t('All {total} installments of "{description}" will be archived.', { total: transaction.installment.total, description: transaction.description })
             : transaction?.fixed
-              ? `The recurrence of "${transaction.description}" will be archived for all months.`
-              : `"${transaction?.description}" will be archived.`}
-          {' '}It leaves your lists and totals, but nothing is deleted.
+              ? t('The recurrence of "{description}" will be archived for all months.', { description: transaction.description })
+              : t('"{description}" will be archived.', { description: transaction?.description ?? '' })}
+          {' '}{t('It leaves your lists and totals, but nothing is deleted.')}
         </Text>
       </Sheet>
     </Sheet>

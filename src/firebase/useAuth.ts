@@ -15,6 +15,7 @@ import {
 } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { auth } from './auth';
+import { t } from '../i18n';
 
 /** What an email can do on the sign-in screen. */
 export type EmailStatus = 'password' | 'google' | 'new';
@@ -48,7 +49,7 @@ const MESSAGES: Record<string, string> = {
 
 export function authMessage(e: unknown): string {
   const code = (e as { code?: string })?.code ?? '';
-  return code in MESSAGES ? MESSAGES[code] : 'Could not sign in. Try again.';
+  return code in MESSAGES ? (MESSAGES[code] ? t(MESSAGES[code]) : '') : t('Could not sign in. Try again.');
 }
 
 /** Whether the signed-in account has a password (accounts that only use Google do not). */

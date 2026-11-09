@@ -4,6 +4,7 @@ import { Animated, Easing, KeyboardAvoidingView, Modal, Platform, Pressable, Scr
 import { motion, useReducedMotion } from '../theme/motion';
 import { useInstallBannerHeight } from '../theme/viewport';
 import { colors, desktopBreakpoint, glow, radius, spacing, type, useColors } from '../theme';
+import { t } from '../i18n';
 
 interface Props {
   visible: boolean;
@@ -74,7 +75,7 @@ export function Sheet({ visible, title, onClose, children, footer, fixed, screen
           <View style={[s.panel, { backgroundColor: c.card }, asScreen && s.panelScreen]}>
             {asScreen ? (
               <View style={[s.header, s.headerScreen, bannerH > 0 && { paddingTop: spacing.sm }, { borderBottomColor: c.border }]}>
-                <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onClose} style={s.back}>
+                <Pressable accessibilityRole="button" accessibilityLabel={t('Back')} onPress={onClose} style={s.back}>
                   <Feather name="arrow-left" size={24} color={c.text} />
                 </Pressable>
                 <Text style={[type.title, { color: c.text, flex: 1 }]} numberOfLines={1}>{view.title}</Text>
@@ -82,7 +83,7 @@ export function Sheet({ visible, title, onClose, children, footer, fixed, screen
             ) : (
               <View style={[s.header, { paddingHorizontal: pad, paddingTop: pad - 4 }]}>
                 <Text style={[type.title, { color: c.text, flex: 1 }]}>{view.title}</Text>
-                <Pressable accessibilityLabel="Close" onPress={onClose} style={s.close}>
+                <Pressable accessibilityLabel={t('Close')} onPress={onClose} style={s.close}>
                   <Feather name="x" size={22} color={c.textMuted} />
                 </Pressable>
               </View>

@@ -12,6 +12,7 @@ import { ProfileForm } from './ProfileForm';
 import { useSocial } from './SocialProvider';
 import { SummaryView } from './SummaryView';
 import { Avatar, Empty, Pill, PersonRow } from './parts';
+import { t } from '../i18n';
 
 const COUNT_PAD = 14;
 /** A number under a label. With `onPress` it is a button (the lists behind the counters open in a dialog). */
@@ -20,7 +21,7 @@ const Count = ({ n, label, onPress }: { n: number; label: string; onPress?: () =
   return (
     <Pressable
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={onPress ? `${label}: ${n}` : undefined}
+      accessibilityLabel={onPress ? t('{label}: {n}', { label, n }) : undefined}
       disabled={!onPress}
       onPress={onPress}
       style={({ pressed, hovered }: any) => [
@@ -50,11 +51,11 @@ function CodeChip({ code }: { code: string }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Code ${code.split('').join(' ')}. Copy`}
+      accessibilityLabel={t('Code {code}. Copy', { code: code.split('').join(' ') })}
       onPress={copy}
       style={({ pressed, hovered }: any) => [s.chip, { opacity: pressed ? 0.6 : hovered ? 1 : 0.8 }]}
     >
-      <Text style={[type.body, { color: copied ? c.income : c.textMuted, letterSpacing: 2 }]}>{copied ? 'Copied' : code}</Text>
+      <Text style={[type.body, { color: copied ? c.income : c.textMuted, letterSpacing: 2 }]}>{copied ? t('Copied') : code}</Text>
       {!copied ? <Feather name="copy" size={14} color={c.textMuted} /> : null}
     </Pressable>
   );
@@ -103,26 +104,26 @@ function ShareDialog({ visible, onClose }: { visible: boolean; onClose: () => vo
     }
   };
   return (
-    <Sheet visible={visible} title="Share your data" onClose={onClose}>
+    <Sheet visible={visible} title={t('Share your data')} onClose={onClose}>
       <Text style={[type.body, { color: c.textMuted }]}>
-        Type the code of the person you want to share your summary with. They see percentages only (never single transactions), and you can stop at any time.
+        {t('Type the code of the person you want to share your summary with. They see percentages only (never single transactions), and you can stop at any time.')}
       </Text>
-      <CodeInput value={finder.text} onChange={finder.setText} placeholder="Their code" />
+      <CodeInput value={finder.text} onChange={finder.setText} placeholder={t('Their code')} />
       <FoundPerson
         lookup={finder.lookup}
         actions={(p) =>
           p.sharedWithThem ? (
-            <Text style={[type.body, { color: c.textMuted }]}>You already share your data with {p.displayName}.</Text>
+            <Text style={[type.body, { color: c.textMuted }]}>{t('You already share your data with {name}.', { name: p.displayName })}</Text>
           ) : (
-            <Pill label="Share my data" icon="share-2" primary disabled={busy === p.code} onPress={() => void run(p.code, async () => { await share(p.code); finder.clear(); })} />
+            <Pill label={t('Share my data')} icon="share-2" primary disabled={busy === p.code} onPress={() => void run(p.code, async () => { await share(p.code); finder.clear(); })} />
           )
         }
       />
       <View style={{ gap: spacing.xs }}>
-        <Text style={[type.label, { color: c.text }]}>Sharing with · {given.length}</Text>
-        {given.length === 0 ? <Text style={[type.body, { color: c.textMuted }]}>Nobody yet.</Text> : null}
+        <Text style={[type.label, { color: c.text }]}>{t('Sharing with · {n}', { n: given.length })}</Text>
+        {given.length === 0 ? <Text style={[type.body, { color: c.textMuted }]}>{t('Nobody yet.')}</Text> : null}
         {given.map((p) => (
-          <PersonRow key={p.code} person={p} right={<Pill label="Stop sharing" danger disabled={busy === p.code} onPress={() => void run(p.code, () => revoke(p.code))} />} />
+          <PersonRow key={p.code} person={p} right={<Pill label={t('Stop sharing')} danger disabled={busy === p.code} onPress={() => void run(p.code, () => revoke(p.code))} />} />
         ))}
       </View>
     </Sheet>
@@ -144,7 +145,7 @@ function OwnProfile({ onOpen, onEditAccount, email }: { onOpen: (code: string) =
   if (!profile) {
     return (
       <Card style={{ maxWidth: 560, width: '100%', alignSelf: 'center' }}>
-        <Text style={[type.title, { color: c.text }]}>Create your profile</Text>
+        <Text style={[type.title, { color: c.text }]}>{t('Create your profile')}</Text>
         <ProfileForm email={email} existing={null} onDone={() => {}} />
       </Card>
     );
@@ -157,31 +158,31 @@ function OwnProfile({ onOpen, onEditAccount, email }: { onOpen: (code: string) =
         color={profile.color}
         photo={profile.photo}
         counters={[
-          { n: given.length, label: 'Sharing with', onPress: () => setDialog('share') },
-          { n: received.length, label: 'Shared with me', onPress: () => setDialog('received') },
+          { n: given.length, label: t('Sharing with'), onPress: () => setDialog('share') },
+          { n: received.length, label: t('Shared with me'), onPress: () => setDialog('received') },
         ]}
         actions={
           <>
-            <Pill label="Share data" icon="share-2" primary block={narrow} onPress={() => setDialog('share')} />
-            <Pill label="Edit profile" icon="edit-2" grow={narrow} onPress={() => setEditing(true)} />
-            <Pill label="Edit account" icon="settings" grow={narrow} onPress={onEditAccount} />
+            <Pill label={t('Share data')} icon="share-2" primary block={narrow} onPress={() => setDialog('share')} />
+            <Pill label={t('Edit profile')} icon="edit-2" grow={narrow} onPress={() => setEditing(true)} />
+            <Pill label={t('Edit account')} icon="settings" grow={narrow} onPress={onEditAccount} />
           </>
         }
       />
       <Card>
-        <Text style={[type.title, { color: c.text }]}>Your summary</Text>
+        <Text style={[type.title, { color: c.text }]}>{t('Your summary')}</Text>
         <SummaryView summary={summary} />
       </Card>
 
-      <Sheet visible={editing} title="Edit profile" onClose={() => setEditing(false)}>
+      <Sheet visible={editing} title={t('Edit profile')} onClose={() => setEditing(false)}>
         <ProfileForm email={email} existing={profile} onDone={() => setEditing(false)} />
       </Sheet>
       <ShareDialog visible={dialog === 'share'} onClose={() => setDialog(null)} />
-      <Sheet visible={dialog === 'received'} title={`Shared with me · ${received.length}`} onClose={() => setDialog(null)}>
-        {received.length === 0 ? <Text style={[type.body, { color: c.textMuted }]}>Nobody shares their data with you yet. Give them your code ({profile.code}) so they can.</Text> : null}
+      <Sheet visible={dialog === 'received'} title={t('Shared with me · {n}', { n: received.length })} onClose={() => setDialog(null)}>
+        {received.length === 0 ? <Text style={[type.body, { color: c.textMuted }]}>{t('Nobody shares their data with you yet. Give them your code ({code}) so they can.', { code: profile.code })}</Text> : null}
         <View style={{ gap: spacing.xs }}>
           {received.map((p: Person) => (
-            <PersonRow key={p.code} person={p} subtitle="Tap to see their summary" onPress={() => { setDialog(null); onOpen(p.code); }} />
+            <PersonRow key={p.code} person={p} subtitle={t('Tap to see their summary')} onPress={() => { setDialog(null); onOpen(p.code); }} />
           ))}
         </View>
       </Sheet>
@@ -217,7 +218,7 @@ function OtherProfile({ code }: { code: string }) {
     void load();
   }, [load]);
 
-  if (missing) return <Card><Empty icon="user-x" text="Nobody has this code." /></Card>;
+  if (missing) return <Card><Empty icon="user-x" text={t('Nobody has this code.')} /></Card>;
   if (!person) return null;
   const toggle = async () => {
     setBusy(true);
@@ -238,20 +239,20 @@ function OtherProfile({ code }: { code: string }) {
         photo={person.photo}
         actions={
           <>
-            <Pill label="Message" icon="heart" primary grow={narrow} onPress={() => openChat(code)} />
-            <Pill label={person.sharedWithThem ? 'Stop sharing' : 'Share my data'} icon="share-2" danger={person.sharedWithThem} grow={narrow} disabled={busy} onPress={toggle} />
+            <Pill label={t('Message')} icon="heart" primary grow={narrow} onPress={() => openChat(code)} />
+            <Pill label={person.sharedWithThem ? t('Stop sharing') : t('Share my data')} icon="share-2" danger={person.sharedWithThem} grow={narrow} disabled={busy} onPress={toggle} />
           </>
         }
       />
       {summary?.summary ? (
         <Card>
-          <Text style={[type.title, { color: c.text }]}>{first}'s summary</Text>
+          <Text style={[type.title, { color: c.text }]}>{t("{name}'s summary", { name: first })}</Text>
           <SummaryView summary={summary.summary} updatedAt={summary.updatedAt} />
         </Card>
       ) : (
         <Card>
           <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>
-            {person.summaryAccess ? `${first} shared the summary, but it has not been published yet.` : `${first} has not shared a summary with you.`}
+            {person.summaryAccess ? t('{name} shared the summary, but it has not been published yet.', { name: first }) : t('{name} has not shared a summary with you.', { name: first })}
           </Text>
         </Card>
       )}

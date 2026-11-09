@@ -5,6 +5,7 @@
  * little, because spending on them unplanned shows a lack of planning.
  */
 
+import { t } from '../i18n';
 import { CategoryRecord } from '../types';
 
 export interface Category {
@@ -70,12 +71,51 @@ export const IMPACT_LEVELS = [
 /** Id of the record that overrides a built-in category. */
 export const builtinRecordId = (kind: 'expense' | 'income', slug: string) => `${kind}_${slug}`;
 
+/** Built-in names, so the checker sees every one (the keys must be static literals). */
+function tBuiltin(label: string): string {
+  switch (label) {
+    case 'Groceries': return t('Groceries');
+    case 'Butcher': return t('Butcher');
+    case 'Bills': return t('Bills');
+    case 'Health': return t('Health');
+    case 'Taxes': return t('Taxes');
+    case 'Paperwork': return t('Paperwork');
+    case 'Education': return t('Education');
+    case 'Investments': return t('Investments');
+    case 'Refund': return t('Refund');
+    case 'Loan': return t('Loan');
+    case 'Car': return t('Car');
+    case 'Pets': return t('Pets');
+    case 'Personal care': return t('Personal care');
+    case 'Subscriptions': return t('Subscriptions');
+    case 'Debts': return t('Debts');
+    case 'Gifts': return t('Gifts');
+    case 'Leisure': return t('Leisure');
+    case 'Other': return t('Other');
+    case 'Salary': return t('Salary');
+    case 'Freelance': return t('Freelance');
+    default: return label;
+  }
+}
+
 const build = (records: CategoryRecord[]): Category[] => {
   const byId = new Map(records.map((r) => [r.id, r]));
   const make = (kind: 'expense' | 'income', b: Base): Category => {
     const r = byId.get(builtinRecordId(kind, b.slug));
     const system = kind === 'expense' ? SYSTEM.has(b.slug) : b.slug === REFUND_CATEGORY;
-    return { slug: b.slug, kind, label: r?.name ?? b.label, weight: r?.weight ?? b.weight, archived: !!r?.archivedAt && !system, custom: false, system };
+    // built-in names are translated at read time (a getter), unless the person renamed it
+    const renamed = r?.name && r.name !== b.label ? r.name : undefined;
+    return {
+      slug: b.slug,
+      kind,
+      get label() {
+        return renamed ?? tBuiltin(b.label);
+      },
+      weight: r?.weight ?? b.weight,
+      archived: !!r?.archivedAt && !system,
+      custom: false,
+      system,
+    };
   };
   const builtinIds = new Set([...EXPENSE.map((b) => builtinRecordId('expense', b.slug)), ...INCOME.map((b) => builtinRecordId('income', b.slug))]);
   const custom = records
@@ -107,4 +147,4 @@ export const categoryOf = (slug?: string): Category =>
 
 /** Category name of an expense or income; old income without a category shows as "Income". */
 export const categoryLabel = (slug?: string, type: 'expense' | 'income' = 'expense'): string =>
-  type === 'income' ? registry.find((c) => c.kind === 'income' && c.slug === slug)?.label ?? 'Income' : categoryOf(slug).label;
+  type === 'income' ? registry.find((c) => c.kind === 'income' && c.slug === slug)?.label ?? t('Income') : categoryOf(slug).label;

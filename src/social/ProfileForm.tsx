@@ -8,6 +8,7 @@ import { useSocial } from './SocialProvider';
 import { fallbackName } from './names';
 import { photoSupported, pickPhoto } from './photo';
 import { Avatar, Pill } from './parts';
+import { t } from '../i18n';
 
 /** Creates the profile (first time) or edits it: a photo and a name. */
 export function ProfileForm({ email, existing, onDone }: { email: string; existing: MyProfile | null; onDone: () => void }) {
@@ -22,14 +23,14 @@ export function ProfileForm({ email, existing, onDone }: { email: string; existi
 
   const submit = async () => {
     if (busy) return;
-    if (!name.trim()) return setError('Add the name people will see.');
+    if (!name.trim()) return setError(t('Add the name people will see.'));
     setBusy(true);
     setError('');
     try {
       await saveProfile({ displayName: name.trim(), ...(changed ? { photo } : {}) });
       onDone();
     } catch (e) {
-      setError('Could not save. Try again.');
+      setError(t('Could not save. Try again.'));
     } finally {
       setBusy(false);
     }
@@ -42,18 +43,18 @@ export function ProfileForm({ email, existing, onDone }: { email: string; existi
         {photoSupported ? (
           <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap', justifyContent: 'center' }}>
             <Pill
-              label={photo ? 'Change photo' : 'Add photo'}
+              label={photo ? t('Change photo') : t('Add photo')}
               icon="camera"
               onPress={() => void pickPhoto().then((p) => { if (p) { setPhoto(p); setChanged(true); } })}
             />
-            {photo ? <Pill label="Remove" danger onPress={() => { setPhoto(null); setChanged(true); }} /> : null}
+            {photo ? <Pill label={t('Remove')} danger onPress={() => { setPhoto(null); setChanged(true); }} /> : null}
           </View>
         ) : null}
       </View>
-      {!existing ? <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>Create your profile to follow people and chat. Nothing about your money is shown unless you choose to share it.</Text> : null}
-      <TextField label="Name" value={name} onChangeText={setName} maxLength={40} placeholder="Your name" />
+      {!existing ? <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>{t('Create your profile to follow people and chat. Nothing about your money is shown unless you choose to share it.')}</Text> : null}
+      <TextField label={t('Name')} value={name} onChangeText={setName} maxLength={40} placeholder={t('Your name')} />
       {error ? <Text style={[type.body, { color: c.expense }]}>{error}</Text> : null}
-      <Button label={busy ? 'Saving...' : existing ? 'Save profile' : 'Create profile'} icon="check" onPress={submit} disabled={busy} />
+      <Button label={busy ? t('Saving...') : existing ? t('Save profile') : t('Create profile')} icon="check" onPress={submit} disabled={busy} />
     </View>
   );
 }

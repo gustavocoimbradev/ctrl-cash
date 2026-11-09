@@ -11,6 +11,7 @@ import { authMessage, EmailStatus } from '../firebase/useAuth';
 import { colors as c, desktopBreakpoint, fontFamily, radius, spacing, type } from '../theme';
 import { motion, useReducedMotion } from '../theme/motion';
 import { useViewportHeight } from '../theme/viewport';
+import { t, usePrefsVersion } from '../i18n';
 
 /** Sober sign-in tones: refined accent blue (no neon) and a deeper shade for hover. */
 const BLUE = c.primary;
@@ -65,7 +66,7 @@ function BrandPanel() {
           </View>
         </Reveal>
         <Reveal index={2} distance={6} duration={700}>
-          <Text style={s.headline}>Control your money.{'\n'}Don't let it control you.</Text>
+          <Text style={s.headline}>{t('Control your money.')}{'\n'}{t("Don't let it control you.")}</Text>
         </Reveal>
       </View>
     </LinearGradient>
@@ -98,7 +99,7 @@ function MobilePanel({ tight }: { tight: boolean }) {
           </View>
         </Reveal>
         <Reveal index={2} distance={6} duration={700}>
-          <Text style={[s.headline, { fontSize: tight ? 20 : 22, lineHeight: tight ? 27 : 30, textAlign: 'center' }]}>Control your money.{'\n'}Don't let it control you.</Text>
+          <Text style={[s.headline, { fontSize: tight ? 20 : 22, lineHeight: tight ? 27 : 30, textAlign: 'center' }]}>{t('Control your money.')}{'\n'}{t("Don't let it control you.")}</Text>
         </Reveal>
       </View>
     </LinearGradient>
@@ -181,6 +182,7 @@ type Step = 'idle' | 'checking' | 'exists' | 'google' | 'new';
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
 export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmail }: LoginProps) {
+  usePrefsVersion(); // re-render when the language changes
   const { width } = useWindowDimensions();
   // the page height the app really has (the install banner, when shown, takes part of the window)
   const height = useViewportHeight();
@@ -264,12 +266,12 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
   const submit = async () => {
     if (busy || step === 'checking') return;
     const value = email.trim();
-    if (!EMAIL_RE.test(value)) return fail('Enter a valid email.');
+    if (!EMAIL_RE.test(value)) return fail(t('Enter a valid email.'));
     if (step === 'idle') return check(value, ++request.current);
     if (step === 'google') return google(value);
-    if (creating && !name.trim()) return fail('Enter your name.');
-    if (!password) return fail(creating ? 'Choose a password.' : 'Enter your password.');
-    if (creating && confirm !== password) return fail(confirm ? 'The passwords do not match.' : 'Repeat the password to confirm it.');
+    if (creating && !name.trim()) return fail(t('Enter your name.'));
+    if (!password) return fail(creating ? t('Choose a password.') : t('Enter your password.'));
+    if (creating && confirm !== password) return fail(confirm ? t('The passwords do not match.') : t('Repeat the password to confirm it.'));
     setBusy(true);
     setError('');
     setInfo('');
@@ -299,12 +301,12 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
 
   const reset = async () => {
     if (busy) return;
-    if (!EMAIL_RE.test(email.trim())) return fail('Enter your email to receive the link.');
+    if (!EMAIL_RE.test(email.trim())) return fail(t('Enter your email to receive the link.'));
     setBusy(true);
     try {
       await onReset(email);
       setError('');
-      setInfo(`We sent a reset link to ${email.trim()}.`);
+      setInfo(t('We sent a reset link to {email}.', { email: email.trim() }));
     } catch (e) {
       fail(authMessage(e));
     } finally {
@@ -349,9 +351,9 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
       {desktop && (
         <Reveal index={1} distance={6} duration={600}>
           <View style={{ gap: spacing.xs }}>
-            <Text style={s.title}>{creating ? 'Create your account' : step === 'exists' || step === 'google' ? 'Welcome back' : 'Welcome'}</Text>
+            <Text style={s.title}>{creating ? t('Create your account') : step === 'exists' || step === 'google' ? t('Welcome back') : t('Welcome')}</Text>
             <Text style={[type.body, { color: c.textMuted, minHeight: 48 }]}>
-              {creating ? 'Tell us your name and choose a password.' : step === 'exists' ? 'Enter your password to continue.' : step === 'google' ? '' : 'Enter your email to sign in or create your account.'}
+              {creating ? t('Tell us your name and choose a password.') : step === 'exists' ? t('Enter your password to continue.') : step === 'google' ? '' : t('Enter your email to sign in or create your account.')}
             </Text>
           </View>
         </Reveal>
@@ -359,7 +361,7 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
       <Reveal index={2} distance={6} duration={600}>
        <View onLayout={(e) => setFieldH(e.nativeEvent.layout.height)}>
         <AuthField
-          label="Email"
+          label={t('Email')}
           icon="mail"
           value={email}
           onChangeText={changeEmail}
@@ -378,7 +380,7 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
       {step === 'new' && (
         <Reveal distance={6} duration={400}>
           <AuthField
-            label="Name"
+            label={t('Name')}
             icon="user"
             inputRef={nameRef}
             autoFocus
@@ -399,7 +401,7 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
       {(step === 'exists' || step === 'new') && (
         <Reveal key={step === 'new' ? 'pw-new' : 'pw'} distance={6} duration={400}>
           <AuthField
-            label="Password"
+            label={t('Password')}
             icon="lock"
             inputRef={passwordRef}
             autoFocus={!creating}
@@ -416,7 +418,7 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
             message={target === 'password' ? note : undefined}
             messageColor={error ? c.expense : BLUE}
             right={
-              <Pressable accessibilityRole="button" accessibilityLabel={show ? 'Hide password' : 'Show password'} onPress={() => setShow((v) => !v)} style={s.eye}>
+              <Pressable accessibilityRole="button" accessibilityLabel={show ? t('Hide password') : t('Show password')} onPress={() => setShow((v) => !v)} style={s.eye}>
                 <Feather name={show ? 'eye-off' : 'eye'} size={20} color={c.textMuted} />
               </Pressable>
             }
@@ -426,7 +428,7 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
       {step === 'new' && (
         <Reveal distance={6} duration={400}>
           <AuthField
-            label="Repeat password"
+            label={t('Repeat password')}
             icon="lock"
             inputRef={confirmRef}
             value={confirm}
@@ -460,7 +462,7 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
         >
           {busy || step === 'checking' ? <ActivityIndicator color="#FFFFFF" size="small" /> : null}
           <Text style={[type.label, { color: '#FFFFFF', lineHeight: 20 }]}>
-            {busy ? (creating ? 'Creating account...' : 'Signing in...') : step === 'checking' ? 'Checking...' : creating ? 'Create account' : step === 'exists' ? 'Sign in' : step === 'google' ? 'Continue with Google' : 'Continue'}
+            {busy ? (creating ? t('Creating account...') : t('Signing in...')) : step === 'checking' ? t('Checking...') : creating ? t('Create account') : step === 'exists' ? t('Sign in') : step === 'google' ? t('Continue with Google') : t('Continue')}
           </Text>
           {!busy && step !== 'checking' && (
             // drawn as SVG (not an icon font): the arrow is optically centered on the label, no baseline offset
@@ -478,13 +480,13 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
             {!tiny && (
               <View style={s.or}>
                 <View style={s.orLine} />
-                <Text style={[type.body, { color: c.textMuted }]}>or</Text>
+                <Text style={[type.body, { color: c.textMuted }]}>{t('or')}</Text>
                 <View style={s.orLine} />
               </View>
             )}
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Continue with Google"
+              accessibilityLabel={t('Continue with Google')}
               disabled={busy}
               onPress={() => google()}
               onHoverIn={() => setGHover(true)}
@@ -497,7 +499,7 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
               ]}
             >
               <GoogleMark />
-              <Text style={[type.label, { color: c.text }]}>Continue with Google</Text>
+              <Text style={[type.label, { color: c.text }]}>{t('Continue with Google')}</Text>
             </Pressable>
           </View>
         </Reveal>
@@ -515,8 +517,8 @@ export function LoginScreen({ onSignIn, onSignUp, onReset, onGoogle, onCheckEmai
             style={s.link}
           >
             <Text style={[type.body, { color: c.textMuted }]}>
-              {step === 'exists' ? 'Forgot your password? ' : step === 'new' ? 'I already have an account. ' : 'First time here? '}
-              <Text style={{ color: BLUE, fontWeight: '600' }}>{step === 'exists' ? 'Reset it' : step === 'new' ? 'Sign in' : 'Create account'}</Text>
+              {step === 'exists' ? t('Forgot your password?') : step === 'new' ? t('I already have an account.') : t('First time here?')}{' '}
+              <Text style={{ color: BLUE, fontWeight: '600' }}>{step === 'exists' ? t('Reset it') : step === 'new' ? t('Sign in') : t('Create account')}</Text>
             </Text>
           </Pressable>
         </Reveal>

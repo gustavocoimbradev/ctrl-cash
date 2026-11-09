@@ -4,6 +4,7 @@ import { Animated, Modal, Platform, Pressable, StyleSheet, Text, View, useWindow
 import { colors as c, glow, radius, spacing, type } from '../theme';
 import { motion, useReducedMotion } from '../theme/motion';
 import { useInstallBannerHeight } from '../theme/viewport';
+import { t } from '../i18n';
 
 export interface MenuItem {
   key: string;
@@ -48,13 +49,13 @@ export function MenuDrawer({ visible, onClose, header, items, side = 'right' }: 
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       <View style={{ flex: 1, marginTop: bannerH }}>
-        <Pressable accessibilityLabel="Close menu" style={StyleSheet.absoluteFill} onPress={onClose}>
+        <Pressable accessibilityLabel={t('Close menu')} style={StyleSheet.absoluteFill} onPress={onClose}>
           <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.overlay, opacity: enter }, Platform.OS === 'web' && ({ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' } as object)]} />
         </Pressable>
         <Animated.View style={[s.panel, side === 'left' ? s.panelLeft : s.panelRight, glow('#1E2950', 40, 0.5), { width: panelW, opacity: enter.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 1, 1] }), transform: [{ translateX: enter.interpolate({ inputRange: [0, 1], outputRange: [panelW * 0.35 * (side === 'left' ? -1 : 1), 0] }) }] }]}>
           <View style={s.head}>
             <View style={{ flex: 1, minWidth: 0 }}>{header}</View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close menu" onPress={onClose} style={s.close}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('Close menu')} onPress={onClose} style={s.close}>
               <Feather name="x" size={22} color={c.textMuted} />
             </Pressable>
           </View>

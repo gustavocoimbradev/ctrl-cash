@@ -3,8 +3,10 @@ import { Text, View } from 'react-native';
 import { spacing, type, useColors } from '../theme';
 import { useSocial } from './SocialProvider';
 import { Empty, Pill, PersonRow } from './parts';
+import { t } from '../i18n';
 
-const preview = (mine: boolean, body: string) => `${mine ? 'You: ' : ''}${body.replace(/\s+/g, ' ')}`;
+const clean = (body: string) => body.replace(/\s+/g, ' ');
+const preview = (mine: boolean, body: string) => (mine ? t('You: {text}', { text: clean(body) }) : clean(body));
 
 /** The conversations, newest first, with what is unread. */
 export function ChatsList({ onOpen, onNew }: { onOpen: (code: string) => void; onNew: () => void }) {
@@ -13,14 +15,14 @@ export function ChatsList({ onOpen, onNew }: { onOpen: (code: string) => void; o
   if (conversations.length === 0) {
     return (
       <View style={{ alignItems: 'center' }}>
-        <Empty icon="heart" text="No conversations yet. Start one with the other person's code." />
-        <Pill label="New chat" icon="plus" primary onPress={onNew} />
+        <Empty icon="heart" text={t("No conversations yet. Start one with the other person's code.")} />
+        <Pill label={t('New chat')} icon="plus" primary onPress={onNew} />
       </View>
     );
   }
   return (
     <View style={{ gap: spacing.xs }}>
-      <Pill label="New chat" icon="plus" onPress={onNew} />
+      <Pill label={t('New chat')} icon="plus" onPress={onNew} />
       {conversations.map((cv) => (
         <PersonRow
           key={cv.with.code}

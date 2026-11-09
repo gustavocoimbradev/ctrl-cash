@@ -4,6 +4,7 @@ import { Animated, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { colors as c, spacing } from '../theme';
 import { motion, useReducedMotion } from '../theme/motion';
 import { Reveal } from './Reveal';
+import { t } from '../i18n';
 
 export type MobileTab = 'summary' | 'projection' | 'transactions';
 
@@ -60,19 +61,19 @@ export function BottomBar({ tab, onChange, onAdd, onProfile, avatar }: { tab: Mo
           {SLOTS.map((it, i) =>
             it === 'add' ? (
               <View key="add" style={s.item}>
-                <Pressable accessibilityRole="button" accessibilityLabel="New transaction" onPress={onAdd} style={({ pressed }) => [s.add, { opacity: pressed ? 0.8 : 1 }]}>
+                <Pressable accessibilityRole="button" accessibilityLabel={t('New transaction')} onPress={onAdd} style={({ pressed }) => [s.add, { opacity: pressed ? 0.8 : 1 }]}>
                   <Feather name="plus" size={24} color={c.onPrimary} />
                 </Pressable>
               </View>
             ) : it === 'profile' ? (
-              <Pressable key="profile" accessibilityRole="button" accessibilityLabel="My profile" onPress={onProfile} style={({ pressed }) => [s.item, { opacity: pressed ? 0.7 : 1 }]}>
+              <Pressable key="profile" accessibilityRole="button" accessibilityLabel={t('My profile')} onPress={onProfile} style={({ pressed }) => [s.item, { opacity: pressed ? 0.7 : 1 }]}>
                 {avatar}
               </Pressable>
             ) : (
               <Pressable
                 key={it.key}
                 accessibilityRole="tab"
-                accessibilityLabel={it.label}
+                accessibilityLabel={t(it.label)}
                 accessibilityState={{ selected: it.key === tab }}
                 onPress={() => onChange(it.key)}
                 style={({ pressed }) => [s.item, { opacity: pressed ? 0.7 : 1 }]}

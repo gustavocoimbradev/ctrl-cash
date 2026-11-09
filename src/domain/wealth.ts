@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+
 /** App focus: ACCUMULATE AS MUCH AS POSSIBLE. There is no separate reserve: each month's leftover is wealth. */
 
 /**
@@ -50,10 +52,12 @@ export function runwayMonths(worth: number, avgMonthlyExpense: number): number |
 
 /** "12 days", "3.5 months", "1.4 years". */
 export function formatRunway(months: number): string {
-  const plural = (v: number, unit: string) => `${v} ${unit}${v === 1 ? '' : 's'}`;
-  if (months < 1) return plural(Math.round(months * 30), 'day');
-  if (months < 12) return `${months.toFixed(1)} months`;
-  return `${(months / 12).toFixed(1)} years`;
+  if (months < 1) {
+    const days = Math.round(months * 30);
+    return days === 1 ? t('{n} day', { n: days }) : t('{n} days', { n: days });
+  }
+  if (months < 12) return t('{n} months', { n: months.toFixed(1) });
+  return t('{n} years', { n: (months / 12).toFixed(1) });
 }
 
 export interface Health {

@@ -3,17 +3,17 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { Field, MoneyField, TextField } from '../components/Fields';
-import { CARD_COLORS } from '../domain/cards';
+import { CARD_COLORS, cardColorLabel } from '../domain/cards';
 import { Select } from '../components/Select';
 import { Sheet } from '../components/Sheet';
+import { t } from '../i18n';
 import { useStore } from '../store';
 import { type, useColors } from '../theme';
 import { CreditCard } from '../types';
 
-const dayOptions = Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: `Day ${i + 1}` }));
-
 export function CardForm({ visible, card, onClose }: { visible: boolean; card?: CreditCard; onClose: () => void }) {
   const c = useColors();
+  const dayOptions = Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: t('Day {day}', { day: i + 1 }) }));
   const { data, saveCard, archiveCard, restoreCard } = useStore();
   const [color, setColor] = useState<string>(CARD_COLORS[0].value);
   const [confirmArchive, setConfirmArchive] = useState(false);
@@ -34,8 +34,8 @@ export function CardForm({ visible, card, onClose }: { visible: boolean; card?: 
     }
   }, [visible, card]);
 
-  const nameError = name.trim() ? undefined : 'Enter the card name';
-  const limitError = limit > 0 ? undefined : 'Enter the limit';
+  const nameError = name.trim() ? undefined : t('Enter the card name');
+  const limitError = limit > 0 ? undefined : t('Enter the limit');
 
   const submit = () => {
     setTried(true);
@@ -47,7 +47,7 @@ export function CardForm({ visible, card, onClose }: { visible: boolean; card?: 
   return (
     <Sheet
       visible={visible}
-      title={card ? 'Edit card' : 'New card'}
+      title={card ? t('Edit card') : t('New card')}
       onClose={onClose}
       footer={
         card ? (
@@ -62,28 +62,28 @@ export function CardForm({ visible, card, onClose }: { visible: boolean; card?: 
               }}
               style={({ pressed }) => ({ flex: 1, minHeight: 48, justifyContent: 'center', alignItems: 'flex-start', opacity: pressed ? 0.6 : 1 })}
             >
-              <Text style={[type.label, { color: card.archivedAt ? c.primary : c.expense }]}>{card.archivedAt ? 'Restore' : 'Archive'}</Text>
+              <Text style={[type.label, { color: card.archivedAt ? c.primary : c.expense }]}>{card.archivedAt ? t('Restore') : t('Archive')}</Text>
             </Pressable>
-            <Button label="Save" icon="check" onPress={submit} />
+            <Button label={t('Save')} icon="check" onPress={submit} />
           </>
         ) : (
           <>
-            <Button label="Cancel" variant="secondary" onPress={onClose} flex />
-            <Button label="Save" icon="check" onPress={submit} flex />
+            <Button label={t('Cancel')} variant="secondary" onPress={onClose} flex />
+            <Button label={t('Save')} icon="check" onPress={submit} flex />
           </>
         )
       }
     >
-      <TextField label="Card name" value={name} onChangeText={setName} maxLength={60} error={tried ? nameError : undefined} />
-      <MoneyField label="Total limit" cents={limit} onChange={setLimit} error={tried ? limitError : undefined} />
-      <Select label="Due day" value={dueDay} options={dayOptions} onChange={setDueDay} />
-      <Field label="Color">
+      <TextField label={t('Card name')} value={name} onChangeText={setName} maxLength={60} error={tried ? nameError : undefined} />
+      <MoneyField label={t('Total limit')} cents={limit} onChange={setLimit} error={tried ? limitError : undefined} />
+      <Select label={t('Due day')} value={dueDay} options={dayOptions} onChange={setDueDay} />
+      <Field label={t('Color')}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           {CARD_COLORS.map((x) => (
             <Pressable
               key={x.value}
               accessibilityRole="button"
-              accessibilityLabel={`Color ${x.label}`}
+              accessibilityLabel={t('Color {name}', { name: cardColorLabel(x.label) })}
               accessibilityState={{ selected: color === x.value }}
               onPress={() => setColor(x.value)}
               style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 22, backgroundColor: x.value, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1, borderWidth: color === x.value ? 3 : 0, borderColor: c.card })}
@@ -96,13 +96,13 @@ export function CardForm({ visible, card, onClose }: { visible: boolean; card?: 
 
       <Sheet
         visible={confirmArchive}
-        title="Archive card"
+        title={t('Archive card')}
         onClose={() => setConfirmArchive(false)}
         footer={
           <>
-            <Button label="Cancel" variant="secondary" onPress={() => setConfirmArchive(false)} flex />
+            <Button label={t('Cancel')} variant="secondary" onPress={() => setConfirmArchive(false)} flex />
             <Button
-              label="Archive"
+              label={t('Archive')}
               danger
               flex
               onPress={() => {
@@ -115,7 +115,7 @@ export function CardForm({ visible, card, onClose }: { visible: boolean; card?: 
         }
       >
         <Text style={[type.body, { color: c.text }]}>
-          The card "{card?.name}" stops being offered for new purchases. Its transactions, installments, invoices and payments stay exactly as they are, and you can restore it any time.
+          {t('The card "{name}" stops being offered for new purchases. Its transactions, installments, invoices and payments stay exactly as they are, and you can restore it any time.', { name: card?.name ?? '' })}
         </Text>
       </Sheet>
     </Sheet>

@@ -4,6 +4,7 @@ import { Animated, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, T
 import { colors, glow, minTouch, radius, spacing, type, useColors } from '../theme';
 import { motion, useReducedMotion } from '../theme/motion';
 import { Field, useInputStyle } from './Fields';
+import { t } from '../i18n';
 
 export interface Option<T extends string | number> {
   value: T;
@@ -84,12 +85,12 @@ export function Select<T extends string | number>({ label, value, options, onCha
         style={({ pressed }) => [inputStyle, s.trigger, { opacity: pressed ? 0.7 : 1 }]}
       >
         <Text style={[type.body, { color: current ? c.text : c.textMuted, flex: 1 }]} numberOfLines={1}>
-          {current?.label ?? placeholder ?? 'Selecione'}
+          {current?.label ?? placeholder ?? t('Select')}
         </Text>
         <Feather name={open ? 'chevron-up' : 'chevron-down'} size={20} color={c.textMuted} />
       </Pressable>
       <Modal visible={open} transparent animationType="none" onRequestClose={close}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close list" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel={t('Close list')} />
         {anchor && (
           <Animated.View
             style={[
@@ -111,13 +112,13 @@ export function Select<T extends string | number>({ label, value, options, onCha
                 autoFocus
                 value={query}
                 onChangeText={setQuery}
-                placeholder="Search"
+                placeholder={t('Search')}
                 placeholderTextColor={c.textMuted}
                 style={[searchStyle, { minHeight: 44 }]}
               />
             </View>
             <ScrollView keyboardShouldPersistTaps="handled" style={{ flexGrow: 0 }} contentContainerStyle={{ padding: spacing.xs }}>
-              {filtered.length === 0 && <Text style={[type.body, { color: c.textMuted, padding: spacing.md }]}>Nothing found</Text>}
+              {filtered.length === 0 && <Text style={[type.body, { color: c.textMuted, padding: spacing.md }]}>{t('Nothing found')}</Text>}
               {filtered.map((item) => (
                 <Pressable
                   key={String(item.value)}

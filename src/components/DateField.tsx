@@ -1,13 +1,14 @@
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { addMonthsToKey, daysInMonth, formatDate, monthKey, monthLabel, parseISO, toISO, todayISO } from '../domain/dates';
+import { addMonthsToKey, daysInMonth, formatDate, monthKey, monthLabel, parseISO, toISO, todayISO, weekdayInitials } from '../domain/dates';
 import { colors, glow, minTouch, radius, spacing, type } from '../theme';
 import { Button } from './Button';
 import { Field, useInputStyle } from './Fields';
 import { Sheet } from './Sheet';
+import { t } from '../i18n';
 
-const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
 
 interface Props {
   label: string;
@@ -53,14 +54,14 @@ export function DateField({ label, value, onChange, error }: Props) {
       </Pressable>
       <Sheet visible={open} title={label} onClose={() => setOpen(false)}>
         <View style={s.nav}>
-          <NavButton icon="chevrons-left" label="Previous year" onPress={() => setView(addMonthsToKey(view, -12))} />
-          <NavButton icon="chevron-left" label="Previous month" onPress={() => setView(addMonthsToKey(view, -1))} />
+          <NavButton icon="chevrons-left" label={t('Previous year')} onPress={() => setView(addMonthsToKey(view, -12))} />
+          <NavButton icon="chevron-left" label={t('Previous month')} onPress={() => setView(addMonthsToKey(view, -1))} />
           <Text style={[type.label, { color: colors.text, flex: 1, textAlign: 'center' }]}>{monthLabel(view)}</Text>
-          <NavButton icon="chevron-right" label="Next month" onPress={() => setView(addMonthsToKey(view, 1))} />
-          <NavButton icon="chevrons-right" label="Next year" onPress={() => setView(addMonthsToKey(view, 12))} />
+          <NavButton icon="chevron-right" label={t('Next month')} onPress={() => setView(addMonthsToKey(view, 1))} />
+          <NavButton icon="chevrons-right" label={t('Next year')} onPress={() => setView(addMonthsToKey(view, 12))} />
         </View>
         <View style={s.grid}>
-          {WEEKDAYS.map((w, i) => (
+          {weekdayInitials().map((w, i) => (
             <View key={`w${i}`} style={s.cell}>
               <Text style={[type.body, { color: colors.textMuted }]}>{w}</Text>
             </View>
@@ -90,7 +91,7 @@ export function DateField({ label, value, onChange, error }: Props) {
             );
           })}
         </View>
-        <Button label="Today" variant="secondary" icon="calendar" onPress={() => pick(today)} />
+        <Button label={t('Today')} variant="secondary" icon="calendar" onPress={() => pick(today)} />
       </Sheet>
     </Field>
   );

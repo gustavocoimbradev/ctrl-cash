@@ -9,6 +9,7 @@ import { Thread } from './Thread';
 import { CodeInput, FoundPerson, useCodeLookup } from './code';
 import { Person, socialApi } from './api';
 import { Avatar, Pill } from './parts';
+import { t } from '../i18n';
 
 const WIDTH = 380;
 const HEIGHT = 560;
@@ -71,20 +72,20 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
           <View style={[s.ctaIcon, { backgroundColor: c.surface }]}>
             <Feather name="users" size={24} color={c.primary} />
           </View>
-          <Text style={[type.label, { color: c.text, textAlign: 'center' }]}>Chat with people you follow</Text>
-          <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>Create your profile to follow people and send messages. Nothing about your money is shown unless you share it.</Text>
-          <Pill label="Create profile" icon="user" primary onPress={() => onOpenProfile('me')} />
+          <Text style={[type.label, { color: c.text, textAlign: 'center' }]}>{t('Chat with people you follow')}</Text>
+          <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>{t('Create your profile to follow people and send messages. Nothing about your money is shown unless you share it.')}</Text>
+          <Pill label={t('Create profile')} icon="user" primary onPress={() => onOpenProfile('me')} />
         </View>
       );
     }
     if (composing) {
       return (
         <View style={{ gap: spacing.lg }}>
-          <Text style={[type.body, { color: c.textMuted }]}>Type the code of the person you want to talk to. You will see who it is before starting.</Text>
+          <Text style={[type.body, { color: c.textMuted }]}>{t('Type the code of the person you want to talk to. You will see who it is before starting.')}</Text>
           <CodeInput value={finder.text} onChange={finder.setText} autoFocus />
           <FoundPerson
             lookup={finder.lookup}
-            actions={(p) => <Pill label="Start chat" icon="heart" primary onPress={() => { setComposing(false); finder.clear(); openChat(p.code); }} />}
+            actions={(p) => <Pill label={t('Start chat')} icon="heart" primary onPress={() => { setComposing(false); finder.clear(); openChat(p.code); }} />}
           />
         </View>
       );
@@ -98,7 +99,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
       {!mobile && !chat.open && !mounted ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={unread > 0 ? `Messages, ${unread} unread` : 'Messages'}
+          accessibilityLabel={unread > 0 ? t('Messages, {n} unread', { n: unread }) : t('Messages')}
           onPress={() => openChat()}
           style={({ pressed, hovered }: any) => [s.pill, place, glow('#1E2950', 28, 0.5), { backgroundColor: c.card, borderColor: c.border, opacity: pressed ? 0.85 : 1, transform: [{ translateY: hovered ? -2 : 0 }] }, Platform.OS === 'web' && ({ transitionProperty: 'transform', transitionDuration: '150ms' } as object)]}
         >
@@ -110,7 +111,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
               </View>
             ) : null}
           </View>
-          <Text style={[type.label, { color: c.text }]}>Messages</Text>
+          <Text style={[type.label, { color: c.text }]}>{t('Messages')}</Text>
           {latest ? <Avatar name={latest.displayName} id={latest.code} color={latest.color} photo={latest.photo} size={32} /> : null}
         </Pressable>
       ) : null}
@@ -128,27 +129,27 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
           <View style={[s.header, mobile && s.headerPhone, { borderBottomColor: c.border }]}>
             {chat.with ? (
               <>
-                <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={chatList} style={s.iconBtn}>
+                <Pressable accessibilityRole="button" accessibilityLabel={t('Back')} onPress={chatList} style={s.iconBtn}>
                   <Feather name="arrow-left" size={22} color={c.text} />
                 </Pressable>
                 <Pressable accessibilityRole="button" onPress={() => chat.with && onOpenProfile(chat.with)} style={s.who}>
                   {peer ? <Avatar name={peer.displayName} id={peer.code} color={peer.color} photo={peer.photo} size={36} /> : null}
-                  <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{peer?.displayName ?? 'Conversation'}</Text>
+                  <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{peer?.displayName ?? t('Conversation')}</Text>
                 </Pressable>
               </>
             ) : (
               <View style={[s.who, { paddingLeft: mobile ? 0 : spacing.sm }]}>
                 {mobile && !composing ? (
-                  <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={closeChat} style={s.iconBtn}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={t('Back')} onPress={closeChat} style={s.iconBtn}>
                     <Feather name="arrow-left" size={24} color={c.text} />
                   </Pressable>
                 ) : null}
                 {composing ? (
-                  <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => { setComposing(false); finder.clear(); }} style={[s.iconBtn, { marginLeft: -spacing.sm }]}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={t('Back')} onPress={() => { setComposing(false); finder.clear(); }} style={[s.iconBtn, { marginLeft: -spacing.sm }]}>
                     <Feather name="arrow-left" size={22} color={c.text} />
                   </Pressable>
                 ) : null}
-                <Text style={[type.title, { color: c.text }]}>{composing ? 'New chat' : 'Messages'}</Text>
+                <Text style={[type.title, { color: c.text }]}>{composing ? t('New chat') : t('Messages')}</Text>
                 {unread > 0 && !composing ? (
                   <View style={[s.count, { backgroundColor: c.expense }]}>
                     <Text style={s.badgeText}>{unread > 99 ? '99+' : unread}</Text>
@@ -157,7 +158,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
               </View>
             )}
             {mobile ? null : (
-              <Pressable accessibilityRole="button" accessibilityLabel="Close chat" onPress={closeChat} style={s.iconBtn}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t('Close chat')} onPress={closeChat} style={s.iconBtn}>
                 <Feather name="x" size={22} color={c.textMuted} />
               </Pressable>
             )}

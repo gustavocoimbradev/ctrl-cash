@@ -22,6 +22,8 @@ import { ChatDock } from './src/social/ChatDock';
 import { Avatar } from './src/social/parts';
 import { MenuDrawer } from './src/components/MenuDrawer';
 import { ProfilePage } from './src/social/ProfilePage';
+import { PrefsProvider } from './src/store/prefs';
+import { t, usePrefsVersion } from './src/i18n';
 import { Transaction } from './src/types';
 import { desktopBreakpoint, maxContentWidth, minTouch, radius, spacing, type, useColors } from './src/theme';
 
@@ -50,7 +52,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   const [editing, setEditing] = useState<Transaction | undefined>();
   const [editingMonth, setEditingMonth] = useState<string | undefined>();
   const [preset, setPreset] = useState<FormPreset | undefined>();
-  const name = email.split('@')[0] || 'Account';
+  const name = email.split('@')[0] || t('Account');
   // first access (nothing registered yet): the setup opens by itself and keeps coming back, on every visit, until it is
   // finished. Closing it only hides it for this visit; finishing it (even with nothing added) is what ends it.
   const [seen, setSeen] = useState(() => onboardingSeen(uid));
@@ -111,7 +113,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
         {desktop ? (
           <View style={s.topInner}>
             <View style={s.topSide}>
-              <Pressable accessibilityRole="button" accessibilityLabel="Dashboard" onPress={toDashboard} style={s.brandRow}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t('Dashboard')} onPress={toDashboard} style={s.brandRow}>
                 <Brand size={18} color={c.text} />
               </Pressable>
             </View>
@@ -120,13 +122,13 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
               {/* my profile: the avatar (it is not highlighted on the profile page) */}
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="My profile"
+                accessibilityLabel={t('My profile')}
                 onPress={() => setPage({ name: 'profile', id: 'me' })}
                 style={({ pressed, hovered }: any) => [s.avatarBtn, { borderColor: hovered ? c.surfaceAlt : 'transparent', opacity: pressed ? 0.7 : 1 }]}
               >
                 <Avatar name={myProfile?.displayName ?? name} id={myProfile?.code ?? 'me'} color={myProfile?.color} photo={myProfile?.photo} size={36} />
               </Pressable>
-              <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={onSignOut} style={({ pressed, hovered }: any) => [s.iconBtn, { backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t('Sign out')} onPress={onSignOut} style={({ pressed, hovered }: any) => [s.iconBtn, { backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }]}>
                 <Feather name="log-out" size={20} color={c.textMuted} />
               </Pressable>
             </View>
@@ -134,13 +136,13 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
         ) : (
           // phone: the menu on the left (a panel with what is not on the bottom bar) and the chat on the right
           <View style={s.topInner}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Open menu" onPress={() => setMenuOpen(true)} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: pressed ? c.surface : 'transparent' }]}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('Open menu')} onPress={() => setMenuOpen(true)} style={({ pressed }: any) => [s.iconBtn, { backgroundColor: pressed ? c.surface : 'transparent' }]}>
               <Feather name="menu" size={24} color={c.text} />
             </Pressable>
             <View style={{ flex: 1 }} />
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={unread > 0 ? `Messages, ${unread} unread` : 'Messages'}
+              accessibilityLabel={unread > 0 ? t('Messages, {count} unread', { count: unread }) : t('Messages')}
               onPress={() => openChat()}
               style={({ pressed }: any) => [s.iconBtn, { backgroundColor: pressed ? c.surface : 'transparent' }]}
             >
@@ -241,10 +243,10 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
           </View>
         }
         items={[
-          { key: 'cards', icon: 'credit-card', label: 'Cards', onPress: () => setCardsOpen(true) },
-          { key: 'categories', icon: 'tag', label: 'Categories', onPress: () => setCategoriesOpen(true) },
-          { key: 'account', icon: 'settings', label: 'Account settings', onPress: () => setAccountOpen(true) },
-          { key: 'out', icon: 'log-out', label: 'Sign out', onPress: onSignOut, danger: true },
+          { key: 'cards', icon: 'credit-card', label: t('Cards'), onPress: () => setCardsOpen(true) },
+          { key: 'categories', icon: 'tag', label: t('Categories'), onPress: () => setCategoriesOpen(true) },
+          { key: 'account', icon: 'settings', label: t('Account settings'), onPress: () => setAccountOpen(true) },
+          { key: 'out', icon: 'log-out', label: t('Sign out'), onPress: onSignOut, danger: true },
         ]}
       />
       <CardsSheet visible={cardsOpen} onClose={() => setCardsOpen(false)} />
@@ -255,16 +257,20 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
 }
 
 export default function App() {
+  // the language or currency changed: render everything again, so each `t()` and `formatMoney()` reads the new one
+  usePrefsVersion();
   const { state, signIn, signUp, signOut, resetPassword, signInWithGoogle, checkEmail } = useAuth();
   if (state.status === 'loading') return <Splash />;
   if (state.status === 'out') return <LoginScreen onSignIn={signIn} onSignUp={signUp} onReset={resetPassword} onGoogle={signInWithGoogle} onCheckEmail={checkEmail} />;
   return (
     <StoreProvider uid={state.uid}>
-      <HelpProvider>
-        <SocialProvider account={{ email: state.email, name: state.name }}>
-          <Shell uid={state.uid} email={state.email} onSignOut={signOut} />
-        </SocialProvider>
-      </HelpProvider>
+      <PrefsProvider>
+        <HelpProvider>
+          <SocialProvider account={{ email: state.email, name: state.name }}>
+            <Shell uid={state.uid} email={state.email} onSignOut={signOut} />
+          </SocialProvider>
+        </HelpProvider>
+      </PrefsProvider>
     </StoreProvider>
   );
 }

@@ -1,4 +1,5 @@
 import { CreditCard } from '../types';
+import { t } from '../i18n';
 import { addMonthsToKey, monthKey, parseISO } from './dates';
 
 /** Invoice open today: the next one due (current month up to the due day, then the following). */
@@ -22,4 +23,19 @@ export const CARD_COLORS: { label: string; value: string }[] = [
 /** Card color: the chosen one or, if none, one from the palette by list position. */
 export function cardColor(card: CreditCard, index: number): string {
   return card.color ?? CARD_COLORS[index % CARD_COLORS.length].value;
+}
+
+/** Translated name of a built-in card color (the constant keeps English). */
+export function cardColorLabel(label: string): string {
+  switch (label) {
+    case 'Purple': return t('Purple');
+    case 'Blue': return t('Blue');
+    case 'Sky': return t('Sky');
+    case 'Coral': return t('Coral');
+    case 'Orange': return t('Orange');
+    case 'Yellow': return t('Yellow');
+    case 'Pink': return t('Pink');
+    case 'Gray': return t('Gray');
+    default: return label;
+  }
 }

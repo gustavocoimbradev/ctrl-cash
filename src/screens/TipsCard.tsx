@@ -6,6 +6,7 @@ import { HelpTip } from '../components/HelpTip';
 import { Sheet } from '../components/Sheet';
 import { Impact, ScoreFactor } from '../domain/insights';
 import { colors as c, radius, spacing, type } from '../theme';
+import { t } from '../i18n';
 
 const TONE = {
   negative: { color: c.expense, tint: 'rgba(224,68,107,0.12)' },
@@ -17,8 +18,8 @@ const IMPACT: Record<Impact, string> = { high: 'High impact', medium: 'Medium im
 /** The two groups (pulling the score down / pushing it up), each factor with its impact. */
 function FactorGroups({ factors }: { factors: ScoreFactor[] }) {
   const groups = [
-    { key: 'negative' as const, label: 'Pulling your score down', list: factors.filter((x) => x.tone === 'negative') },
-    { key: 'positive' as const, label: 'Pushing your score up', list: factors.filter((x) => x.tone === 'positive') },
+    { key: 'negative' as const, label: t('Pulling your score down'), list: factors.filter((x) => x.tone === 'negative') },
+    { key: 'positive' as const, label: t('Pushing your score up'), list: factors.filter((x) => x.tone === 'positive') },
   ].filter((g) => g.list.length > 0);
   return (
     <>
@@ -36,7 +37,7 @@ function FactorGroups({ factors }: { factors: ScoreFactor[] }) {
                   <Text style={[type.label, { color: c.text }]}>{x.title}</Text>
                   <Text style={[type.body, { color: c.textMuted }]}>{x.text}</Text>
                   <View style={[s.impact, { backgroundColor: tone.tint }]}>
-                    <Text style={[type.body, { color: tone.color, fontWeight: '600' }]}>{IMPACT[x.impact]}</Text>
+                    <Text style={[type.body, { color: tone.color, fontWeight: '600' }]}>{t(IMPACT[x.impact])}</Text>
                   </View>
                 </View>
               </View>
@@ -66,21 +67,21 @@ export function ScoreFactorsCard({ factors, scroll, collapsed }: { factors: Scor
     return (
       <>
         <Card>
-          <Pressable accessibilityRole="button" accessibilityLabel="Open the score factors" onPress={() => setOpen(true)} style={({ pressed }) => [s.head, { opacity: pressed ? 0.7 : 1 }]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('Open the score factors')} onPress={() => setOpen(true)} style={({ pressed }) => [s.head, { opacity: pressed ? 0.7 : 1 }]}>
             <View style={[s.tile, { backgroundColor: c.surface }]}>
               <Feather name="layers" size={22} color={c.primary} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[type.title, { color: c.text }]} numberOfLines={1}>Score factors</Text>
+              <Text style={[type.title, { color: c.text }]} numberOfLines={1}>{t('Score factors')}</Text>
               <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>
-                {[down ? `${down} pulling down` : null, up ? `${up} pushing up` : null].filter(Boolean).join(' · ')}
+                {[down ? t('{n} pulling down', { n: down }) : null, up ? t('{n} pushing up', { n: up }) : null].filter(Boolean).join(' · ')}
               </Text>
             </View>
             <Feather name="chevron-right" size={20} color={c.textMuted} />
           </Pressable>
         </Card>
-        <Sheet visible={open} title="Score factors" onClose={() => setOpen(false)}>
-          <Text style={[type.body, { color: c.textMuted }]}>{HELP}</Text>
+        <Sheet visible={open} title={t('Score factors')} onClose={() => setOpen(false)}>
+          <Text style={[type.body, { color: c.textMuted }]}>{t(HELP)}</Text>
           <FactorGroups factors={factors} />
         </Sheet>
       </>
@@ -94,8 +95,8 @@ export function ScoreFactorsCard({ factors, scroll, collapsed }: { factors: Scor
           <Feather name="layers" size={22} color={c.primary} />
         </View>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minWidth: 0 }}>
-          <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>Score factors</Text>
-          <HelpTip title="Score factors" text={HELP} />
+          <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{t('Score factors')}</Text>
+          <HelpTip title={t('Score factors')} text={t(HELP)} />
         </View>
       </View>
       <View style={[{ gap: spacing.lg }, scroll && ({ flexShrink: 1, minHeight: 0, overflowY: 'auto', paddingRight: 4 } as object)]}>

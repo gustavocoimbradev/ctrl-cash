@@ -4,6 +4,7 @@ import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-nat
 import { addMonthsToKey, currentMonthKey, monthLabel } from '../domain/dates';
 import { colors as c, minTouch, radius, type } from '../theme';
 import { motion, useReducedMotion } from '../theme/motion';
+import { t } from '../i18n';
 
 /** Month picker: ‹ Month Year › (tapping the name returns to the current month). The name slides in the direction of the change. */
 export function MonthNav({ month, onChange }: { month: string; onChange: (m: string) => void }) {
@@ -23,13 +24,13 @@ export function MonthNav({ month, onChange }: { month: string; onChange: (m: str
 
   return (
     <View style={s.bar}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => onChange(addMonthsToKey(month, -1))} style={({ pressed, hovered }: any) => [s.btn, { backgroundColor: hovered ? c.surfaceAlt : 'transparent', opacity: pressed ? 0.6 : 1 }]}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('Previous month')} onPress={() => onChange(addMonthsToKey(month, -1))} style={({ pressed, hovered }: any) => [s.btn, { backgroundColor: hovered ? c.surfaceAlt : 'transparent', opacity: pressed ? 0.6 : 1 }]}>
         <Feather name="chevron-left" size={22} color={c.textMuted} />
       </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Go to current month" onPress={() => onChange(currentMonthKey())} style={s.label}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('Go to current month')} onPress={() => onChange(currentMonthKey())} style={s.label}>
         <Animated.Text style={[type.label, { color: c.text, opacity: v, transform: [{ translateX }] }]} numberOfLines={1}>{monthLabel(month)}</Animated.Text>
       </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={() => onChange(addMonthsToKey(month, 1))} style={({ pressed, hovered }: any) => [s.btn, { backgroundColor: hovered ? c.surfaceAlt : 'transparent', opacity: pressed ? 0.6 : 1 }]}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('Next month')} onPress={() => onChange(addMonthsToKey(month, 1))} style={({ pressed, hovered }: any) => [s.btn, { backgroundColor: hovered ? c.surfaceAlt : 'transparent', opacity: pressed ? 0.6 : 1 }]}>
         <Feather name="chevron-right" size={22} color={c.textMuted} />
       </Pressable>
     </View>

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { colors as c, spacing, type } from '../theme';
 import { Button } from './Button';
 import { Sheet } from './Sheet';
+import { t } from '../i18n';
 
 interface Help {
   title: string;
@@ -27,7 +28,7 @@ export function HelpProvider({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={value}>
       {children}
-      <Sheet visible={open} title={help?.title ?? ''} onClose={() => setOpen(false)} footer={<Button label="Got it" onPress={() => setOpen(false)} flex />}>
+      <Sheet visible={open} title={help?.title ?? ''} onClose={() => setOpen(false)} footer={<Button label={t('Got it')} onPress={() => setOpen(false)} flex />}>
         <Text style={[type.body, { color: c.text }]}>{help?.text}</Text>
       </Sheet>
     </Ctx.Provider>
@@ -45,7 +46,7 @@ export function HelpTip({ title, text }: { title: string; text: string }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`What is ${title}?`}
+      accessibilityLabel={t('What is {title}?', { title })}
       onPress={() => show({ title, text })}
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 14 }}
       style={({ pressed }) => [s.hit, { opacity: pressed ? 0.6 : 1 }]}

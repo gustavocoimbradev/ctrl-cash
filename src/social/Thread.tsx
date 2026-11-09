@@ -2,21 +2,22 @@ import { Feather } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { radius, spacing, type, useColors } from '../theme';
+import { shortDate, timeOf } from '../domain/dates';
 import { Message, socialApi } from './api';
 import { useSocial } from './SocialProvider';
 import { Empty } from './parts';
+import { t } from '../i18n';
 
 const POLL_MS = 3500;
 const MAX = 1000;
 
-const timeOf = (ms: number) => new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 const dayOf = (ms: number) => {
   const d = new Date(ms);
   const now = new Date();
-  if (d.toDateString() === now.toDateString()) return 'Today';
+  if (d.toDateString() === now.toDateString()) return t('Today');
   const y = new Date(now.getTime() - 86_400_000);
-  if (d.toDateString() === y.toDateString()) return 'Yesterday';
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
+  if (d.toDateString() === y.toDateString()) return t('Yesterday');
+  return shortDate(ms, d.getFullYear() !== now.getFullYear());
 };
 
 /** The conversation with one person: bubbles, day separators and a composer. Polls while it is open. */
@@ -62,8 +63,8 @@ export function Thread({ id }: { id: string }) {
   }, [id, load]);
 
   useEffect(() => {
-    const t = setTimeout(() => scroller.current?.scrollToEnd({ animated: true }), 50);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => scroller.current?.scrollToEnd({ animated: true }), 50);
+    return () => clearTimeout(timer);
   }, [messages.length]);
 
   const send = async () => {
@@ -78,7 +79,7 @@ export function Thread({ id }: { id: string }) {
       setMessages((m) => [...m, res.message]);
       void refresh();
     } catch {
-      setError('The message was not sent. Try again.');
+      setError(t('The message was not sent. Try again.'));
     } finally {
       setSending(false);
     }
@@ -88,7 +89,7 @@ export function Thread({ id }: { id: string }) {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView ref={scroller} style={{ flex: 1 }} contentContainerStyle={s.list} keyboardShouldPersistTaps="handled">
-        {loaded && messages.length === 0 ? <Empty icon="heart" text="No messages yet. Say hi!" /> : null}
+        {loaded && messages.length === 0 ? <Empty icon="heart" text={t('No messages yet. Say hi!')} /> : null}
         {messages.map((m) => {
           const day = dayOf(m.createdAt);
           const showDay = day !== lastDay;
@@ -100,7 +101,7 @@ export function Thread({ id }: { id: string }) {
                 <View style={[s.bubble, m.mine ? { backgroundColor: c.primary, borderBottomRightRadius: 6 } : { backgroundColor: c.surface, borderBottomLeftRadius: 6 }]}>
                   <Text style={[type.body, { color: m.mine ? c.onPrimary : c.text }, Platform.OS === 'web' && ({ whiteSpace: 'pre-wrap', wordBreak: 'break-word' } as object)]} selectable>{m.body}</Text>
                 </View>
-                <Text style={[s.time, { color: c.textMuted }]}>{timeOf(m.createdAt)}{m.mine && m.readAt ? ' · Seen' : ''}</Text>
+                <Text style={[s.time, { color: c.textMuted }]}>{m.mine && m.readAt ? t('{time} · Seen', { time: timeOf(m.createdAt) }) : timeOf(m.createdAt)}</Text>
               </View>
             </React.Fragment>
           );
@@ -114,12 +115,12 @@ export function Thread({ id }: { id: string }) {
             <TextInput
               value={text}
               onChangeText={setText}
-              placeholder="Write a message"
+              placeholder={t('Write a message')}
               placeholderTextColor={c.textMuted}
               multiline
               numberOfLines={1}
               maxLength={MAX}
-              accessibilityLabel="Message"
+              accessibilityLabel={t('Message')}
               onKeyPress={(e: any) => {
                 // Enter sends, Shift+Enter breaks the line (web)
                 if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
@@ -131,7 +132,7 @@ export function Thread({ id }: { id: string }) {
             />
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Send"
+              accessibilityLabel={t('Send')}
               onPress={send}
               disabled={!text.trim() || sending}
               style={({ pressed }) => [s.send, { backgroundColor: c.primary, opacity: !text.trim() || sending ? 0.4 : pressed ? 0.8 : 1 }]}
@@ -142,7 +143,7 @@ export function Thread({ id }: { id: string }) {
         </View>
       ) : (
         <View style={[s.composer, { borderTopColor: c.border }]}>
-          <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>You can message each other once you both follow each other.</Text>
+          <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>{t('You can message each other once you both follow each other.')}</Text>
         </View>
       )}
     </View>

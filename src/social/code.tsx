@@ -4,6 +4,7 @@ import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { radius, spacing, type, useColors } from '../theme';
 import { PersonDetail, socialApi } from './api';
 import { Avatar } from './parts';
+import { t } from '../i18n';
 
 /** A code is 6 characters: digits and letters (no I or O, so nothing is mistaken for 1 or 0). */
 export const CODE_LENGTH = 6;
@@ -32,8 +33,8 @@ export function useCodeLookup() {
   }, []);
 
   const setText = useCallback(
-    (t: string) => {
-      const code = normalizeCode(t);
+    (text: string) => {
+      const code = normalizeCode(text);
       setTextRaw(code);
       if (CODE_RE.test(code)) void run(code);
       else {
@@ -51,8 +52,9 @@ export function useCodeLookup() {
 }
 
 /** The field where a code is typed. */
-export function CodeInput({ value, onChange, autoFocus, placeholder = 'Enter a code', bare }: { value: string; onChange: (t: string) => void; autoFocus?: boolean; placeholder?: string; /** no own background (when it sits inside another box) */ bare?: boolean }) {
+export function CodeInput({ value, onChange, autoFocus, placeholder, bare }: { value: string; onChange: (t: string) => void; autoFocus?: boolean; placeholder?: string; /** no own background (when it sits inside another box) */ bare?: boolean }) {
   const c = useColors();
+  const ph = placeholder ?? t('Enter a code');
   const [focused, setFocused] = useState(false);
   return (
     <View style={[s.field, !bare && { backgroundColor: c.surface, borderColor: focused ? c.primary : 'transparent' }, bare && { borderColor: 'transparent' }]}>
@@ -63,12 +65,12 @@ export function CodeInput({ value, onChange, autoFocus, placeholder = 'Enter a c
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         autoFocus={autoFocus}
-        placeholder={placeholder}
+        placeholder={ph}
         placeholderTextColor={c.textMuted}
         autoCapitalize="characters"
         autoCorrect={false}
         maxLength={CODE_LENGTH + 4}
-        accessibilityLabel="Code"
+        accessibilityLabel={t('Code')}
         style={[type.label, s.input, { color: c.text, letterSpacing: value ? 3 : 0 }, Platform.OS === 'web' && ({ outlineStyle: 'none' } as object)]}
       />
     </View>
@@ -79,8 +81,8 @@ export function CodeInput({ value, onChange, autoFocus, placeholder = 'Enter a c
 export function FoundPerson({ lookup, actions }: { lookup: Lookup; actions: (person: PersonDetail) => React.ReactNode }) {
   const c = useColors();
   if (lookup.status === 'idle') return null;
-  if (lookup.status === 'loading') return <Text style={[type.body, { color: c.textMuted }]}>Looking...</Text>;
-  if (lookup.status === 'missing') return <Text style={[type.body, { color: c.expense }]}>No one has this code. Check it and try again.</Text>;
+  if (lookup.status === 'loading') return <Text style={[type.body, { color: c.textMuted }]}>{t('Looking...')}</Text>;
+  if (lookup.status === 'missing') return <Text style={[type.body, { color: c.expense }]}>{t('No one has this code. Check it and try again.')}</Text>;
   const p = lookup.person;
   return (
     <View style={[s.card, { backgroundColor: c.surface }]}>
@@ -91,7 +93,7 @@ export function FoundPerson({ lookup, actions }: { lookup: Lookup; actions: (per
           <Text style={[type.body, { color: c.textMuted, letterSpacing: 2 }]}>{p.code}</Text>
         </View>
       </View>
-      {p.self ? <Text style={[type.body, { color: c.textMuted }]}>This is your own code.</Text> : <View style={s.actions}>{actions(p)}</View>}
+      {p.self ? <Text style={[type.body, { color: c.textMuted }]}>{t('This is your own code.')}</Text> : <View style={s.actions}>{actions(p)}</View>}
     </View>
   );
 }

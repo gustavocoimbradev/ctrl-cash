@@ -28,6 +28,7 @@ import { CreditCard, Occurrence, Transaction } from '../types';
 import type { MobileTab } from '../components/BottomBar';
 import { StatementKind, StatementSheet } from './Statements';
 import { FormPreset } from './TransactionForm';
+import { t } from '../i18n';
 
 type Entry =
   | { kind: 'tx'; date: string; key: string; o: Occurrence }
@@ -207,7 +208,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
             return {
               key: `buy-${o.key}`,
               title: o.description,
-              meta: [o.installment ? `${o.installment.index}/${o.installment.total}` : null, o.fixed ? (isPending(o, today) ? 'Fixed · expected' : 'Fixed') : null].filter(Boolean).join(' · '),
+              meta: [o.installment ? `${o.installment.index}/${o.installment.total}` : null, o.fixed ? (isPending(o, today) ? t('Fixed · expected') : t('Fixed')) : null].filter(Boolean).join(' · '),
               date: o.purchaseDate,
               amount: o.amount,
               sign: income ? '+' : '-',
@@ -215,15 +216,15 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
               icon: income ? 'rotate-ccw' : 'arrow-down-right',
               done: paid,
               group: paid ? 'done' : 'pending',
-              category: income ? 'Refund' : categoryLabel(o.category),
+              category: income ? t('Refund') : categoryLabel(o.category),
               onPress: () => edit(o),
             };
           }),
       ];
       return {
         key: entry.key,
-        title: `${ic.name} invoice`,
-        meta: [`${invoice.items.length} ${invoice.items.length === 1 ? 'item' : 'items'}`, !paid && invoice.paid > 0 ? `${formatMoney(left)} left` : null].filter(Boolean).join(' · '),
+        title: t('{name} invoice', { name: ic.name }),
+        meta: [invoice.items.length === 1 ? t('{n} item', { n: 1 }) : t('{n} items', { n: invoice.items.length }), !paid && invoice.paid > 0 ? t('{amount} left', { amount: formatMoney(left) }) : null].filter(Boolean).join(' · '),
         date: invoice.dueDate,
         amount: Math.max(invoice.total, invoice.paid),
         sign: '-',
@@ -231,11 +232,11 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
         icon: 'credit-card',
         done: paid,
         group: paid ? 'done' : 'pending',
-        category: 'Invoice',
+        category: t('Invoice'),
         children,
         check: {
           tone: 'expense',
-          label: paid ? `Undo payment of ${ic.name} invoice` : `Pay ${ic.name} invoice`,
+          label: paid ? t('Undo payment of {name} invoice', { name: ic.name }) : t('Pay {name} invoice', { name: ic.name }),
           // unchecking a paid invoice undoes its payment(s)
           onPress: paid ? () => invoice.payments.forEach((pm) => archivePayment(pm.id)) : pay,
         },
@@ -248,7 +249,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       key: entry.key,
       title: o.description,
       // every row carries one badge so the rows look alike: installment (n/total), Fixed or, when it is neither, One-time
-      meta: [o.installment ? `${o.installment.index}/${o.installment.total}` : null, o.fixed ? 'Fixed' : null].filter(Boolean).join(' · ') || 'One-time',
+      meta: [o.installment ? `${o.installment.index}/${o.installment.total}` : null, o.fixed ? t('Fixed') : null].filter(Boolean).join(' · ') || t('One-time'),
       date: o.date,
       amount: o.amount,
       sign: income ? '+' : '-',
@@ -257,7 +258,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       done: o.confirmed,
       group: o.confirmed ? 'done' : 'pending',
       category: categoryLabel(o.category, o.type),
-      check: { tone: income ? 'income' : 'expense', label: income ? 'Confirm receipt' : 'Confirm payment', onPress: () => toggleConfirmed(o.transactionId, o.monthKey) },
+      check: { tone: income ? 'income' : 'expense', label: income ? t('Confirm receipt') : t('Confirm payment'), onPress: () => toggleConfirmed(o.transactionId, o.monthKey) },
       onPress: () => edit(o),
     };
   });
@@ -282,7 +283,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
     if (nested) {
       return (
         <Pressable key={r.key} accessible={false} focusable={false} style={({ hovered }: any) => [s.nestedRow, hoverBg(hovered), dim && { opacity: 0.6 }]}>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Open ${r.title}`} onPress={r.onPress} style={({ pressed }: any) => [s.nestedMain, { opacity: pressed ? 0.6 : 1 }]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('Open {title}', { title: r.title })} onPress={r.onPress} style={({ pressed }: any) => [s.nestedMain, { opacity: pressed ? 0.6 : 1 }]}>
             {/* same columns as the parent row: the text starts at the same point as the invoice title */}
             <View style={{ flex: wide ? 3 : 1, minWidth: 0 }}>
               <View style={{ marginLeft: wide ? 52 : 16 }}>
@@ -301,7 +302,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
             </Text>
           </Pressable>
           {r.onRemove ? (
-            <Pressable accessibilityRole="button" accessibilityLabel="Archive payment" onPress={r.onRemove} style={s.trash}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('Archive payment')} onPress={r.onRemove} style={s.trash}>
               <Feather name="trash-2" size={18} color={c.textMuted} />
             </Pressable>
           ) : (
@@ -313,7 +314,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
     return (
       // the hover covers the WHOLE row (content, checkbox and delete button), not just the clickable part
       <Pressable key={r.key} accessible={false} focusable={false} style={({ hovered }: any) => [s.txRow, !wide && s.txRowMobile, border && { borderTopWidth: 1, borderColor: c.border }, hoverBg(hovered), dim && { opacity: 0.6 }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Open ${r.title}`} onPress={r.onPress} style={({ pressed }: any) => [s.txMain, !wide && s.txMainMobile, { opacity: pressed ? 0.6 : 1 }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('Open {title}', { title: r.title })} onPress={r.onPress} style={({ pressed }: any) => [s.txMain, !wide && s.txMainMobile, { opacity: pressed ? 0.6 : 1 }]}>
           <View style={{ flex: 3, flexDirection: 'row', alignItems: 'center', gap: spacing.md, minWidth: 0 }}>
             <View style={[s.tile, { backgroundColor: `${r.color}1A` }]}>
               <Feather name={r.icon} size={18} color={r.color} />
@@ -343,7 +344,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
           )}
         </Pressable>
         {r.onRemove ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Archive payment" onPress={r.onRemove} style={s.trash}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('Archive payment')} onPress={r.onRemove} style={s.trash}>
             <Feather name="trash-2" size={20} color={c.expense} />
           </Pressable>
         ) : r.check ? (
@@ -364,8 +365,8 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
         // mobile: title and month selector centered (the + is in the bottom bar)
         <View style={{ alignItems: 'center', gap: spacing.md, padding: spacing.lg, paddingBottom: spacing.md }}>
           <View style={s.titleRow}>
-            <Text style={[type.title, { color: c.text }]} numberOfLines={1}>Transactions</Text>
-            <HelpTip title="Transactions" text={TRANSACTIONS_HELP} />
+            <Text style={[type.title, { color: c.text }]} numberOfLines={1}>{t('Transactions')}</Text>
+            <HelpTip title={t('Transactions')} text={t(TRANSACTIONS_HELP)} />
           </View>
           <MonthNav month={month} onChange={onMonthChange} />
         </View>
@@ -373,15 +374,15 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
         <View style={[s.tableHead, { padding: spacing.xl - 4, paddingBottom: spacing.md }]}>
           <View style={s.headSide}>
             <View style={s.titleRow}>
-              <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>Transactions</Text>
-              <HelpTip title="Transactions" text={TRANSACTIONS_HELP} />
+              <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{t('Transactions')}</Text>
+              <HelpTip title={t('Transactions')} text={t(TRANSACTIONS_HELP)} />
             </View>
           </View>
           <MonthNav month={month} onChange={onMonthChange} />
           <View style={[s.headSide, { alignItems: 'flex-end' }]}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="New transaction"
+              accessibilityLabel={t('New transaction')}
               onPress={() => onAdd()}
               style={({ pressed, hovered }: any) => [s.addBtn, glow(c.primary, 12, 0.5), { backgroundColor: hovered ? '#2447BD' : c.primary, opacity: pressed ? 0.85 : 1 }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '160ms' } as object)]}
             >
@@ -393,10 +394,10 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       {wide && visibleGroups.length > 0 && (
         <View style={[s.txRow, s.headRow, { borderColor: c.border }]}>
           <View style={[s.txMain, { minHeight: 36 }]}>
-            <Text style={[type.body, { color: c.textMuted, flex: 3 }]}>Description</Text>
-            <Text style={[type.body, { color: c.textMuted, flex: 1.2 }]}>Date</Text>
-            <Text style={[type.body, { color: c.textMuted, flex: 1.5 }]}>Category</Text>
-            <Text style={[type.body, { color: c.textMuted, flex: 1.5, textAlign: 'right' }]}>Amount</Text>
+            <Text style={[type.body, { color: c.textMuted, flex: 3 }]}>{t('Description')}</Text>
+            <Text style={[type.body, { color: c.textMuted, flex: 1.2 }]}>{t('Date')}</Text>
+            <Text style={[type.body, { color: c.textMuted, flex: 1.5 }]}>{t('Category')}</Text>
+            <Text style={[type.body, { color: c.textMuted, flex: 1.5, textAlign: 'right' }]}>{t('Amount')}</Text>
           </View>
           <View style={{ width: 44 }} />
         </View>
@@ -409,8 +410,8 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
           <View style={s.emptyArt}>
             <Feather name="inbox" size={28} color={c.primary} />
           </View>
-          <Text style={[type.title, { color: c.text }]}>A quiet month here</Text>
-          <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>Nothing in {monthLabel(month)}. Tap + to add a transaction.</Text>
+          <Text style={[type.title, { color: c.text }]}>{t('A quiet month here')}</Text>
+          <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>{t('Nothing in {month}. Tap + to add a transaction.', { month: monthLabel(month) })}</Text>
         </View>
       ) : (
         <View key={month}>
@@ -418,7 +419,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
               <View key={g.key}>
                 {!single && (
                   <View style={s.groupLabel}>
-                    <Text style={[type.body, { color: c.textMuted, fontWeight: '600', letterSpacing: 0.3 }]}>{g.label}</Text>
+                    <Text style={[type.body, { color: c.textMuted, fontWeight: '600', letterSpacing: 0.3 }]}>{t(g.label)}</Text>
                     <View style={s.groupLine} />
                   </View>
                 )}
@@ -441,8 +442,8 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
         <View style={[s.summary, { borderTopColor: c.border }, mobile && s.summaryMobile]}>
           <View style={[s.summaryPair, mobile && s.summaryStack]}>
             {[
-              { label: 'Income', confirmed: summary.income.confirmed, pending: summary.income.pending, color: c.income, total: summary.income.total },
-              { label: 'Expenses', confirmed: summary.expense.confirmed, pending: summary.expense.pending, color: c.expense, total: summary.expense.total },
+              { label: t('Income'), confirmed: summary.income.confirmed, pending: summary.income.pending, color: c.income, total: summary.income.total },
+              { label: t('Expenses'), confirmed: summary.expense.confirmed, pending: summary.expense.pending, color: c.expense, total: summary.expense.total },
             ].map((x) => {
               const ratio = x.total > 0 ? Math.min(1, Math.max(0, x.confirmed / x.total)) : 0;
               return (
@@ -453,7 +454,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
                   <View style={s.valueRow}>
                     <Text style={[type.label, { color: x.color, fontSize: 20, flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{formatMoney(x.confirmed)}</Text>
                     <View style={s.splitItem}>
-                      <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>Pending {formatMoney(x.pending)}</Text>
+                      <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('Pending {amount}', { amount: formatMoney(x.pending) })}</Text>
                     </View>
                   </View>
                   <View style={s.splitBar}>
@@ -466,13 +467,13 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
           </View>
           {/* the result: what is left over right now, and what it will be once everything pending happens */}
           <View style={[s.resultRow, { backgroundColor: c.card, borderTopColor: c.border }]}>
-            <Text style={[type.title, { color: c.text }]}>Left over</Text>
+            <Text style={[type.title, { color: c.text }]}>{t('Left over')}</Text>
             <View style={s.resultValue}>
               <View style={s.resultAmount}>
                 <Pressable
                   onPress={() => { setAdjustTo(summary.leftNow); setAdjustOpen(true); }}
                   accessibilityRole="button"
-                  accessibilityLabel="Adjust left over"
+                  accessibilityLabel={t('Adjust left over')}
                   hitSlop={8}
                   style={({ hovered, pressed }: { hovered?: boolean; pressed: boolean }) => [s.adjustButton, { opacity: pressed ? 0.5 : hovered ? 0.8 : 0.45 }]}
                 >
@@ -480,25 +481,27 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
                 </Pressable>
                 <Text style={[type.title, { color: summary.leftNow < 0 ? c.expense : c.primary, fontSize: 22 }]} numberOfLines={1}>{formatMoney(summary.leftNow)}</Text>
               </View>
-              <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{formatMoney(summary.left)} when everything is paid</Text>
+              <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('{amount} when everything is paid', { amount: formatMoney(summary.left) })}</Text>
             </View>
           </View>
         </View>
       )}
-      <Sheet visible={adjustOpen} title="Adjust left over" onClose={() => setAdjustOpen(false)}>
+      <Sheet visible={adjustOpen} title={t('Adjust left over')} onClose={() => setAdjustOpen(false)}>
         <Text style={[type.body, { color: c.text }]}>
-          Type what you really have left over now. The difference is recorded as a corrective transaction, so nothing already registered changes.
+          {t('Type what you really have left over now. The difference is recorded as a corrective transaction, so nothing already registered changes.')}
         </Text>
-        <MoneyField label="Left over now" cents={adjustTo} onChange={setAdjustTo} />
+        <MoneyField label={t('Left over now')} cents={adjustTo} onChange={setAdjustTo} />
         <Text style={[type.body, { color: c.textMuted }]}>
           {adjustTo === summary.leftNow
-            ? `Already ${formatMoney(summary.leftNow)}: nothing to adjust.`
-            : `Now ${formatMoney(summary.leftNow)}. A ${adjustTo > summary.leftNow ? 'income' : 'expense'} of ${formatMoney(Math.abs(adjustTo - summary.leftNow))} named "Left over adjustment" will be added.`}
+            ? t('Already {amount}: nothing to adjust.', { amount: formatMoney(summary.leftNow) })
+            : adjustTo > summary.leftNow
+              ? t('Now {now}. An income of {diff} named "Left over adjustment" will be added.', { now: formatMoney(summary.leftNow), diff: formatMoney(Math.abs(adjustTo - summary.leftNow)) })
+              : t('Now {now}. An expense of {diff} named "Left over adjustment" will be added.', { now: formatMoney(summary.leftNow), diff: formatMoney(Math.abs(adjustTo - summary.leftNow)) })}
         </Text>
         <View style={{ flexDirection: 'row', gap: spacing.md }}>
-          <Button label="Cancel" variant="secondary" flex onPress={() => setAdjustOpen(false)} />
+          <Button label={t('Cancel')} variant="secondary" flex onPress={() => setAdjustOpen(false)} />
           <Button
-            label="Adjust"
+            label={t('Adjust')}
             flex
             icon="check"
             disabled={adjustTo === summary.leftNow}
@@ -507,7 +510,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
               if (diff === 0) return;
               // dated today while looking at the current month, otherwise on the last day of the month on screen
               const date = monthKey(today) === month ? today : endOfMonth(month);
-              addTransaction({ type: diff > 0 ? 'income' : 'expense', description: 'Left over adjustment', amount: Math.abs(diff), date, confirmed: true, fixed: false, category: 'adjustment', installments: 1 });
+              addTransaction({ type: diff > 0 ? 'income' : 'expense', description: t('Left over adjustment'), amount: Math.abs(diff), date, confirmed: true, fixed: false, category: 'adjustment', installments: 1 });
               setAdjustOpen(false);
             }}
           />
@@ -520,10 +523,10 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
   const health = financialHealth(runway, debtTotal, avgExpense, quality, { left: summary.left, income: summary.income.total }) ?? { score: 1000, saved: 40, debt: 30, habits: 30, month: 1, label: 'Excellent' };
   const healthColor = health.score < 250 ? c.expense : health.score < 500 ? c.warning : c.primary;
   const factors = [
-    { label: 'Wealth', v: health.saved / 40 },
-    { label: 'Debt-free', v: health.debt / 30 },
-    { label: 'Healthy spending', v: health.habits / 30 },
-    { label: 'Month result', v: health.month },
+    { label: t('Wealth'), v: health.saved / 40 },
+    { label: t('Debt-free'), v: health.debt / 30 },
+    { label: t('Healthy spending'), v: health.habits / 30 },
+    { label: t('Month result'), v: health.month },
   ];
   // what makes up the score (pulling it down / pushing it up), from the same numbers the score uses
   const activeCards = cards.filter((x) => !x.archivedAt);
@@ -547,14 +550,14 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
           <Feather name="heart" size={22} color={c.primary} />
         </View>
         <View style={[s.titleRow, { flex: 1 }]}>
-          <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>Financial health</Text>
-          <HelpTip title="Financial health" text={HEALTH_HELP} />
+          <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{t('Financial health')}</Text>
+          <HelpTip title={t('Financial health')} text={t(HEALTH_HELP)} />
         </View>
       </View>
       <View style={{ alignItems: 'center' }}>
         <Gauge segments={[{ value: Math.max(health.score, 1), color: healthColor }]} total={1000} size={220} gradient={health.score < 250 ? ['#F28BA3', '#E0446A'] : health.score < 500 ? ['#F5C16B', '#D9831F'] : ['#6F8FF5', '#2D55D9']}>
           <Counter value={health.score} style={[type.hero, { color: healthColor, lineHeight: 42 }]} />
-          <Text style={[type.label, { color: healthColor }]}>{health.label}</Text>
+          <Text style={[type.label, { color: healthColor }]}>{healthLabel(health.label)}</Text>
         </Gauge>
       </View>
       {factors.map((f) => (
@@ -572,13 +575,13 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
   // order: health, card debt, wealth figures and, last, financial freedom
   const debtCard = (
     <Card>
-      <Pressable accessibilityRole="button" accessibilityLabel="View statement: Card debt" onPress={() => setDetail('debt')} style={{ gap: spacing.md }}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('View statement: {name}', { name: t('Card debt') })} onPress={() => setDetail('debt')} style={{ gap: spacing.md }}>
         <View style={s.statHead}>
           <View style={[s.statTile, { backgroundColor: 'rgba(224,68,107,0.12)' }]}>
             <Feather name="credit-card" size={22} color={c.expense} />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>Card debt</Text>
+            <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('Card debt')}</Text>
             <Money cents={debtTotal} style={[type.title, { color: debtTotal > 0 ? c.expense : c.text, fontSize: 24 }]} numberOfLines={1} />
           </View>
           <Feather name="chevron-right" size={20} color={c.textMuted} />
@@ -587,13 +590,13 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
     </Card>
   );
   // pending account commitments (excluding the card, which has its own card): accumulated - debt - commitments = net
-  const commitmentsCard = <StatCard icon="clock" label="Pending commitments" cents={commitments} onPress={() => setDetail('commitments')} accent={c.warning} valueColor={commitments > 0 ? c.warning : c.text} />;
+  const commitmentsCard = <StatCard icon="clock" label={t('Pending commitments')} cents={commitments} onPress={() => setDetail('commitments')} accent={c.warning} valueColor={commitments > 0 ? c.warning : c.text} />;
   const figureEls = [
-    <StatCard key="s1" icon="trending-up" label="Accumulated wealth" cents={balanceNow} onPress={() => setDetail('accumulated')} accent={c.primary} valueColor={balanceNow < 0 ? c.expense : c.primary} />,
+    <StatCard key="s1" icon="trending-up" label={t('Accumulated wealth')} cents={balanceNow} onPress={() => setDetail('accumulated')} accent={c.primary} valueColor={balanceNow < 0 ? c.expense : c.primary} />,
     debtCard,
     commitmentsCard,
-    <StatCard key="s2" icon="award" label="Net worth" cents={worth} onPress={() => setDetail('net')} accent={c.violet} valueColor={worth < 0 ? c.expense : c.violet} />,
-    <StatCard key="s0" icon="sun" label="Financial freedom" value={runwayText ?? '—'} onPress={() => setDetail('freedom')} accent={runway !== null && runway < 3 ? c.expense : c.sky} valueColor={runway === null ? c.text : runway < 3 ? c.expense : c.sky} />,
+    <StatCard key="s2" icon="award" label={t('Net worth')} cents={worth} onPress={() => setDetail('net')} accent={c.violet} valueColor={worth < 0 ? c.expense : c.violet} />,
+    <StatCard key="s0" icon="sun" label={t('Financial freedom')} value={runwayText ?? '—'} onPress={() => setDetail('freedom')} accent={runway !== null && runway < 3 ? c.expense : c.sky} valueColor={runway === null ? c.text : runway < 3 ? c.expense : c.sky} />,
   ];
   // phone (Summary tab): health, its tips, then the figures; desktop splits them (see below)
   const items = [healthCard, tipsCard, ...figureEls];
@@ -621,28 +624,28 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       {mobile ? (
         <View style={{ gap: spacing.md, alignItems: 'center' }}>
           <View style={s.titleRow}>
-            <Text style={[type.title, { color: c.text }]}>Wealth projection</Text>
-            <HelpTip title="Wealth projection" text={PROJECTION_HELP} />
+            <Text style={[type.title, { color: c.text }]}>{t('Wealth projection')}</Text>
+            <HelpTip title={t('Wealth projection')} text={t(PROJECTION_HELP)} />
           </View>
           <View style={{ alignSelf: 'stretch' }}>
-            <PillToggle stretch value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: `${h} months` }))} />
+            <PillToggle stretch value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: t('{n} months', { n: h }) }))} />
           </View>
         </View>
       ) : (
         <View style={[s.rowBetween, { gap: spacing.md, flexWrap: 'wrap' }]}>
           <View style={{ flex: 1, minWidth: 220 }}>
             <View style={s.titleRow}>
-              <Text style={[type.title, { color: c.text }]}>Wealth projection</Text>
-              <HelpTip title="Wealth projection" text={PROJECTION_HELP} />
+              <Text style={[type.title, { color: c.text }]}>{t('Wealth projection')}</Text>
+              <HelpTip title={t('Wealth projection')} text={t(PROJECTION_HELP)} />
             </View>
           </View>
-          <PillToggle value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: `${h} months` }))} />
+          <PillToggle value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: t('{n} months', { n: h }) }))} />
         </View>
       )}
       <ProjectionChart
         series={[
-          { values: projection.planned, color: c.primary, area: true, label: 'Planned' },
-          { values: projection.habit, color: c.expense, dashed: true, label: 'Historical' },
+          { values: projection.planned, color: c.primary, area: true, label: t('Planned') },
+          { values: projection.habit, color: c.expense, dashed: true, label: t('Historical') },
         ].filter((_, i) => !hiddenSeries.includes(i))}
         labels={chartLabels}
         selected={chartSel === null ? null : Math.min(chartSel, projection.keys.length - 1)}
@@ -650,8 +653,8 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       />
       <ChartLegend
         items={[
-          { label: 'Planned', color: c.primary, line: true, on: !hiddenSeries.includes(0), onPress: () => toggleSeries(0) },
-          { label: 'Historical', color: c.expense, line: true, dashed: true, on: !hiddenSeries.includes(1), onPress: () => toggleSeries(1) },
+          { label: t('Planned'), color: c.primary, line: true, on: !hiddenSeries.includes(0), onPress: () => toggleSeries(0) },
+          { label: t('Historical'), color: c.expense, line: true, dashed: true, on: !hiddenSeries.includes(1), onPress: () => toggleSeries(1) },
         ]}
       />
     </Card>
@@ -661,8 +664,8 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
   const menu = (
     <View style={s.menu}>
       {[
-        { key: 'cards', icon: 'credit-card' as const, label: 'Cards', onPress: onOpenCards },
-        { key: 'categories', icon: 'tag' as const, label: 'Categories', onPress: onOpenCategories },
+        { key: 'cards', icon: 'credit-card' as const, label: t('Cards'), onPress: onOpenCards },
+        { key: 'categories', icon: 'tag' as const, label: t('Categories'), onPress: onOpenCategories },
       ].map((it) => (
         <Pressable
           key={it.key}
@@ -729,6 +732,8 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
   );
 }
 
+const healthLabel = (l: 'Critical' | 'Warning' | 'Good' | 'Excellent') => (l === 'Critical' ? t('Critical') : l === 'Warning' ? t('Warning') : l === 'Good' ? t('Good') : t('Excellent'));
+
 /** Recurrence tags (Fixed, 1/2, Reserve...) as discreet pills. */
 function MetaPills({ meta, end }: { meta: string; end?: boolean }) {
   const tags = meta.split(' · ').filter(Boolean);
@@ -774,7 +779,7 @@ function StatCard({ icon, label, value, cents, valueColor, accent, onPress }: { 
     // no hover state on the indicator cards (all alike, clickable or not); only the press feedback
     <Card>
       {onPress ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={`View statement: ${label}`} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('View statement: {name}', { name: label })} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
           {body}
         </Pressable>
       ) : (

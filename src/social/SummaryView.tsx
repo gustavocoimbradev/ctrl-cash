@@ -3,10 +3,11 @@ import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from
 import Svg, { Path, Text as SvgText } from 'react-native-svg';
 import { ChartLegend, ProjectionChart } from '../components/Charts';
 import { PillToggle } from '../components/Controls';
-import { addMonthsToKey, currentMonthKey, formatMonth } from '../domain/dates';
+import { addMonthsToKey, currentMonthKey, formatMonth, shortDate } from '../domain/dates';
 import { desktopBreakpoint, fontFamily, spacing, type, useColors } from '../theme';
 import { motion, useGlide, useTween, useTweenList } from '../theme/motion';
 import { CategoryShare, Summary } from './api';
+import { t } from '../i18n';
 
 const HORIZONS = [6, 12, 24] as const;
 type Horizon = (typeof HORIZONS)[number];
@@ -120,7 +121,7 @@ function Pie({ slices, selected, onSelect, size, compact, center }: { slices: { 
       {/* the pointer: hover on the web, a tap on a phone */}
       <Pressable
         accessibilityRole="image"
-        accessibilityLabel="Spending by category"
+        accessibilityLabel={t('Spending by category')}
         onPress={(e: any) => {
           const k = hit(e.nativeEvent.locationX, e.nativeEvent.locationY);
           onSelect(k === selected ? null : k);
@@ -183,7 +184,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
 
   const shownSpent = useTween(spentOfIncome, motion.slow);
   const hasData = months.some((m) => weight(m) > 0);
-  if (!hasData) return <Text style={[type.body, { color: c.textMuted }]}>Nothing to show yet: add some income and expenses.</Text>;
+  if (!hasData) return <Text style={[type.body, { color: c.textMuted }]}>{t('Nothing to show yet: add some income and expenses.')}</Text>;
 
   const colorOf = (slug: string) => {
     const i = categories.findIndex((x) => x.slug === slug);
@@ -191,16 +192,16 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   };
   const top = categories.slice(0, PALETTE.length);
   const rest = categories.slice(PALETTE.length).reduce((a, x) => a + x.pct, 0);
-  const pieRows = [...top.map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug) })), ...(rest > 0 ? [{ key: '_rest', label: 'Everything else', value: rest, color: OTHER }] : [])];
+  const pieRows = [...top.map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug) })), ...(rest > 0 ? [{ key: '_rest', label: t('Everything else'), value: rest, color: OTHER }] : [])];
   const pieTotal = pieRows.reduce((a, x) => a + x.value, 0) || 1;
 
   const chart = (
     <View style={{ gap: spacing.sm, flex: wide ? 1.7 : undefined, minWidth: 0 }}>
       <ProjectionChart
         series={[
-          { values: months.map((m) => (m.incomeRel === undefined ? 100 : m.incomeRel)), color: c.income, area: true, label: 'Income' },
-          { values: months.map((m) => (weight(m) * m.spent) / 100), color: c.expense, dashed: true, label: 'Spent' },
-          { values: months.map((m) => (weight(m) * m.saved) / 100), color: c.primary, label: 'Saved' },
+          { values: months.map((m) => (m.incomeRel === undefined ? 100 : m.incomeRel)), color: c.income, area: true, label: t('Income') },
+          { values: months.map((m) => (weight(m) * m.spent) / 100), color: c.expense, dashed: true, label: t('Spent') },
+          { values: months.map((m) => (weight(m) * m.saved) / 100), color: c.primary, label: t('Saved') },
         ]}
         areaColor={c.income}
         height={wide && pieBox.h > 0 ? Math.max(230, pieBox.h - 112) : 230}
@@ -212,7 +213,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
         tipWidth={310}
         renderTip={(i) => {
           const m = months[i];
-          if (!m || weight(m) <= 0) return <Text style={[type.body, { color: c.textMuted }]}>No income planned.</Text>;
+          if (!m || weight(m) <= 0) return <Text style={[type.body, { color: c.textMuted }]}>{t('No income planned.')}</Text>;
           const f = weight(m) / 100;
           const list = m.categories.slice(0, 4);
           const peak = Math.max(1, ...list.map((x) => x.pct * f));
@@ -221,11 +222,11 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
             <View style={{ gap: spacing.sm, marginTop: spacing.xs }}>
               <View style={s.tipLines}>
                 <View style={[s.tipPill, { backgroundColor: `${c.expense}1A` }]}>
-                  <Text style={[type.body, { color: c.textMuted }]}>Spent</Text>
+                  <Text style={[type.body, { color: c.textMuted }]}>{t('Spent')}</Text>
                   <Text style={[type.label, { color: c.expense }]}>{pct(r1(f * m.spent))}</Text>
                 </View>
                 <View style={[s.tipPill, { backgroundColor: `${over ? c.expense : c.primary}1A` }]}>
-                  <Text style={[type.body, { color: c.textMuted }]}>{over ? 'Over' : 'Saved'}</Text>
+                  <Text style={[type.body, { color: c.textMuted }]}>{over ? t('Over') : t('Saved')}</Text>
                   <Text style={[type.label, { color: over ? c.expense : c.primary }]}>{pct(r1(Math.abs(f * m.saved)))}</Text>
                 </View>
               </View>
@@ -253,9 +254,9 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
       />
       <ChartLegend
         items={[
-          { label: 'Income', color: c.income, line: true, on: true, onPress: () => {} },
-          { label: 'Spent', color: c.expense, line: true, dashed: true, on: true, onPress: () => {} },
-          { label: 'Saved', color: c.primary, line: true, on: true, onPress: () => {} },
+          { label: t('Income'), color: c.income, line: true, on: true, onPress: () => {} },
+          { label: t('Spent'), color: c.expense, line: true, dashed: true, on: true, onPress: () => {} },
+          { label: t('Saved'), color: c.primary, line: true, on: true, onPress: () => {} },
         ]}
       />
     </View>
@@ -264,7 +265,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   const pie = (
     <View onLayout={(e) => setPieBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })} style={{ gap: spacing.md, flex: wide ? 1 : undefined, minWidth: 0 }}>
       {pieRows.length === 0 ? (
-        <Text style={[type.body, { color: c.textMuted }]}>No expenses in this period.</Text>
+        <Text style={[type.body, { color: c.textMuted }]}>{t('No expenses in this period.')}</Text>
       ) : (
         <>
           <Pie
@@ -276,7 +277,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
             center={
               <>
                 <Text style={[type.title, { color: c.expense, fontSize: wide ? 20 : 22 }]}>{pct(r1(shownSpent))}</Text>
-                <Text style={[type.body, { color: c.textMuted }]}>{wide ? 'of income spent' : 'spent'}</Text>
+                <Text style={[type.body, { color: c.textMuted }]}>{wide ? t('of income spent') : t('spent')}</Text>
               </>
             }
           />
@@ -304,14 +305,14 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   return (
     <View style={{ gap: spacing.lg }}>
       <View style={s.head}>
-        {wide ? <Text style={[type.label, { color: c.text }]}>Month by month</Text> : null}
-        <PillToggle stretch={!wide} value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: `${h} months` }))} />
+        {wide ? <Text style={[type.label, { color: c.text }]}>{t('Month by month')}</Text> : null}
+        <PillToggle stretch={!wide} value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: t('{n} months', { n: h }) }))} />
       </View>
       <View style={[{ gap: spacing.xl }, wide && { flexDirection: 'row', alignItems: 'flex-start' }]}>
         {chart}
         {pie}
       </View>
-      {updatedAt ? <Text style={[type.body, { color: c.textMuted }]}>Updated {new Date(updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text> : null}
+      {updatedAt ? <Text style={[type.body, { color: c.textMuted }]}>{t('Updated {date}', { date: shortDate(updatedAt) })}</Text> : null}
     </View>
   );
 }

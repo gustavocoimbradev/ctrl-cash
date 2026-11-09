@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { categoryLabel } from './categories';
 import { formatMoney } from './money';
 import { Health, Spend, formatRunway, spendQuality } from './wealth';
@@ -50,9 +51,9 @@ export function buildScoreFactors(i: InsightInput): ScoreFactor[] {
   // no data yet: the score starts at its best, so what makes it up is shown as good (it changes as data comes in)
   if (!h || i.avgExpense <= 0) {
     return [
-      { id: 'start-debt', tone: 'positive', icon: 'shield', impact: 'high', title: 'You have no card debt', text: 'Nothing is owed on cards, so the Debt-free part of your score is complete.' },
-      { id: 'start-wealth', tone: 'positive', icon: 'trending-up', impact: 'high', title: 'A clean start', text: 'Your Wealth part grows as you leave money over each month; 12 months of expenses saved completes it.' },
-      { id: 'start-habits', tone: 'positive', icon: 'heart', impact: 'medium', title: 'Healthy spending so far', text: 'Your spending habits count as healthy until there is something to judge.' },
+      { id: 'start-debt', tone: 'positive', icon: 'shield', impact: 'high', title: t('You have no card debt'), text: t('Nothing is owed on cards, so the Debt-free part of your score is complete.') },
+      { id: 'start-wealth', tone: 'positive', icon: 'trending-up', impact: 'high', title: t('A clean start'), text: t('Your Wealth part grows as you leave money over each month; 12 months of expenses saved completes it.') },
+      { id: 'start-habits', tone: 'positive', icon: 'heart', impact: 'medium', title: t('Healthy spending so far'), text: t('Your spending habits count as healthy until there is something to judge.') },
     ];
   }
   const out: ScoreFactor[] = [];
@@ -62,9 +63,9 @@ export function buildScoreFactors(i: InsightInput): ScoreFactor[] {
 
   // spending versus income, this month
   if (i.monthLeft < 0) {
-    neg({ id: 'overspend', icon: 'trending-down', impact: 'high', title: 'You spend more than you earn', text: `This month your expenses are ${formatMoney(-i.monthLeft)} above your income.` });
+    neg({ id: 'overspend', icon: 'trending-down', impact: 'high', title: t('You spend more than you earn'), text: t('This month your expenses are {amount} above your income.', { amount: formatMoney(-i.monthLeft) }) });
   } else if (i.monthLeft > 0) {
-    pos({ id: 'leftover', icon: 'trending-up', impact: 'medium', title: 'You spend less than you earn', text: `${formatMoney(i.monthLeft)} is left over this month, about ${(i.monthLeft / i.avgExpense).toFixed(1)} months of expenses.` });
+    pos({ id: 'leftover', icon: 'trending-up', impact: 'medium', title: t('You spend less than you earn'), text: t('{amount} is left over this month, about {months} months of expenses.', { amount: formatMoney(i.monthLeft), months: (i.monthLeft / i.avgExpense).toFixed(1) }) });
   }
 
   // card debt (30 points of the score)
@@ -74,36 +75,36 @@ export function buildScoreFactors(i: InsightInput): ScoreFactor[] {
       id: 'debt',
       icon: 'credit-card',
       impact: months >= 2 ? 'high' : months >= 1 ? 'medium' : 'low',
-      title: 'You have card debt',
-      text: `You owe ${formatMoney(i.debt)} on cards, about ${months.toFixed(1)} months of your expenses.`,
+      title: t('You have card debt'),
+      text: t('You owe {amount} on cards, about {months} months of your expenses.', { amount: formatMoney(i.debt), months: months.toFixed(1) }),
     });
     if (i.debt > wealth) {
-      neg({ id: 'debt-vs-wealth', icon: 'alert-triangle', impact: 'high', title: 'Your debts are bigger than your wealth can cover', text: `${formatMoney(i.debt)} owed against ${formatMoney(wealth)} accumulated.` });
+      neg({ id: 'debt-vs-wealth', icon: 'alert-triangle', impact: 'high', title: t('Your debts are bigger than your wealth can cover'), text: t('{debt} owed against {wealth} accumulated.', { debt: formatMoney(i.debt), wealth: formatMoney(wealth) }) });
     }
   } else {
-    pos({ id: 'no-debt', icon: 'shield', impact: 'high', title: 'You have no card debt', text: 'Your cards are paid, so the Debt-free part of your score is complete.' });
+    pos({ id: 'no-debt', icon: 'shield', impact: 'high', title: t('You have no card debt'), text: t('Your cards are paid, so the Debt-free part of your score is complete.') });
   }
 
   // pending commitments versus wealth
   if (i.commitments > 0) {
     if (i.commitments > wealth) {
-      neg({ id: 'commitments', icon: 'clock', impact: 'medium', title: 'Your pending bills are bigger than what you have', text: `${formatMoney(i.commitments)} still to pay against ${formatMoney(wealth)} accumulated.` });
+      neg({ id: 'commitments', icon: 'clock', impact: 'medium', title: t('Your pending bills are bigger than what you have'), text: t('{bills} still to pay against {wealth} accumulated.', { bills: formatMoney(i.commitments), wealth: formatMoney(wealth) }) });
     } else {
-      pos({ id: 'commitments-covered', icon: 'clock', impact: 'low', title: 'Your pending bills are covered', text: `What you have accumulated (${formatMoney(wealth)}) is enough for the ${formatMoney(i.commitments)} still to pay.` });
+      pos({ id: 'commitments-covered', icon: 'clock', impact: 'low', title: t('Your pending bills are covered'), text: t('What you have accumulated ({wealth}) is enough for the {bills} still to pay.', { wealth: formatMoney(wealth), bills: formatMoney(i.commitments) }) });
     }
   }
 
   // cushion (40 points of the score, complete at 12 months)
   if (i.runway !== null) {
     if (i.runway < 3) {
-      neg({ id: 'cushion-short', icon: 'battery-charging', impact: i.runway < 1 ? 'high' : 'medium', title: 'Your cushion is short', text: `You could live ${formatRunway(i.runway)} without income; 12 months is the healthy mark.` });
+      neg({ id: 'cushion-short', icon: 'battery-charging', impact: i.runway < 1 ? 'high' : 'medium', title: t('Your cushion is short'), text: t('You could live {time} without income; 12 months is the healthy mark.', { time: formatRunway(i.runway) }) });
     } else if (i.runway < 12) {
-      neg({ id: 'cushion-partial', icon: 'battery-charging', impact: 'low', title: 'Your cushion is still growing', text: `You could live ${formatRunway(i.runway)} without income, short of the 12 months that complete this part of the score.` });
+      neg({ id: 'cushion-partial', icon: 'battery-charging', impact: 'low', title: t('Your cushion is still growing'), text: t('You could live {time} without income, short of the 12 months that complete this part of the score.', { time: formatRunway(i.runway) }) });
     } else {
-      pos({ id: 'cushion-full', icon: 'award', impact: 'high', title: 'Your cushion is complete', text: `You could live ${formatRunway(i.runway)} without income.` });
+      pos({ id: 'cushion-full', icon: 'award', impact: 'high', title: t('Your cushion is complete'), text: t('You could live {time} without income.', { time: formatRunway(i.runway) }) });
     }
     if (i.runway >= 3 && i.runway < 12 && i.runway >= 6) {
-      pos({ id: 'cushion-solid', icon: 'umbrella', impact: 'medium', title: 'You have a solid cushion', text: `${formatRunway(i.runway)} of expenses are already covered.` });
+      pos({ id: 'cushion-solid', icon: 'umbrella', impact: 'medium', title: t('You have a solid cushion'), text: t('{time} of expenses are already covered.', { time: formatRunway(i.runway) }) });
     }
   }
 
@@ -121,24 +122,24 @@ export function buildScoreFactors(i: InsightInput): ScoreFactor[] {
           id: 'category',
           icon: 'pie-chart',
           impact: quality < 0.5 ? 'high' : 'medium',
-          title: `A lot of your spending goes to ${categoryLabel(top)}`,
-          text: `${categoryLabel(top)} is ${share}% of what you spent in the last 3 months and weighs the most against your score.`,
+          title: t('A lot of your spending goes to {category}', { category: categoryLabel(top) }),
+          text: t('{category} is {share}% of what you spent in the last 3 months and weighs the most against your score.', { category: categoryLabel(top), share }),
         });
       }
     } else {
-      pos({ id: 'quality', icon: 'check-circle', impact: 'medium', title: 'Your spending is well chosen', text: 'Most of what you spent in the last 3 months went to essential items.' });
+      pos({ id: 'quality', icon: 'check-circle', impact: 'medium', title: t('Your spending is well chosen'), text: t('Most of what you spent in the last 3 months went to essential items.') });
     }
     const planned = i.spends.filter((s) => s.planned).reduce((a, s) => a + s.amount, 0) / total;
     if (planned < 0.4 && quality < 0.85) {
-      neg({ id: 'unplanned', icon: 'shuffle', impact: 'low', title: 'Most of your spending is one-off', text: `Only ${Math.round(planned * 100)}% was planned as fixed items or installments, and unplanned spending counts more against you.` });
+      neg({ id: 'unplanned', icon: 'shuffle', impact: 'low', title: t('Most of your spending is one-off'), text: t('Only {share}% was planned as fixed items or installments, and unplanned spending counts more against you.', { share: Math.round(planned * 100) }) });
     } else if (planned >= 0.6) {
-      pos({ id: 'planned', icon: 'calendar', impact: 'low', title: 'Most of your spending is planned', text: `${Math.round(planned * 100)}% of it is fixed items or installments, which count less against your score.` });
+      pos({ id: 'planned', icon: 'calendar', impact: 'low', title: t('Most of your spending is planned'), text: t('{share}% of it is fixed items or installments, which count less against your score.', { share: Math.round(planned * 100) }) });
     }
   }
 
   // card limit use
   if (i.cardLimit > 0 && i.cardUsed / i.cardLimit > 0.5) {
-    neg({ id: 'limit', icon: 'percent', impact: 'low', title: 'You use a big part of your card limit', text: `${Math.round((i.cardUsed / i.cardLimit) * 100)}% of your total limit is in use.` });
+    neg({ id: 'limit', icon: 'percent', impact: 'low', title: t('You use a big part of your card limit'), text: t('{share}% of your total limit is in use.', { share: Math.round((i.cardUsed / i.cardLimit) * 100) }) });
   }
 
   // heaviest first inside each side

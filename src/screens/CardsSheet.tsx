@@ -4,6 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { ToggleRow } from '../components/Controls';
 import { Sheet } from '../components/Sheet';
+import { t } from '../i18n';
 import { cardColor } from '../domain/cards';
 import { currentMonthKey, todayISO } from '../domain/dates';
 import { buildInvoices, cardUsed } from '../domain/invoices';
@@ -26,7 +27,7 @@ function CardsList({ onEdit }: { onEdit: (card: CreditCard) => void }) {
   return (
     <>
       <Text style={[type.body, { color: c.textMuted }]}>
-        A card is debt, not extra income. Add your cards to track what you owe and pay off the invoices.
+        {t('A card is debt, not extra income. Add your cards to track what you owe and pay off the invoices.')}
       </Text>
       {data.cards.map((card, ci) => ({ card, ci })).filter(({ card }) => !card.archivedAt || showArchived).map(({ card, ci }) => {
         const debt = used.get(card.id) ?? 0;
@@ -34,7 +35,7 @@ function CardsList({ onEdit }: { onEdit: (card: CreditCard) => void }) {
           <Pressable
             key={card.id}
             accessibilityRole="button"
-            accessibilityLabel={`Edit card ${card.name}`}
+            accessibilityLabel={t('Edit card {name}', { name: card.name })}
             onPress={() => onEdit(card)}
             style={({ pressed, hovered }: any) => [s.row, { backgroundColor: hovered ? c.surfaceAlt : c.surface, opacity: pressed ? 0.7 : card.archivedAt ? 0.6 : 1 }]}
           >
@@ -42,19 +43,19 @@ function CardsList({ onEdit }: { onEdit: (card: CreditCard) => void }) {
               <Feather name="credit-card" size={20} color={cardColor(card, ci)} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{card.name}{card.archivedAt ? '  ·  archived' : ''}</Text>
-              <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>Limit {formatMoney(card.limit)} · due day {card.dueDay}</Text>
+              <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{card.archivedAt ? t('{name}  ·  archived', { name: card.name }) : card.name}</Text>
+              <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('Limit {limit} · due day {day}', { limit: formatMoney(card.limit), day: card.dueDay })}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={[type.label, { color: debt > 0 ? c.expense : c.text }]}>{formatMoney(debt)}</Text>
-              <Text style={[type.body, { color: c.textMuted }]}>debt</Text>
+              <Text style={[type.body, { color: c.textMuted }]}>{t('debt')}</Text>
             </View>
             <Feather name="edit-2" size={16} color={c.textMuted} />
           </Pressable>
         );
       })}
       {data.cards.some((x) => x.archivedAt) && (
-        <ToggleRow label="Show archived cards" hint="Archived cards keep their history; restore one from its edit screen." value={showArchived} onChange={setShowArchived} />
+        <ToggleRow label={t('Show archived cards')} hint={t('Archived cards keep their history; restore one from its edit screen.')} value={showArchived} onChange={setShowArchived} />
       )}
     </>
   );
@@ -66,7 +67,7 @@ export function CardsContent() {
   return (
     <>
       <CardsList onEdit={(card) => setForm({ card })} />
-      <Button label="New card" icon="plus" variant="secondary" onPress={() => setForm({})} />
+      <Button label={t('New card')} icon="plus" variant="secondary" onPress={() => setForm({})} />
       <CardForm visible={!!form} card={form?.card} onClose={() => setForm(null)} />
     </>
   );
@@ -76,7 +77,7 @@ export function CardsContent() {
 export function CardsSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [form, setForm] = useState<{ card?: CreditCard } | null>(null);
   return (
-    <Sheet screen visible={visible} title="Cards" onClose={onClose} footer={<Button label="New card" icon="plus" onPress={() => setForm({})} flex />}>
+    <Sheet screen visible={visible} title={t('Cards')} onClose={onClose} footer={<Button label={t('New card')} icon="plus" onPress={() => setForm({})} flex />}>
       <CardsList onEdit={(card) => setForm({ card })} />
       <CardForm visible={!!form} card={form?.card} onClose={() => setForm(null)} />
     </Sheet>
