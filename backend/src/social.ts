@@ -253,6 +253,9 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
       const offset = Math.min(Math.max(Number((req.query as { offset?: unknown }).offset) || 0, 0), 5000);
       const like = `%${text.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
       const PAGE = 20;
+      // profiles made before codes existed get theirs now: without a code nobody can start a chat with them
+      const missing = await pool.query('select user_id from profiles where code is null limit 100');
+      for (const m of missing.rows) await assignCode(pool, m.user_id as string);
       const res = await pool.query(
         `with related as (
            select recipient_id as other from messages where sender_id = $1

@@ -8,7 +8,7 @@ import { desktopBreakpoint, fontFamily, spacing, type, useColors } from '../them
 import { motion, useGlide, useTween, useTweenList } from '../theme/motion';
 import { CategoryShare, Summary } from './api';
 import type { OwnChart } from '../domain/summary';
-import { formatMoney } from '../domain/money';
+import { formatMoney, formatMoneyShort } from '../domain/money';
 import type { Tone } from '../types';
 import { TONE_COLORS, categoryColor, defaultTone, sharedCategoryLabel, toneLabel } from '../domain/categories';
 import { t, usePrefsVersion } from '../i18n';
@@ -42,7 +42,7 @@ const arc = (cx: number, cy: number, r: number, a0: number, a1: number) => {
  * A donut: one slice per category. Hovering (or tapping) a slice makes it stand out and puts its percentage outside the
  * ring, at the end of a thin line from the slice. `onSelect` is told which slice the pointer is on.
  */
-function Pie({ slices, selected, onSelect, size, compact, center }: { slices: { key: string; value: number; color: string; /** shown beside the percentage of the chosen slice */ name?: string; tone?: { label: string; color: string } | null }[]; selected: string | null; onSelect: (key: string | null) => void; size: number; /** phones: a thinner ring and less room around it */ compact: boolean; center: React.ReactNode }) {
+function Pie({ slices, selected, onSelect, size, compact, center, valueText }: { slices: { key: string; value: number; color: string; /** shown beside the percentage of the chosen slice */ name?: string; tone?: { label: string; color: string } | null }[]; selected: string | null; onSelect: (key: string | null) => void; size: number; /** phones: a thinner ring and less room around it */ compact: boolean; center: React.ReactNode; /** how the chosen slice's value is written beside it (default: its share of the pie) */ valueText?: (v: number) => string }) {
   const c = useColors();
   const RING = compact ? RING_COMPACT : RING_FULL;
   const MARGIN_X = compact ? MARGIN_X_COMPACT : MARGIN_X_FULL;
@@ -114,7 +114,7 @@ function Pie({ slices, selected, onSelect, size, compact, center }: { slices: { 
           const yName = up ? p2.y - 12 : p2.y + 24;
           return (
             <>
-              <SvgText x={x} y={p2.y + 6} fontSize={compact ? 16 : 17} fontWeight="700" fontFamily={fontFamily} fill={chosen.color} fillOpacity={lead} textAnchor={anchor}>{pct(r1(((target ?? chosen).value / pieTotalOf(slices)) * 100))}</SvgText>
+              <SvgText x={x} y={p2.y + 6} fontSize={compact ? 16 : 17} fontWeight="700" fontFamily={fontFamily} fill={chosen.color} fillOpacity={lead} textAnchor={anchor}>{valueText ? valueText((target ?? chosen).value) : pct(r1(((target ?? chosen).value / pieTotalOf(slices)) * 100))}</SvgText>
               {chosen.name ? <SvgText x={x} y={yName} fontSize={16} fontFamily={fontFamily} fill={c.text} fillOpacity={lead} textAnchor={anchor}>{cut(chosen.name)}</SvgText> : null}
             </>
           );
@@ -213,11 +213,21 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
   const chartMonths = months.slice(start);
   if (!hasData) return <Text style={[type.body, { color: c.textMuted }]}>{t('Nothing to show yet: add some income and expenses.')}</Text>;
 
+  // my own profile: the amounts spent in the range (this month, or the months of the range), biggest first
+  const rangeKeys = horizon === 'month' ? [current] : months.map((m) => m.key);
+  const realCats = real
+    ? real.categories
+        .map((x) => ({ slug: x.slug, label: x.label, tone: x.tone ?? undefined, amount: rangeKeys.reduce((a, k) => a + (x.byMonth[k] ?? 0), 0) }))
+        .filter((x) => x.amount > 0)
+        .sort((a, b) => b.amount - a.amount)
+    : null;
+  const realTotal = realCats ? realCats.reduce((a, x) => a + x.amount, 0) : 0;
+
   const colorOf = (slug: string) => {
     // built-in categories have a color that says what they are (debt is red, investments green)
     const fixed = categoryColor(slug);
     if (fixed) return fixed;
-    const i = categories.findIndex((x) => x.slug === slug);
+    const i = (realCats ?? categories).findIndex((x) => x.slug === slug);
     if (i < 0) return OTHER;
     // after the fixed palette every category still gets its own color (hues spread by the golden angle)
     return i < PALETTE.length ? PALETTE[i] : `hsl(${Math.round((i * 137.508) % 360)}, 55%, ${i % 2 ? 48 : 62}%)`;
@@ -228,11 +238,14 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
     const tn = x.tone ?? defaultTone(x.slug);
     return tn ? { label: toneLabel(tn), color: TONE_COLORS[tn] } : null;
   };
-  const pieRows = categories.filter((x) => r1(x.pct) > 0).map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug), name: x.label, tone: toneOf(x) }));
+  const pieRows = realCats
+    ? realCats.map((x) => ({ key: x.slug, label: x.label, value: x.amount, color: colorOf(x.slug), name: x.label, tone: toneOf({ slug: x.slug, label: x.label, pct: 0, tone: x.tone }) }))
+    : categories.filter((x) => r1(x.pct) > 0).map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug), name: x.label, tone: toneOf(x) }));
+  /** how a slice's value is written: money on my own profile, a share of the pie otherwise */
+  const sliceText = (v: number) => (realCats ? formatMoneyShort(v) : pct(r1((v / (pieRows.reduce((a, x) => a + x.value, 0) || 1)) * 100)));
   // two columns on desktop, one on a phone (names, badges and percentages need the room)
   const legendW = wide ? Math.max(0, rowW - Math.min(PIE_MAX + MARGIN_X_FULL * 2, Math.max(360, rowW * 0.55)) - spacing.lg) : rowW;
   const legendCols = wide ? 2 : 1;
-  const pieTotal = pieRows.reduce((a, x) => a + x.value, 0) || 1;
 
   // "this month": the days of the month, 1 to the last, with what came in and went out so far (percent of that month's income)
   const days = summary.days && summary.days.month === current ? summary.days : undefined;
@@ -282,7 +295,7 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
         tipLabels={dayMode ? dayTips : undefined}
         selected={sel}
         onSelect={setSel}
-        format={real ? formatMoney : pct}
+        format={real ? formatMoneyShort : pct}
         fill
         tipWidth={real ? 230 : 310}
         renderTip={dayMode || real ? undefined : (i) => {
@@ -347,14 +360,15 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
           <View onLayout={(e) => setPieBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })} style={{ width: wide ? Math.min(PIE_MAX + MARGIN_X_FULL * 2, Math.max(360, rowW * 0.55)) : undefined, flexShrink: 0 }}>
           <Pie
             slices={pieRows}
+            valueText={realCats ? sliceText : undefined}
             selected={slice}
             onSelect={setSlice}
             compact={!wide}
             size={Math.max(170, Math.min(PIE_MAX, (pieBox.w || PIE_MAX + MARGIN_X_FULL * 2) - (wide ? MARGIN_X_FULL : MARGIN_X_COMPACT) * 2))}
             center={
               <>
-                <Text style={[type.title, { color: c.expense, fontSize: wide ? 20 : 22 }]}>{pct(r1(shownSpent))}</Text>
-                <Text style={[type.body, { color: c.textMuted }]}>{wide && pieBox.w - MARGIN_X_FULL * 2 >= 240 ? t('of income spent') : t('spent')}</Text>
+                <Text style={[type.title, { color: c.expense, fontSize: wide ? 20 : 22 }]}>{realCats ? formatMoneyShort(realTotal) : pct(r1(shownSpent))}</Text>
+                <Text style={[type.body, { color: c.textMuted }]}>{wide && !realCats && pieBox.w - MARGIN_X_FULL * 2 >= 240 ? t('of income spent') : t('spent')}</Text>
               </>
             }
           />
@@ -365,7 +379,7 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
               <Pressable
                 key={x.key}
                 accessibilityRole="button"
-                accessibilityLabel={`${x.label}: ${pct(r1((x.value / pieTotal) * 100))}`}
+                accessibilityLabel={`${x.label}: ${sliceText(x.value)}`}
                 onPress={() => setSlice(slice === x.key ? null : x.key)}
                 {...({ onHoverIn: () => setSlice(x.key), onHoverOut: () => setSlice(null) } as object)}
                 style={({ hovered }: any) => [s.legendRow, { width: `${100 / legendCols - 2}%` as `${number}%` }, { backgroundColor: hovered || slice === x.key ? c.surface : 'transparent' }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '180ms' } as object)]}
@@ -379,7 +393,7 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
                     </View>
                   ) : null}
                 </View>
-                <Text style={[type.label, { color: c.text }]}>{pct(r1((x.value / pieTotal) * 100))}</Text>
+                <Text style={[type.label, { color: c.text }]}>{sliceText(x.value)}</Text>
               </Pressable>
             ))}
           </View>

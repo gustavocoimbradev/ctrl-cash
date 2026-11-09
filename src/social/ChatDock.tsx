@@ -77,11 +77,6 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
         </View>
       );
     }
-    if (composing) {
-      return (
-        <People onPick={(code) => { setComposing(false); openChat(code); }} />
-      );
-    }
     return <ChatsList onOpen={(code) => openChat(code)} onNew={() => setComposing(true)} />;
   };
 
@@ -160,6 +155,9 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
           </View>
           {profile && chat.with ? (
             <Thread key={chat.with} id={chat.with} />
+          ) : profile && composing ? (
+            // the people list scrolls by itself, a page at a time
+            <People onPick={(code) => { setComposing(false); openChat(code); }} />
           ) : (
             <ScrollView contentContainerStyle={s.body} keyboardShouldPersistTaps="handled">
               {body()}

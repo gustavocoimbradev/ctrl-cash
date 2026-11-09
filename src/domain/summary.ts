@@ -1,5 +1,5 @@
 import type { Summary } from '../social/api';
-import { AppData } from '../types';
+import { AppData, Tone } from '../types';
 import { LOAN_CATEGORY, REFUND_CATEGORY, categoryLabel, categoryOf, toneOfCategory } from './categories';
 import { addMonthsToKey, currentMonthKey, daysInMonth, todayISO } from './dates';
 import { currentHealth } from './health';
@@ -122,6 +122,8 @@ export interface OwnChart {
   months: Record<string, { income: number; expense: number }>;
   /** this month, cumulative cents from day 1 to today */
   days: { income: number[]; spent: number[] };
+  /** spending by category and month, cents (same rules) */
+  categories: { slug: string; label: string; tone: Tone | null; byMonth: Record<string, number> }[];
 }
 
 export function buildOwnChart(data: AppData, today = todayISO()): OwnChart {
@@ -130,6 +132,7 @@ export function buildOwnChart(data: AppData, today = todayISO()): OwnChart {
   const months: OwnChart['months'] = {};
   const dayIncome: number[] = [];
   const daySpent: number[] = [];
+  const byCat = new Map<string, Record<string, number>>();
   for (let k = addMonthsToKey(current, -SUMMARY_BACK); k <= current; k = addMonthsToKey(k, 1)) {
     let income = 0;
     let expense = 0;
@@ -143,6 +146,10 @@ export function buildOwnChart(data: AppData, today = todayISO()): OwnChart {
       } else {
         expense += o.amount;
         if (k === current) daySpent[day] = (daySpent[day] ?? 0) + o.amount;
+        const slug = categoryOf(o.category).slug;
+        const row = byCat.get(slug) ?? {};
+        row[k] = (row[k] ?? 0) + o.amount;
+        byCat.set(slug, row);
       }
     }
     months[k] = { income, expense };
@@ -158,5 +165,6 @@ export function buildOwnChart(data: AppData, today = todayISO()): OwnChart {
     income.push(inc);
     spent.push(sp);
   }
-  return { months, days: { income, spent } };
+  const categories = [...byCat].map(([slug, byMonth]) => ({ slug, label: categoryLabel(slug), tone: categoryOf(slug).tone, byMonth }));
+  return { months, days: { income, spent }, categories };
 }

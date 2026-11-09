@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, Text, View } from 'react-native';
 import Svg, { Circle, ClipPath, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
-import { formatMoney, minorUnit } from '../domain/money';
+import { formatMoney, formatMoneyShort, minorUnit } from '../domain/money';
 import { colors as c, fontFamily, radius, spacing, type } from '../theme';
 import { motion, useGlide, useProgress, useReducedMotion, useTween, useTweenList } from '../theme/motion';
 import { t } from '../i18n';
@@ -54,7 +54,7 @@ interface ProjectionProps {
 }
 
 /** Line chart (up to 2 series, the first with an area), vertical guide and tooltip at the selected point. */
-export function ProjectionChart({ series, labels, selected, onSelect, height = 230, format = formatMoney, renderTip, tipWidth = 190, areaColor = c.primary, nowIndex, fill, tipLabels }: ProjectionProps) {
+export function ProjectionChart({ series, labels, selected, onSelect, height = 230, format = formatMoneyShort, renderTip, tipWidth = 190, areaColor = c.primary, nowIndex, fill, tipLabels }: ProjectionProps) {
   const [w, setW] = useState(0);
   /** drawing: the lines reveal from left to right on enter and when the horizon changes */
   const progress = useProgress(`proj-${labels.length}`);

@@ -6,7 +6,7 @@ import { Sheet } from '../components/Sheet';
 import { BarChart } from '../components/Charts';
 import { debtsSummary, debtsTimeline } from '../domain/areas';
 import { formatDate, monthLabel, monthName } from '../domain/dates';
-import { formatMoney } from '../domain/money';
+import { formatMoney, formatMoneyShort } from '../domain/money';
 import { getLocale, t } from '../i18n';
 import { useStore } from '../store';
 import { radius, spacing, type, useColors } from '../theme';
@@ -41,8 +41,8 @@ export function DebtsSheet({ visible, onClose, onAdd, onEdit }: { visible: boole
   const cardName = (id?: string) => (id ? data.cards.find((x) => x.id === id)?.name : undefined);
   const tiles = s
     ? [
-        { label: t('Owed'), value: formatMoney(s.owed) },
-        { label: t('Due this month'), value: formatMoney(s.thisMonth) },
+        { label: t('Owed'), value: formatMoneyShort(s.owed) },
+        { label: t('Due this month'), value: formatMoneyShort(s.thisMonth) },
         { label: t('Of income'), value: s.income > 0 ? pct(s.share) : '-' },
       ]
     : [];

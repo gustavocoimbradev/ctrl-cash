@@ -6,7 +6,7 @@ import { ByClaude } from '../components/ClaudeMark';
 import { Sheet } from '../components/Sheet';
 import { AreaItem, AreaKey, areaSummary } from '../domain/areas';
 import { currentMonthKey, monthName, shortDate } from '../domain/dates';
-import { formatMoney } from '../domain/money';
+import { formatMoney, formatMoneyShort } from '../domain/money';
 import { getLocale, t } from '../i18n';
 import { useStore } from '../store';
 import { radius, spacing, type, useColors } from '../theme';
@@ -72,8 +72,8 @@ export function AreaSheet({ area, visible, onClose, onAdd, onEdit }: { area: Are
   const title = area === 'subscriptions' ? t('Subscriptions') : area === 'bills' ? t('Utility bills') : t('Delivery');
   const addLabel = area === 'subscriptions' ? t('New subscription') : area === 'bills' ? t('New bill') : t('New order');
   const tiles = area === 'delivery'
-    ? [{ label: t('Per month'), value: s ? formatMoney(s.monthly) : '' }, { label: t('Per year'), value: s ? formatMoney(s.yearly) : '' }, { label: t('Of income'), value: s && s.income > 0 ? pct(s.share) : '-' }]
-    : [{ label: t('Per month'), value: s ? formatMoney(s.monthly) : '' }, { label: t('Per year'), value: s ? formatMoney(s.yearly) : '' }, { label: t('Of income'), value: s && s.income > 0 ? pct(s.share) : '-' }];
+    ? [{ label: t('Per month'), value: s ? formatMoneyShort(s.monthly) : '' }, { label: t('Per year'), value: s ? formatMoneyShort(s.yearly) : '' }, { label: t('Of income'), value: s && s.income > 0 ? pct(s.share) : '-' }]
+    : [{ label: t('Per month'), value: s ? formatMoneyShort(s.monthly) : '' }, { label: t('Per year'), value: s ? formatMoneyShort(s.yearly) : '' }, { label: t('Of income'), value: s && s.income > 0 ? pct(s.share) : '-' }];
 
   return (
     <Sheet

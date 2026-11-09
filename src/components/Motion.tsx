@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Platform, StyleProp, Text, TextProps, TextStyle, View, ViewStyle } from 'react-native';
-import { formatMoney } from '../domain/money';
+import { formatMoneyShort } from '../domain/money';
 import { colors as c } from '../theme';
 import { motion, useReducedMotion, useTween } from '../theme/motion';
 
@@ -9,7 +9,7 @@ export function Money({ cents, style, ...rest }: { cents: number; style?: StyleP
   const v = useTween(cents);
   return (
     <Text style={style} {...rest}>
-      {formatMoney(Math.round(v))}
+      {formatMoneyShort(Math.round(v))}
     </Text>
   );
 }
