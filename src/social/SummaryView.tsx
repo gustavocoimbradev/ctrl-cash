@@ -417,11 +417,12 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
 
   const wealth = summary.wealth;
   const wealthCount = wealth ? Math.min(horizon === 'month' ? 12 : horizon, wealth.planned.length) : 0;
-  const signed = (v: number) => `${v > 0 ? '+' : ''}${pct(r1(v))}`;
+  // no numbers for this one: only whether the wealth ends up above, below or at today's level
+  const direction = (v: number) => (v > 0.05 ? t('Above today') : v < -0.05 ? t('Below today') : t('Same as today'));
   const wealthBlock = wealth && wealthCount > 0 ? (
     <View style={{ gap: spacing.sm, flex: wide ? 1.6 : undefined, minWidth: 0 }}>
       <Text style={[type.title, { color: c.text }]}>{t('Wealth projection')}</Text>
-      <Text style={[type.body, { color: c.textMuted }]}>{t('Change from today, in percent of the wealth accumulated today.')}</Text>
+      <Text style={[type.body, { color: c.textMuted }]}>{t('Where the wealth is heading compared with today. Only the shape is shared, never a number.')}</Text>
       <ProjectionChart
         series={[
           { values: wealth.planned.slice(0, wealthCount), color: c.primary, area: true, label: t('Planned') },
@@ -430,7 +431,8 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
         labels={Array.from({ length: wealthCount }, (_, i) => formatMonth(addMonthsToKey(wealth.start, i)))}
         selected={wealthSel}
         onSelect={setWealthSel}
-        format={signed}
+        format={direction}
+        tipWidth={240}
         height={wide ? 260 : 230}
       />
       <ChartLegend
