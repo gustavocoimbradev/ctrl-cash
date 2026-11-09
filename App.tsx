@@ -160,7 +160,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
                 }}
                 style={[s.brandRow, Platform.OS === 'web' && ({ cursor: 'pointer' } as object)]}
               >
-                <Brand size={18} color={c.text} />
+                <Brand size={18} color={c.text} inLink />
               </Pressable>
             </View>
             {/* the places (cards, categories, debts...): a quiet navigation in the header, always at hand */}

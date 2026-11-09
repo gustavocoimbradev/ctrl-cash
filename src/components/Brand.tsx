@@ -6,11 +6,14 @@ import { Image, Platform, StyleSheet, Text, View } from 'react-native';
  * `size` is the font size of the name; the icon is a little taller than the text. In URLs and the like the name
  * is `ctrlcash`.
  */
-export function Brand({ size = 24, color = '#FFFFFF' }: { size?: number; color?: string }) {
+export function Brand({ size = 24, color = '#FFFFFF', inLink }: { size?: number; color?: string; /** sits inside a link: the whole brand (icon and name) is the click target, with the pointer cursor */ inLink?: boolean }) {
   const fontFamily = Platform.OS === 'web' ? 'Inter, system-ui, sans-serif' : undefined;
   const icon = Math.round(size * 1.6);
   return (
-    <View accessible accessibilityRole="header" accessibilityLabel="Ctrl+Cash" style={[s.row, { gap: size * 0.45 }]}>
+    <View
+      {...(inLink ? { pointerEvents: 'none' as const } : { accessible: true, accessibilityRole: 'header' as const, accessibilityLabel: 'Ctrl+Cash' })}
+      style={[s.row, { gap: size * 0.45 }, inLink && Platform.OS === 'web' && ({ cursor: 'pointer', userSelect: 'none' } as object)]}
+    >
       <Image source={require('../../assets/icon.png')} style={{ width: icon, height: icon, borderRadius: Math.round(icon * 0.26) }} accessibilityIgnoresInvertColors />
       <Text style={[s.text, { color, fontSize: size, fontFamily }]}>Ctrl+Cash</Text>
     </View>
