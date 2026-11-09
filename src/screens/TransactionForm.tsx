@@ -37,6 +37,9 @@ interface Props {
 
 const installmentOptions = Array.from({ length: 47 }, (_, i) => ({ value: i + 2, label: `${i + 2}x` }));
 
+/** A new card purchase goes to the invoice AFTER the one open today by default: that is where it usually lands. */
+const nextInvoiceKey = (card: Parameters<typeof openInvoiceKey>[0]) => addMonthsToKey(openInvoiceKey(card, todayISO()), 1);
+
 export function TransactionForm({ visible, transaction, occurrenceMonth, preset, onClose }: Props) {
   const c = useColors();
   const dayOptions = Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: t('Day {day}', { day: i + 1 }) }));
@@ -96,7 +99,7 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
     setInvoiceKey('');
     {
       const buyCard = data.cards.find((x) => x.id === (transaction?.cardId ?? preset?.cardId));
-      setPurchaseInvoice(transaction?.invoiceKey ?? preset?.invoiceKey ?? (buyCard ? openInvoiceKey(buyCard, todayISO()) : ''));
+      setPurchaseInvoice(transaction?.invoiceKey ?? preset?.invoiceKey ?? (buyCard ? nextInvoiceKey(buyCard) : ''));
     }
     if (!transaction && preset?.kind === 'invoice') {
       const card = data.cards.find((x) => x.id === preset.cardId);
@@ -365,7 +368,7 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
               onChange={(v) => {
                 setCardId(v);
                 const next = data.cards.find((x) => x.id === v);
-                if (next) setPurchaseInvoice(openInvoiceKey(next, todayISO()));
+                if (next) setPurchaseInvoice(nextInvoiceKey(next));
               }}
             />
           )}
