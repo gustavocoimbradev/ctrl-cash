@@ -133,12 +133,34 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
       <View style={[s.topBar, { backgroundColor: c.card, borderBottomColor: c.border }, desktop && { paddingHorizontal: spacing.xxl }]}>
         {desktop ? (
           <View style={s.topInner}>
-            <View style={s.topSide}>
+            <View style={[s.topSide, { flex: 0 }]}>
               <Pressable accessibilityRole="button" accessibilityLabel={t('Dashboard')} onPress={toDashboard} style={s.brandRow}>
                 <Brand size={18} color={c.text} />
               </Pressable>
             </View>
-            <View style={{ flex: 1 }} />
+            {/* the places (cards, categories, debts...): a quiet navigation in the header, always at hand */}
+            <View style={s.nav} accessibilityRole="menu">
+              {[
+                { key: 'cards', icon: 'credit-card' as const, label: t('Cards'), onPress: () => setCardsOpen(true) },
+                { key: 'categories', icon: 'tag' as const, label: t('Categories'), onPress: () => setCategoriesOpen(true) },
+                ...places,
+              ].map((it) => (
+                <Pressable
+                  key={it.key}
+                  accessibilityRole="menuitem"
+                  accessibilityLabel={it.label}
+                  onPress={it.onPress}
+                  style={({ pressed, hovered }: any) => [s.navItem, { backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.7 : 1 }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '140ms' } as object)]}
+                >
+                  {({ hovered }: any) => (
+                    <>
+                      <Feather name={it.icon} size={18} color={hovered ? c.text : c.textMuted} />
+                      <Text style={[type.label, { color: hovered ? c.text : c.textMuted }]} numberOfLines={1}>{it.label}</Text>
+                    </>
+                  )}
+                </Pressable>
+              ))}
+            </View>
             <View style={[s.topSide, { flex: 0, justifyContent: 'flex-end' }]}>
               {/* my profile: the avatar (it is not highlighted on the profile page) */}
               <Pressable
@@ -361,6 +383,9 @@ const s = StyleSheet.create({
   topBar: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, borderBottomWidth: 1 },
   topInner: { width: '100%', maxWidth: maxContentWidth, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 52 },
   topSide: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  /** the places in the header: icon and label, no frame, a soft background on hover */
+  nav: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, flexWrap: 'nowrap' },
+  navItem: { minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1, minWidth: 0 },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   topBtn: { minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: 'rgba(15,27,51,0.10)' },
   iconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
