@@ -76,4 +76,7 @@ export const mappers: Record<Collection, Mapper> = {
   shoppingLists: mapper('shopping_lists', [
     id, f('name', 'name', 'text'), f('items', 'items', 'json'), f('finishedAt', 'finished_at_ms', 'int'), created, archived,
   ], byCreated),
+  wishlist: mapper('wishlist', [
+    id, f('name', 'name', 'text'), f('price', 'price', 'int'), f('url', 'url', 'text'), f('note', 'note', 'text'), f('boughtAt', 'bought_at_ms', 'int'), created, archived,
+  ], byCreated),
 };

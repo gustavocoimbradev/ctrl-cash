@@ -33,7 +33,7 @@ test('mapper round trip through PostgreSQL (floats, big amounts, unicode)', asyn
   const docs = {
     transactions: [{ ...full.transactions!, description: 'Café ☕ 日本語', amount: 100000000000 }],
     categories: [{ ...full.categories!, weight: 0.1 + 0.2 }],
-    cards: [full.cards!], payments: [full.payments!], reserves: [full.reserves!], reserveMoves: [full.reserveMoves!], shoppingLists: [full.shoppingLists!],
+    cards: [full.cards!], payments: [full.payments!], reserves: [full.reserves!], reserveMoves: [full.reserveMoves!], shoppingLists: [full.shoppingLists!], wishlist: [full.wishlist!],
   };
   await withTransaction(pool, (c) => upsertDocs(c, uid, docs));
   const back = await readAll(pool, uid);

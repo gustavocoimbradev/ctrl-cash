@@ -196,7 +196,7 @@ async function main() {
     body: JSON.stringify({ transactions: txs, cards: [cardA, cardB], payments, categories }),
   });
   if (!res.ok) throw new Error(`The API answered ${res.status}: ${await res.text()}`);
-  const codes = await seedSocial(token, { transactions: txs, cards: [cardA, cardB], payments, categories, reserves: [], reserveMoves: [], shoppingLists: [] });
+  const codes = await seedSocial(token, { transactions: txs, cards: [cardA, cardB], payments, categories, reserves: [], reserveMoves: [], shoppingLists: [], wishlist: [] });
   console.log(`Demo account ready: ${EMAIL} / ${PASSWORD}  (${txs.length} transactions, 2 cards, ${payments.length} payments, your code: ${codes.me}, friend Maria Costa: ${codes.friend})`);
 }
 

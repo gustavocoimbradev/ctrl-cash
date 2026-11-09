@@ -167,6 +167,20 @@ export interface ShoppingList {
   archivedAt?: number;
 }
 
+/** Something the person wants to buy. Archiving hides it; `boughtAt` says it was bought (and billed). */
+export interface WishItem {
+  id: string;
+  name: string;
+  /** smallest currency unit (cents for dollars); optional */
+  price?: number;
+  /** where to buy it online; http(s) only */
+  url?: string;
+  note?: string;
+  boughtAt?: number;
+  createdAt?: number;
+  archivedAt?: number;
+}
+
 export interface AppData {
   cards: CreditCard[];
   categories: CategoryRecord[];
@@ -175,4 +189,5 @@ export interface AppData {
   reserves: Reserve[];
   reserveMoves: ReserveMove[];
   shoppingLists: ShoppingList[];
+  wishlist: WishItem[];
 }

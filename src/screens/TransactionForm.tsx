@@ -28,6 +28,8 @@ export interface FormPreset {
   description?: string;
   category?: string;
   confirmed?: boolean;
+  /** starting amount in cents */
+  amount?: number;
   /** start as a fixed (monthly) transaction */
   fixed?: boolean;
   /** called once the new transaction is saved */
@@ -93,7 +95,7 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
     const eff = transaction?.fixed ? fixedFieldsAt(transaction, occurrenceMonth ?? monthKey(transaction.date)) : undefined;
     setDescription(eff?.description ?? transaction?.description ?? preset?.description ?? '');
     setCategory(eff?.category ?? transaction?.category ?? (transaction ? (transaction.type === 'expense' ? DEFAULT_CATEGORY : '') : preset?.category ?? ''));
-    setCents(eff?.amount ?? transaction?.amount ?? 0);
+    setCents(eff?.amount ?? transaction?.amount ?? preset?.amount ?? 0);
     setDay(eff?.day ?? 1);
     setScopeOpen(false);
     setDate(transaction?.date ?? todayISO());

@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { RemoteMap, push, subscribe } from './sync';
-import { AppData, CategoryRecord, CreditCard, InvoicePayment, OccurrenceFields, Reserve, ReserveMove, Revision, ShoppingList, Tone, Transaction } from '../types';
+import { AppData, CategoryRecord, CreditCard, InvoicePayment, OccurrenceFields, Reserve, ReserveMove, Revision, ShoppingList, Tone, Transaction, WishItem } from '../types';
 import { allCategories, builtinRecordId, setCategoryRecords } from '../domain/categories';
 import { t } from '../i18n';
 import { newId } from '../domain/money';
@@ -16,7 +16,7 @@ const FIELD_KEYS: (keyof OccurrenceFields)[] = ['description', 'amount', 'catego
 
 const without = <T extends object>(o: T, keys: string[]): T => Object.fromEntries(Object.entries(o).filter(([k]) => !keys.includes(k))) as T;
 
-const empty: AppData = { cards: [], categories: [], transactions: [], payments: [], reserves: [], reserveMoves: [], shoppingLists: [] };
+const empty: AppData = { cards: [], categories: [], transactions: [], payments: [], reserves: [], reserveMoves: [], shoppingLists: [], wishlist: [] };
 
 interface Store {
   /** data loaded from the server */
@@ -67,6 +67,9 @@ interface Store {
   saveShoppingList: (list: Omit<ShoppingList, 'id'> & { id?: string }) => string;
   /** archives the list (soft delete) */
   archiveShoppingList: (id: string) => void;
+  /** creates or replaces a wishlist item; returns its id */
+  saveWish: (item: Omit<WishItem, 'id'> & { id?: string }) => string;
+  archiveWish: (id: string) => void;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -114,6 +117,7 @@ export function StoreProvider({ uid, children }: { uid: string; children: React.
       reserves: raw.reserves.filter((x) => !x.archivedAt),
       reserveMoves: raw.reserveMoves.filter((x) => !x.archivedAt),
       shoppingLists: raw.shoppingLists.filter((x) => !x.archivedAt),
+      wishlist: raw.wishlist.filter((x) => !x.archivedAt),
     }),
     [raw],
   );
@@ -236,6 +240,7 @@ export function StoreProvider({ uid, children }: { uid: string; children: React.
       cards: mark(d.cards),
       categories: mark(d.categories),
       shoppingLists: mark(d.shoppingLists),
+      wishlist: mark(d.wishlist),
     }));
   }, []);
   const restoreTransaction = useCallback((id: string) => {
@@ -312,6 +317,18 @@ export function StoreProvider({ uid, children }: { uid: string; children: React.
     setData((d) => ({ ...d, shoppingLists: d.shoppingLists.map((x) => (x.id === id ? { ...x, archivedAt: Date.now() } : x)) }));
   }, []);
 
+  const saveWish = useCallback((item: Omit<WishItem, 'id'> & { id?: string }): string => {
+    const id = item.id ?? newId();
+    setData((d) => {
+      const rec: WishItem = { ...item, id, createdAt: item.createdAt ?? Date.now() };
+      return d.wishlist.some((x) => x.id === id) ? { ...d, wishlist: d.wishlist.map((x) => (x.id === id ? rec : x)) } : { ...d, wishlist: [...d.wishlist, rec] };
+    });
+    return id;
+  }, []);
+  const archiveWish = useCallback((id: string) => {
+    setData((d) => ({ ...d, wishlist: d.wishlist.map((x) => (x.id === id ? { ...x, archivedAt: Date.now() } : x)) }));
+  }, []);
+
   const saveCategory = useCallback((input: { kind: 'expense' | 'income'; slug?: string; name: string; weight?: number; tone?: Tone }) => {
     setData((d) => {
       const name = input.name.trim();
@@ -347,8 +364,8 @@ export function StoreProvider({ uid, children }: { uid: string; children: React.
   const restoreCategory = useCallback((kind: 'expense' | 'income', slug: string) => setCategoryArchived(kind, slug, undefined), [setCategoryArchived]);
 
   const value = useMemo(
-    () => ({ ready, syncError, data, archived, addTransaction, updateTransaction, updateFixed, toggleConfirmed, archiveTransaction, clearAll, restoreTransaction, addPayment, archivePayment, saveReserve, archiveReserve, addReserveMove, updateReserveMove, archiveReserveMove, saveCard, archiveCard, restoreCard, saveCategory, archiveCategory, restoreCategory, saveShoppingList, archiveShoppingList }),
-    [ready, syncError, data, archived, addTransaction, updateTransaction, updateFixed, toggleConfirmed, archiveTransaction, clearAll, restoreTransaction, addPayment, archivePayment, saveReserve, archiveReserve, addReserveMove, updateReserveMove, archiveReserveMove, saveCard, archiveCard, restoreCard, saveCategory, archiveCategory, restoreCategory, saveShoppingList, archiveShoppingList],
+    () => ({ ready, syncError, data, archived, addTransaction, updateTransaction, updateFixed, toggleConfirmed, archiveTransaction, clearAll, restoreTransaction, addPayment, archivePayment, saveReserve, archiveReserve, addReserveMove, updateReserveMove, archiveReserveMove, saveCard, archiveCard, restoreCard, saveCategory, archiveCategory, restoreCategory, saveShoppingList, archiveShoppingList, saveWish, archiveWish }),
+    [ready, syncError, data, archived, addTransaction, updateTransaction, updateFixed, toggleConfirmed, archiveTransaction, clearAll, restoreTransaction, addPayment, archivePayment, saveReserve, archiveReserve, addReserveMove, updateReserveMove, archiveReserveMove, saveCard, archiveCard, restoreCard, saveCategory, archiveCategory, restoreCategory, saveShoppingList, archiveShoppingList, saveWish, archiveWish],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

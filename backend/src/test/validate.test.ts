@@ -67,3 +67,9 @@ test('shopping lists', () => {
   ok('shoppingLists', l({ items: [] }));
   ok('shoppingLists', l({ items: [item({ archivedAt: 5 })], finishedAt: 7, createdAt: 3 }));
 });
+
+test('wishlist', () => {
+  const w = (o: Doc = {}) => ({ ...samples.wishlist, ...o });
+  for (const o of [{ name: '' }, { name: 'n'.repeat(81) }, { price: 0 }, { price: 1.5 }, { price: -3 }, { url: 'ftp://x.com' }, { url: 'javascript:alert(1)' }, { url: 'https://a b.com' }, { url: 'https://' + 'a'.repeat(500) }, { note: '' }, { note: 'n'.repeat(301) }, { extra: 1 }, { boughtAt: 1.5 }]) bad('wishlist', w(o));
+  ok('wishlist', w({ price: 9900, url: 'https://shop.example/item', note: 'blue', boughtAt: 5 }));
+});

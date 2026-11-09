@@ -2,7 +2,7 @@
 // Each validator throws ValidationError with a clear message; `validate` turns it into a result.
 
 export type Doc = Record<string, unknown>;
-export const COLLECTIONS = ['transactions', 'cards', 'payments', 'reserves', 'reserveMoves', 'categories', 'shoppingLists'] as const;
+export const COLLECTIONS = ['transactions', 'cards', 'payments', 'reserves', 'reserveMoves', 'categories', 'shoppingLists', 'wishlist'] as const;
 export type Collection = (typeof COLLECTIONS)[number];
 
 export class ValidationError extends Error {}
@@ -211,6 +211,21 @@ function shoppingList(d: Doc) {
   msTimestamp(d, 'archivedAt');
 }
 
+function wish(d: Doc) {
+  onlyKeys(d, ['id', 'name', 'price', 'url', 'note', 'boughtAt', 'createdAt', 'archivedAt'], ['id', 'name']);
+  checkId(d);
+  text(d, 'name', 80);
+  if (has(d, 'price')) cents(d, 'price');
+  if (has(d, 'url')) {
+    text(d, 'url', 500);
+    if (!/^https?:\/\/\S+$/i.test(d.url as string)) fail('"url" must be a link starting with http:// or https://');
+  }
+  optText(d, 'note', 300);
+  msTimestamp(d, 'boughtAt');
+  msTimestamp(d, 'createdAt');
+  msTimestamp(d, 'archivedAt');
+}
+
 const validators: Record<Collection, (d: Doc) => void> = {
   transactions: transaction,
   cards: card,
@@ -219,6 +234,7 @@ const validators: Record<Collection, (d: Doc) => void> = {
   reserveMoves: reserveMove,
   categories: category,
   shoppingLists: shoppingList,
+  wishlist: wish,
 };
 
 /** Returns null when valid, otherwise the first error message. */

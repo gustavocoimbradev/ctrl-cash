@@ -38,6 +38,7 @@ export const samples: Record<string, Doc> = {
   reserveMoves: { id: 'x1', reserveId: 'r1', type: 'deposit', amount: 5000, date: '2026-11-10' },
   categories: { id: 'x1', slug: 'x1', kind: 'expense', name: 'Coffee', weight: 0.45 },
   shoppingLists: { id: 'x1', name: 'Weekly', items: [{ id: 'i1', name: 'Milk', done: false }] },
+  wishlist: { id: 'x1', name: 'Headphones' },
 };
 
 export const full: Record<string, Doc> = {
@@ -51,5 +52,6 @@ export const full: Record<string, Doc> = {
   reserves: { id: 'r1', name: 'Trip', goal: 500000, createdAt: 1790000000000, archivedAt: 1790000001000 },
   reserveMoves: { id: 'm1', reserveId: 'r1', type: 'withdraw', amount: 100, date: '2026-10-31', confirmed: false, createdAt: 1790000000001, archivedAt: 1790000001000 },
   shoppingLists: { id: 's1', name: 'Weekly ☕', items: [{ id: 'i1', name: 'Milk', done: true }, { id: 'i2', name: 'Eggs', done: false, archivedAt: 1790000001000 }], finishedAt: 1790000000500, createdAt: 1790000000000, archivedAt: 1790000001000 },
+  wishlist: { id: 'w1', name: 'Headphones ☕', price: 25000, url: 'https://example.com/p?id=1', note: 'the black ones', boughtAt: 1790000000500, createdAt: 1790000000000, archivedAt: 1790000001000 },
   categories: { id: 'income_salary', slug: 'salary', kind: 'expense', name: 'Pay', weight: 0.25, createdAt: 1790000000000, archivedAt: 1790000001000 },
 };

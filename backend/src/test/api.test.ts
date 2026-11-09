@@ -39,7 +39,7 @@ test('401 without token, with a bad token, and a wrong scheme', async () => {
 
 test('empty account reads all collections as empty lists', async () => {
   const d = await get(newUid());
-  assert.deepEqual(d, { transactions: [], cards: [], payments: [], reserves: [], reserveMoves: [], categories: [], shoppingLists: [] });
+  assert.deepEqual(d, { transactions: [], cards: [], payments: [], reserves: [], reserveMoves: [], categories: [], shoppingLists: [], wishlist: [] });
 });
 
 test('upsert + read back for every collection (minimal and complete docs)', async () => {
@@ -48,7 +48,7 @@ test('upsert + read back for every collection (minimal and complete docs)', asyn
   for (const c of COLLECTIONS) body[c] = [{ ...samples[c]!, id: 'min' }, full[c]!];
   const r = await put(uid, body);
   assert.equal(r.statusCode, 200);
-  assert.deepEqual(r.json(), { upserted: 14 });
+  assert.deepEqual(r.json(), { upserted: 16 });
   const back = await get(uid);
   for (const c of COLLECTIONS) {
     assert.equal(back[c]!.length, 2, c);
@@ -114,7 +114,7 @@ test('validation failures return 400 with details, per collection, and write not
       assert.ok(j.details[0].message.length > 3);
     }
   }
-  assert.deepEqual(await get(uid), { transactions: [], cards: [], payments: [], reserves: [], reserveMoves: [], categories: [], shoppingLists: [] });
+  assert.deepEqual(await get(uid), { transactions: [], cards: [], payments: [], reserves: [], reserveMoves: [], categories: [], shoppingLists: [], wishlist: [] });
 });
 
 test('invalid id, missing id and bad body shapes are rejected', async () => {
@@ -134,7 +134,7 @@ test('atomicity: one invalid doc writes nothing (also across collections)', asyn
   const r = await put(uid, { cards: [{ ...samples.cards!, id: 'good' }], transactions: [tx({ id: 'ok' }), tx({ id: 'bad', amount: -1 })] });
   assert.equal(r.statusCode, 400);
   assert.deepEqual(r.json().details.map((d: { id: string }) => d.id), ['bad']);
-  assert.deepEqual(await get(uid), { transactions: [], cards: [], payments: [], reserves: [], reserveMoves: [], categories: [], shoppingLists: [] });
+  assert.deepEqual(await get(uid), { transactions: [], cards: [], payments: [], reserves: [], reserveMoves: [], categories: [], shoppingLists: [], wishlist: [] });
 });
 
 test('atomicity: a database failure in the middle rolls everything back', async () => {

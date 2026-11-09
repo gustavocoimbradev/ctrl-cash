@@ -9,6 +9,7 @@ import { CardsSheet } from './src/screens/CardsSheet';
 import { CategoriesSheet } from './src/screens/CategoriesSheet';
 import { ShoppingSheet } from './src/screens/ShoppingSheet';
 import { AreaSheet } from './src/screens/AreaSheet';
+import { WishlistSheet } from './src/screens/WishlistSheet';
 import type { AreaKey } from './src/domain/areas';
 import { Dashboard } from './src/screens/Dashboard';
 import { AccountSheet } from './src/screens/AccountSheet';
@@ -43,7 +44,7 @@ function pageFromUrl(): Page {
 
 function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOut: () => void }) {
   const c = useColors();
-  const { ready, syncError, data, saveShoppingList } = useStore();
+  const { ready, syncError, data, saveShoppingList, saveWish } = useStore();
   const { width } = useWindowDimensions();
   const desktop = width >= desktopBreakpoint;
   const [month, setMonth] = useState(currentMonthKey());
@@ -51,6 +52,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   const [tab, setTab] = useState<MobileTab>('summary');
   const [cardsOpen, setCardsOpen] = useState(false);
   const [shoppingOpen, setShoppingOpen] = useState(false);
+  const [wishOpen, setWishOpen] = useState(false);
   const [area, setArea] = useState<AreaKey | null>(null);
   const lastArea = useRef<AreaKey>('subscriptions');
   if (area) lastArea.current = area;
@@ -75,6 +77,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   /** the places beside Cards and Categories, in the phone menu and in the strip above the projection */
   const places = [
     { key: 'shopping', icon: 'shopping-cart' as const, label: t('Shopping lists'), onPress: () => setShoppingOpen(true) },
+    { key: 'wishlist', icon: 'gift' as const, label: t('Wishlist'), onPress: () => setWishOpen(true) },
     { key: 'subscriptions', icon: 'repeat' as const, label: t('Subscriptions'), onPress: () => setArea('subscriptions') },
     { key: 'bills', icon: 'file-text' as const, label: t('Utility bills'), onPress: () => setArea('bills') },
     { key: 'delivery', icon: 'package' as const, label: t('Delivery'), onPress: () => setArea('delivery') },
@@ -267,6 +270,16 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
       />
       <CardsSheet visible={cardsOpen} onClose={() => setCardsOpen(false)} />
       <CategoriesSheet visible={categoriesOpen} onClose={() => setCategoriesOpen(false)} />
+      <WishlistSheet
+        visible={wishOpen}
+        onClose={() => setWishOpen(false)}
+        onBought={(item) => {
+          // bought it: the expense opens with what was on the list, and the wish is marked bought once it is saved
+          setEditing(undefined);
+          setPreset({ kind: 'expense', description: item.name, amount: item.price, onSaved: () => saveWish({ ...item, boughtAt: Date.now() }) });
+          setFormOpen(true);
+        }}
+      />
       <AreaSheet
         area={lastArea.current}
         visible={area !== null}

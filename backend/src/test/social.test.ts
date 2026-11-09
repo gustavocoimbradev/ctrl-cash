@@ -456,7 +456,7 @@ test('no response ever carries a user id, and /api/data stays free of social dat
   }
   assert.equal((await call(a.uid, 'PUT', '/api/data', { transactions: [tx()] })).status, 200);
   const data = (await call(b.uid, 'GET', '/api/data')).body;
-  assert.deepEqual(Object.keys(data).sort(), ['cards', 'categories', 'payments', 'reserveMoves', 'reserves', 'shoppingLists', 'transactions']);
+  assert.deepEqual(Object.keys(data).sort(), ['cards', 'categories', 'payments', 'reserveMoves', 'reserves', 'shoppingLists', 'transactions', 'wishlist']);
   assert.deepEqual(data.transactions, []);
   const mine = (await call(a.uid, 'GET', '/api/data')).body;
   assert.equal(JSON.stringify(mine).includes('secret'), false);
