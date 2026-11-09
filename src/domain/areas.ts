@@ -1,7 +1,7 @@
 import { AppData, Occurrence, Transaction } from '../types';
 import { LOAN_CATEGORY } from './categories';
-import { buildInvoices } from './invoices';
-import { addMonthsToKey, currentMonthKey, monthKey, parseISO } from './dates';
+import { buildInvoices, invoiceDebt, remaining } from './invoices';
+import { addMonthsToKey, currentMonthKey, monthKey, parseISO, todayISO } from './dates';
 import { buildOccurrences, fixedFieldsAt, monthOccurrences, monthTotals } from './transactions';
 
 /**
@@ -108,28 +108,30 @@ export function areaSummary(data: AppData, area: AreaKey): AreaSummary {
   };
 }
 
-/** One purchase paid in installments (on a card or not): what is left of it. */
+/** One thing owed: a purchase on a card (in installments or in one go) or something filed under the Debts category. */
 export interface DebtItem {
-  groupId: string;
-  /** the transaction of the next installment, to open it for editing */
+  key: string;
+  /** the transaction to open for editing */
   transaction: Transaction;
   month: string;
   description: string;
   cardId?: string;
-  /** installments still to pay, of `total` */
+  /** installments still to pay, of `total`; both 1 for something paid in one go */
   left: number;
   total: number;
-  /** what the next installment costs */
+  /** what the next installment (or the whole thing) costs */
   next: number;
   /** what is still to pay in all */
   remaining: number;
   /** month (YYYY-MM) of the last installment */
   endsAt: string;
+  /** when the next one falls due */
+  dueDate: string;
 }
 
 export interface DebtsSummary {
   items: DebtItem[];
-  /** everything still to pay in installments */
+  /** everything still owed */
   owed: number;
   /** what falls due this month */
   thisMonth: number;
@@ -139,46 +141,54 @@ export interface DebtsSummary {
 }
 
 /**
- * Debts: everything bought in installments, on a card or not, that still has installments to pay. An installment is still
- * to pay when it falls in this month or later, or when it is an earlier one on the account not yet confirmed.
+ * Debts: everything owed. What is on the cards, in installments or in one go, counted by the same rule as the card debt
+ * everywhere else (unpaid invoices; what was lent to somebody who pays it back is not mine), and everything filed under the
+ * Debts category that is still to pay, by PIX/account or card.
  */
 export function debtsSummary(data: AppData): DebtsSummary {
   const cur = currentMonthKey();
+  const today = todayISO();
   const occ = buildOccurrences(data, addMonthsToKey(cur, 60));
   const invoices = buildInvoices(data, occ);
   const txById = new Map(data.transactions.map((x) => [x.id, x]));
-  const groups = new Map<string, Occurrence[]>();
+
+  const owedOcc: Occurrence[] = [];
+  for (const inv of invoices) {
+    if (remaining(inv) <= 0) continue;
+    owedOcc.push(...invoiceDebt(inv, today).items.filter((o) => o.type === 'expense' && o.category !== LOAN_CATEGORY));
+  }
+  // filed under Debts, paid from the account: still to pay when not confirmed
   for (const o of occ) {
-    // a card lent to somebody who pays it back (the Loan category) is not MY debt
-    if (!o.installment || o.type !== 'expense' || o.category === LOAN_CATEGORY) continue;
-    const list = groups.get(o.installment.groupId) ?? [];
-    list.push(o);
-    groups.set(o.installment.groupId, list);
+    if (!o.cardId && o.type === 'expense' && o.category === 'debts' && !o.confirmed && (monthKey(o.date) <= cur || !o.fixed)) owedOcc.push(o);
+  }
+
+  const groups = new Map<string, Occurrence[]>();
+  for (const o of owedOcc) {
+    const key = o.installment?.groupId ?? o.transactionId;
+    groups.set(key, [...(groups.get(key) ?? []), o]);
   }
   const items: DebtItem[] = [];
-  let thisMonth = 0;
-  for (const [groupId, list] of groups) {
+  for (const [key, list] of groups) {
     const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date));
-    const left = sorted.filter((o) => monthKey(o.date) >= cur || (!o.cardId && !o.confirmed));
-    if (left.length === 0) continue;
-    const first = left[0];
+    const first = sorted[0];
     const tx = txById.get(first.transactionId);
     if (!tx) continue;
     items.push({
-      groupId,
+      key,
       transaction: tx,
       month: first.monthKey,
       description: first.description,
       cardId: first.cardId,
-      left: left.length,
-      total: first.installment!.total,
+      left: sorted.length,
+      total: first.installment?.total ?? sorted.length,
       next: first.amount,
-      remaining: left.reduce((s, o) => s + o.amount, 0),
+      remaining: sorted.reduce((sum, o) => sum + o.amount, 0),
       endsAt: monthKey(sorted[sorted.length - 1].date),
+      dueDate: first.date,
     });
-    thisMonth += sorted.filter((o) => monthKey(o.date) === cur).reduce((s, o) => s + o.amount, 0);
   }
-  items.sort((a, b) => a.endsAt.localeCompare(b.endsAt) || a.description.localeCompare(b.description));
+  items.sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.description.localeCompare(b.description));
+  const thisMonth = owedOcc.filter((o) => monthKey(o.date) === cur).reduce((sum, o) => sum + o.amount, 0);
   const income = recentIncome(occ, invoices);
-  return { items, owed: items.reduce((s, x) => s + x.remaining, 0), thisMonth, income, share: income > 0 ? thisMonth / income : 0 };
+  return { items, owed: items.reduce((sum, x) => sum + x.remaining, 0), thisMonth, income, share: income > 0 ? thisMonth / income : 0 };
 }

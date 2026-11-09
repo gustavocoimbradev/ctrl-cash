@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { Sheet } from '../components/Sheet';
 import { debtsSummary } from '../domain/areas';
-import { monthLabel } from '../domain/dates';
+import { formatDate, monthLabel } from '../domain/dates';
 import { formatMoney } from '../domain/money';
 import { getLocale, t } from '../i18n';
 import { useStore } from '../store';
@@ -32,7 +32,7 @@ export function DebtsSheet({ visible, onClose, onAdd, onEdit }: { visible: boole
     : [];
 
   return (
-    <Sheet screen visible={visible} title={t('Debts')} onClose={onClose} footer={<Button label={t('New installment purchase')} icon="plus" onPress={() => onAdd({ kind: 'expense', installments: true })} flex />}>
+    <Sheet screen visible={visible} title={t('Debts')} onClose={onClose} footer={<Button label={t('New debt')} icon="plus" onPress={() => onAdd({ kind: 'expense', category: 'debts' })} flex />}>
       {s ? (
         <>
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
@@ -43,13 +43,12 @@ export function DebtsSheet({ visible, onClose, onAdd, onEdit }: { visible: boole
               </View>
             ))}
           </View>
-          {s.items.length === 0 ? <Text style={[type.body, { color: c.textMuted }]}>{t('Nothing in installments right now.')}</Text> : null}
+          {s.items.length === 0 ? <Text style={[type.body, { color: c.textMuted }]}>{t('You owe nothing right now.')}</Text> : null}
           {s.items.length > 0 ? (
             <View style={{ gap: spacing.xs }}>
-              <Text style={[type.title, { color: c.text }]}>{t('In installments')}</Text>
               {s.items.map((i) => (
                 <Pressable
-                  key={i.groupId}
+                  key={i.key}
                   accessibilityRole="button"
                   accessibilityLabel={t('Open {title}', { title: i.description })}
                   onPress={() => onEdit(i.transaction, i.month)}
@@ -58,12 +57,12 @@ export function DebtsSheet({ visible, onClose, onAdd, onEdit }: { visible: boole
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{i.description}</Text>
                     <Text style={[type.body, { color: c.textMuted }]} numberOfLines={2}>
-                      {[t('{left} of {total} left · ends {month}', { left: i.left, total: i.total, month: monthLabel(i.endsAt) }), cardName(i.cardId)].filter(Boolean).join(' · ')}
+                      {[i.total > 1 ? t('{left} of {total} left · ends {month}', { left: i.left, total: i.total, month: monthLabel(i.endsAt) }) : t('Due {date}', { date: formatDate(i.dueDate) }), cardName(i.cardId)].filter(Boolean).join(' · ')}
                     </Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={[type.label, { color: c.text }]}>{formatMoney(i.remaining)}</Text>
-                    <Text style={[type.body, { color: c.textMuted }]}>{t('{amount} each', { amount: formatMoney(i.next) })}</Text>
+                    {i.total > 1 ? <Text style={[type.body, { color: c.textMuted }]}>{t('{amount} each', { amount: formatMoney(i.next) })}</Text> : null}
                   </View>
                 </Pressable>
               ))}
