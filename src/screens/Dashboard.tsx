@@ -28,7 +28,7 @@ import { CreditCard, Occurrence, Transaction } from '../types';
 import type { MobileTab } from '../components/BottomBar';
 import { StatementKind, StatementSheet } from './Statements';
 import { FormPreset } from './TransactionForm';
-import { t } from '../i18n';
+import { t, usePrefsVersion } from '../i18n';
 
 type Entry =
   | { kind: 'tx'; date: string; key: string; o: Occurrence }
@@ -123,6 +123,8 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
     return buildOccurrences(data, until);
   }, [data, month, today]);
 
+  // rows hold translated texts and category names: they are built again when the language changes
+  const lang = usePrefsVersion();
   const calc = useMemo(() => {
     const end = endOfMonth(month);
     const cardById = new Map(data.cards.map((x) => [x.id, x]));
@@ -180,7 +182,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       commitments: pendingCommitments(occ, endOfMonth(currentMonthKey())),
       quality,
     };
-  }, [data, occ, month]);
+  }, [data, occ, month, lang]);
   const { final, totals, avgExpense, quality, commitments, summary, spends } = calc;
 
   // accumulated wealth projection: from the current month onward (only recalculates when data or horizon change)

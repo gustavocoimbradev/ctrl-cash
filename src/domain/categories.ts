@@ -148,3 +148,12 @@ export const categoryOf = (slug?: string): Category =>
 /** Category name of an expense or income; old income without a category shows as "Income". */
 export const categoryLabel = (slug?: string, type: 'expense' | 'income' = 'expense'): string =>
   type === 'income' ? registry.find((c) => c.kind === 'income' && c.slug === slug)?.label ?? t('Income') : categoryOf(slug).label;
+
+/**
+ * The name to show for a category in somebody else's shared summary: a built-in one is shown in MY language (the slug
+ * is the same for everybody); a custom one keeps the name its owner gave it.
+ */
+export const sharedCategoryLabel = (slug: string, given: string): string => {
+  const base = EXPENSE.find((b) => b.slug === slug);
+  return base ? tBuiltin(base.label) : given;
+};

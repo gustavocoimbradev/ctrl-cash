@@ -3,7 +3,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BarChart, ChartLegend } from '../components/Charts';
 import { Segmented } from '../components/Controls';
-import { t } from '../i18n';
+import { t, usePrefsVersion } from '../i18n';
 import { Sheet } from '../components/Sheet';
 import { AnimatedBar } from '../components/Motion';
 import { cardColor } from '../domain/cards';

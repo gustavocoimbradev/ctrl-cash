@@ -7,7 +7,8 @@ import { addMonthsToKey, currentMonthKey, formatMonth, shortDate } from '../doma
 import { desktopBreakpoint, fontFamily, spacing, type, useColors } from '../theme';
 import { motion, useGlide, useTween, useTweenList } from '../theme/motion';
 import { CategoryShare, Summary } from './api';
-import { t } from '../i18n';
+import { sharedCategoryLabel } from '../domain/categories';
+import { t, usePrefsVersion } from '../i18n';
 
 const HORIZONS = [6, 12, 24] as const;
 type Horizon = (typeof HORIZONS)[number];
@@ -174,13 +175,14 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   const weight = (m: Month) => (m.incomeRel === undefined ? (m.spent > 0 || m.saved !== 0 ? 100 : 0) : m.incomeRel);
 
   // where the spending goes in the range: each month's category shares weighted by that month's income
+  const lang = usePrefsVersion();
   const { categories, spentOfIncome } = useMemo(() => {
     const totalWeight = months.reduce((a, m) => a + weight(m), 0);
     const agg = new Map<string, { label: string; w: number }>();
-    for (const m of months) for (const x of m.categories) agg.set(x.slug, { label: x.label, w: (agg.get(x.slug)?.w ?? 0) + x.pct * weight(m) });
+    for (const m of months) for (const x of m.categories) agg.set(x.slug, { label: sharedCategoryLabel(x.slug, x.label), w: (agg.get(x.slug)?.w ?? 0) + x.pct * weight(m) });
     const list: CategoryShare[] = totalWeight > 0 ? [...agg].map(([slug, v]) => ({ slug, label: v.label, pct: v.w / totalWeight })).filter((x) => x.pct > 0).sort((a, b) => b.pct - a.pct) : [];
     return { categories: list, spentOfIncome: list.reduce((a, x) => a + x.pct, 0) };
-  }, [months]);
+  }, [months, lang]);
 
   const shownSpent = useTween(spentOfIncome, motion.slow);
   const hasData = months.some((m) => weight(m) > 0);
@@ -225,9 +227,9 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
                   <Text style={[type.body, { color: c.textMuted }]}>{t('Spent')}</Text>
                   <Text style={[type.label, { color: c.expense }]}>{pct(r1(f * m.spent))}</Text>
                 </View>
-                <View style={[s.tipPill, { backgroundColor: `${over ? c.expense : c.primary}1A` }]}>
-                  <Text style={[type.body, { color: c.textMuted }]}>{over ? t('Over') : t('Saved')}</Text>
-                  <Text style={[type.label, { color: over ? c.expense : c.primary }]}>{pct(r1(Math.abs(f * m.saved)))}</Text>
+                <View style={[s.tipPill, { backgroundColor: `${c.primary}1A` }]}>
+                  <Text style={[type.body, { color: c.textMuted }]}>{t('Saved')}</Text>
+                  <Text style={[type.label, { color: c.primary }]}>{pct(over ? 0 : r1(f * m.saved))}</Text>
                 </View>
               </View>
               {/* how the month's income was shared between spending and saving */}
@@ -239,7 +241,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
                 <View style={{ gap: 6 }}>
                   {list.map((x) => (
                     <View key={x.slug} style={s.tipRow}>
-                      <Text style={[type.body, { color: c.text, width: 124 }]} numberOfLines={1}>{x.label}</Text>
+                      <Text style={[type.body, { color: c.text, width: 124 }]} numberOfLines={1}>{sharedCategoryLabel(x.slug, x.label)}</Text>
                       <View style={[s.miniTrack, { backgroundColor: c.surface }]}>
                         <View style={{ width: `${((x.pct * f) / peak) * 100}%`, height: '100%', borderRadius: 4, backgroundColor: colorOf(x.slug) }} />
                       </View>
