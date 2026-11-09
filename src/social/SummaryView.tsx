@@ -247,9 +247,9 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
     return tn ? { label: toneLabel(tn), color: TONE_COLORS[tn] } : null;
   };
   const pieRows = categories.filter((x) => r1(x.pct) > 0).map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug), name: x.label, tone: toneOf(x) }));
-  // two columns (a very narrow phone: one)
+  // two columns on desktop, one on a phone (names, badges and percentages need the room)
   const legendW = wide ? Math.max(0, rowW - Math.min(PIE_MAX + MARGIN_X_FULL * 2, Math.max(360, rowW * 0.55)) - spacing.lg) : rowW;
-  const legendCols = legendW >= 300 || !legendW ? 2 : 1;
+  const legendCols = wide ? 2 : 1;
   const pieTotal = pieRows.reduce((a, x) => a + x.value, 0) || 1;
 
   const chart = (
@@ -267,6 +267,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
         selected={sel}
         onSelect={setSel}
         format={pct}
+        fill
         tipWidth={310}
         renderTip={(i) => {
           const m = chartMonths[i];
@@ -355,9 +356,9 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
               >
                 <View style={[s.swatch, { backgroundColor: x.color }]} />
                 <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                  <Text style={[type.body, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{x.label}</Text>
+                  <Text style={[type.body, { color: c.text, flexShrink: 1, minWidth: 0 }]} numberOfLines={1}>{x.label}</Text>
                   {x.tone ? (
-                    <View style={{ backgroundColor: `${x.tone.color}1F`, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 1 }}>
+                    <View style={{ flexShrink: 0, backgroundColor: `${x.tone.color}1F`, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 1 }}>
                       <Text style={[type.body, { color: x.tone.color, fontSize: 16 }]} numberOfLines={1}>{x.tone.label}</Text>
                     </View>
                   ) : null}
@@ -375,7 +376,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
     <View style={{ gap: spacing.lg }}>
       <View style={s.head}>
         {wide ? <Text style={[type.label, { color: c.text }]}>{t('Month by month')}</Text> : null}
-        <PillToggle stretch={!wide} value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: h === 'month' ? t('This month') : t('{n} months', { n: h }) }))} />
+        <PillToggle stretch={!wide} value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: h === 'month' ? t('This month') : wide ? t('{n} months', { n: h }) : t('{n} mo.', { n: h }) }))} />
       </View>
       <View style={{ gap: spacing.xl }}>
         {chart}

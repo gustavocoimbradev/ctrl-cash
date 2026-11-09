@@ -47,10 +47,12 @@ interface ProjectionProps {
   areaColor?: string;
   /** index of the point that is "now": a dotted vertical line and a small label mark it */
   nowIndex?: number;
+  /** use the whole width: the first point at the left edge and the last at the right (few points, small screens) */
+  fill?: boolean;
 }
 
 /** Line chart (up to 2 series, the first with an area), vertical guide and tooltip at the selected point. */
-export function ProjectionChart({ series, labels, selected, onSelect, height = 230, format = formatMoney, renderTip, tipWidth = 190, areaColor = c.primary, nowIndex }: ProjectionProps) {
+export function ProjectionChart({ series, labels, selected, onSelect, height = 230, format = formatMoney, renderTip, tipWidth = 190, areaColor = c.primary, nowIndex, fill }: ProjectionProps) {
   const [w, setW] = useState(0);
   /** drawing: the lines reveal from left to right on enter and when the horizon changes */
   const progress = useProgress(`proj-${labels.length}`);
@@ -81,13 +83,17 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
   const span = max - min || 1;
   const n = labels.length;
   const step = w / Math.max(n, 1);
-  const x = (i: number) => step * i + step / 2;
+  const PAD = 14;
+  const x = (i: number) => (fill ? (n > 1 ? PAD + ((w - PAD * 2) * i) / (n - 1) : w / 2) : step * i + step / 2);
   const y = (v: number) => top + (height - top - bottom) * (1 - (v - min) / span);
   const sel = selected === null ? null : Math.min(selected, n - 1);
   const zeroY = y(0);
   const tipW = tipWidth;
   /** diagonal labels need about 28px per column; with less, show every Nth (still the full MM/YYYY) */
-  const labelEvery = Math.max(1, Math.ceil(28 / Math.max(step, 1)));
+  const gap = fill && n > 1 ? (w - PAD * 2) / (n - 1) : step;
+  const labelEvery = Math.max(1, Math.ceil(28 / Math.max(gap, 1)));
+  /** columns wide enough for a label lying flat: no diagonal, no wasted height */
+  const flat = gap >= 76;
   const LABEL_W = 84;
   // narrow charts (phones): steeper labels, so the first one does not stick out to the left of the card
   const steep = w < 520;
@@ -193,7 +199,7 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
         </View>
       )}
       {/* X axis: full MM/YYYY labels, diagonal, below the chart; every Nth one only if the columns are too tight */}
-      <View style={{ height: steep ? 84 : 60, marginTop: spacing.xs }}>
+      <View style={{ height: flat ? 28 : steep ? 84 : 60, marginTop: spacing.xs }}>
         {labels.map((l, i) => {
           if (i % labelEvery !== 0) return null;
           return (
@@ -201,8 +207,10 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
               key={i}
               numberOfLines={1}
               style={[
-                { position: 'absolute', top: 4, left: x(i) - LABEL_W, width: LABEL_W, textAlign: 'right', fontFamily, fontSize: 16, lineHeight: 20, color: i === sel ? c.text : c.textMuted, fontWeight: i === sel ? '700' : '400' },
-                { transform: [{ rotate: `${angle}deg` }], transformOrigin: '100% 50%' } as object,
+                flat
+                  ? { position: 'absolute', top: 4, left: Math.min(Math.max(x(i) - LABEL_W / 2, 0), Math.max(w - LABEL_W, 0)), width: LABEL_W, textAlign: i === 0 && x(i) - LABEL_W / 2 < 0 ? 'left' : i === n - 1 && x(i) + LABEL_W / 2 > w ? 'right' : 'center', fontFamily, fontSize: 16, lineHeight: 20, color: i === sel ? c.text : c.textMuted, fontWeight: i === sel ? '700' : '400' }
+                  : { position: 'absolute', top: 4, left: x(i) - LABEL_W, width: LABEL_W, textAlign: 'right', fontFamily, fontSize: 16, lineHeight: 20, color: i === sel ? c.text : c.textMuted, fontWeight: i === sel ? '700' : '400' },
+                flat ? null : ({ transform: [{ rotate: `${angle}deg` }], transformOrigin: '100% 50%' } as object),
               ]}
             >
               {l}
@@ -431,7 +439,7 @@ export interface LegendItem {
 /** Legend that also filters: tapping toggles the series (at least one always stays on). */
 export function ChartLegend({ items, extra }: { items: LegendItem[]; /** fixed item (does not filter), e.g. paid invoice indicator */ extra?: React.ReactNode }) {
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'center' }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.xs, justifyContent: 'center' }}>
       {items.map((it) => (
         <Pressable
           key={it.label}
@@ -439,7 +447,7 @@ export function ChartLegend({ items, extra }: { items: LegendItem[]; /** fixed i
           accessibilityState={{ checked: it.on }}
           accessibilityLabel={it.on ? t('Hide {name}', { name: it.label }) : t('Show {name}', { name: it.label })}
           onPress={it.onPress}
-          style={({ pressed, hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 36, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.6 : 1 })}
+          style={({ pressed, hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 36, paddingHorizontal: spacing.sm, borderRadius: radius.pill, backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.6 : 1 })}
         >
           {it.line && it.dashed ? (
             <View style={{ flexDirection: 'row', gap: 3, opacity: it.on ? 1 : 0.4 }}>

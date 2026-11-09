@@ -3,6 +3,7 @@ import type { Dict } from '../index';
 /** Quick setup, account settings, the language/currency fields and the app shell. */
 export const dict: Dict = {
   pt: {
+    "{n} mo.": "{n} m",
     "Data sharing request": "Pedido de compartilhamento de dados",
     "You asked to see their data.": "Você pediu para ver os dados dela.",
     "They asked you to share your data with them.": "Pediram que você compartilhe seus dados.",
@@ -232,6 +233,7 @@ export const dict: Dict = {
     "Cloud storage": "Armazenamento na nuvem",
   },
   es: {
+    "{n} mo.": "{n} m",
     "Data sharing request": "Solicitud de compartir datos",
     "You asked to see their data.": "Pediste ver sus datos.",
     "They asked you to share your data with them.": "Te pidieron que compartas tus datos con ellos.",
@@ -461,6 +463,7 @@ export const dict: Dict = {
     "Cloud storage": "Almacenamiento en la nube",
   },
   de: {
+    "{n} mo.": "{n} Mon.",
     "Data sharing request": "Anfrage zum Teilen von Daten",
     "You asked to see their data.": "Du hast darum gebeten, ihre Daten zu sehen.",
     "They asked you to share your data with them.": "Sie haben dich gebeten, deine Daten mit ihnen zu teilen.",
@@ -690,6 +693,7 @@ export const dict: Dict = {
     "Cloud storage": "Cloud-Speicher",
   },
   fr: {
+    "{n} mo.": "{n} mois",
     "Data sharing request": "Demande de partage de données",
     "You asked to see their data.": "Vous avez demandé à voir ses données.",
     "They asked you to share your data with them.": "On vous a demandé de partager vos données.",
@@ -919,6 +923,7 @@ export const dict: Dict = {
     "Cloud storage": "Stockage cloud",
   },
   it: {
+    "{n} mo.": "{n} m",
     "Data sharing request": "Richiesta di condivisione dei dati",
     "You asked to see their data.": "Hai chiesto di vedere i suoi dati.",
     "They asked you to share your data with them.": "Ti hanno chiesto di condividere i tuoi dati.",
