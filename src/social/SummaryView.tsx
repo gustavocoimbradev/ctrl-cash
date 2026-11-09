@@ -152,7 +152,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   const c = useColors();
   const { width } = useWindowDimensions();
   const wide = width >= desktopBreakpoint;
-  const [horizon, setHorizon] = useState<Horizon>(12);
+  const [horizon, setHorizon] = useState<Horizon>('month');
   const [sel, setSel] = useState<number | null>(null);
   const [slice, setSlice] = useState<string | null>(null);
   /** the pie column's size: the line chart takes its height, and the pie fits its width */
