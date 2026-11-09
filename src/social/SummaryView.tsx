@@ -7,7 +7,7 @@ import { addMonthsToKey, currentMonthKey, formatMonth, shortDate } from '../doma
 import { desktopBreakpoint, fontFamily, spacing, type, useColors } from '../theme';
 import { motion, useGlide, useTween, useTweenList } from '../theme/motion';
 import { CategoryShare, Summary } from './api';
-import { sharedCategoryLabel } from '../domain/categories';
+import { TONE_COLORS, categoryColor, categoryTone, sharedCategoryLabel, toneLabel } from '../domain/categories';
 import { t, usePrefsVersion } from '../i18n';
 
 const HORIZONS = ['month', 6, 12, 24] as const;
@@ -212,6 +212,9 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   if (!hasData) return <Text style={[type.body, { color: c.textMuted }]}>{t('Nothing to show yet: add some income and expenses.')}</Text>;
 
   const colorOf = (slug: string) => {
+    // built-in categories have a color that says what they are (debt is red, investments green)
+    const fixed = categoryColor(slug);
+    if (fixed) return fixed;
     const i = categories.findIndex((x) => x.slug === slug);
     if (i < 0) return OTHER;
     // after the fixed palette every category still gets its own color (hues spread by the golden angle)
@@ -322,7 +325,10 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
                 style={({ hovered }: any) => [s.legendRow, s.legendCell, { backgroundColor: hovered || slice === x.key ? c.surface : 'transparent' }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '180ms' } as object)]}
               >
                 <View style={[s.swatch, { backgroundColor: x.color }]} />
-                <Text style={[type.body, { color: c.text, flex: 1 }]} numberOfLines={1}>{x.label}</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[type.body, { color: c.text }]} numberOfLines={1}>{x.label}</Text>
+                  {categoryTone(x.key) ? <Text style={[type.body, { color: TONE_COLORS[categoryTone(x.key)!], fontWeight: '600' }]} numberOfLines={1}>{toneLabel(categoryTone(x.key)!)}</Text> : null}
+                </View>
                 <Text style={[type.label, { color: c.text }]}>{pct(r1((x.value / pieTotal) * 100))}</Text>
               </Pressable>
             ))}

@@ -157,3 +157,67 @@ export const sharedCategoryLabel = (slug: string, given: string): string => {
   const base = EXPENSE.find((b) => b.slug === slug);
   return base ? tBuiltin(base.label) : given;
 };
+
+/** How a built-in category counts for financial health, in words anybody understands. */
+export type Tone = 'healthy' | 'necessary' | 'comfort' | 'luxury' | 'unhealthy';
+
+const TONES: Record<string, Tone> = {
+  investments: 'healthy',
+  groceries: 'necessary',
+  butcher: 'necessary',
+  bills: 'necessary',
+  health: 'necessary',
+  taxes: 'necessary',
+  bureaucracy: 'necessary',
+  education: 'necessary',
+  car: 'comfort',
+  pets: 'comfort',
+  personal_care: 'comfort',
+  subscriptions: 'luxury',
+  gifts: 'luxury',
+  leisure: 'luxury',
+  debts: 'unhealthy',
+};
+
+/** The tone of a built-in category by slug; null for the ones that have none (custom categories, "Other"). */
+export const categoryTone = (slug: string): Tone | null => TONES[slug] ?? null;
+
+export const TONE_COLORS: Record<Tone, string> = {
+  healthy: '#1FA86A',
+  necessary: '#5B6CC4',
+  comfort: '#D9A31F',
+  luxury: '#C25BD6',
+  unhealthy: '#DC2626',
+};
+
+/** The tone's name in the language on screen. */
+export function toneLabel(tone: Tone): string {
+  switch (tone) {
+    case 'healthy': return t('Healthy');
+    case 'necessary': return t('Necessary');
+    case 'comfort': return t('Comfort');
+    case 'luxury': return t('Luxury');
+    case 'unhealthy': return t('Unhealthy');
+  }
+}
+
+/** A color per built-in category, from its tone: green for what builds wealth, red for debt, blues for what is necessary, warm colors for comfort and luxury. */
+const SLUG_COLORS: Record<string, string> = {
+  investments: '#1FA86A',
+  groceries: '#3B82F6',
+  butcher: '#60A5FA',
+  bills: '#4F46E5',
+  health: '#0EA5E9',
+  taxes: '#6366F1',
+  bureaucracy: '#0891B2',
+  education: '#818CF8',
+  car: '#D9A31F',
+  pets: '#B98A5E',
+  personal_care: '#F0B429',
+  subscriptions: '#C25BD6',
+  gifts: '#F28BA3',
+  leisure: '#8B5CF6',
+  debts: '#DC2626',
+  other: '#9AA5BC',
+};
+export const categoryColor = (slug: string): string | null => SLUG_COLORS[slug] ?? null;

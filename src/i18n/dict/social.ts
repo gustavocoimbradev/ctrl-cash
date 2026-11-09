@@ -2,6 +2,11 @@ import type { Dict } from '../index';
 
 export const dict: Dict = {
   pt: {
+    'Healthy': 'Saudável',
+    'Necessary': 'Necessário',
+    'Comfort': 'Conforto',
+    'Luxury': 'Luxo',
+    'Unhealthy': 'Não saudável',
     'This month': 'Este mês',
     "Chat with people you follow": "Converse com quem você segue",
     "Create your profile to follow people and send messages. Nothing about your money is shown unless you share it.": "Crie seu perfil para seguir pessoas e enviar mensagens. Nada sobre o seu dinheiro é mostrado, a menos que você compartilhe.",
@@ -81,6 +86,11 @@ export const dict: Dict = {
     "This is your own code.": "Este é o seu próprio código.",
   },
   es: {
+    'Healthy': 'Saludable',
+    'Necessary': 'Necesario',
+    'Comfort': 'Comodidad',
+    'Luxury': 'Lujo',
+    'Unhealthy': 'Poco saludable',
     'This month': 'Este mes',
     "Chat with people you follow": "Chatea con las personas que sigues",
     "Create your profile to follow people and send messages. Nothing about your money is shown unless you share it.": "Crea tu perfil para seguir a otras personas y enviar mensajes. No se muestra nada de tu dinero a menos que lo compartas.",
@@ -160,6 +170,11 @@ export const dict: Dict = {
     "This is your own code.": "Este es tu propio código.",
   },
   de: {
+    'Healthy': 'Gesund',
+    'Necessary': 'Notwendig',
+    'Comfort': 'Komfort',
+    'Luxury': 'Luxus',
+    'Unhealthy': 'Ungesund',
     'This month': 'Dieser Monat',
     "Chat with people you follow": "Chatte mit Leuten, denen du folgst",
     "Create your profile to follow people and send messages. Nothing about your money is shown unless you share it.": "Erstelle dein Profil, um Leuten zu folgen und Nachrichten zu senden. Nichts über dein Geld wird angezeigt, außer du teilst es.",
@@ -239,6 +254,11 @@ export const dict: Dict = {
     "This is your own code.": "Das ist dein eigener Code.",
   },
   fr: {
+    'Healthy': 'Sain',
+    'Necessary': 'Nécessaire',
+    'Comfort': 'Confort',
+    'Luxury': 'Luxe',
+    'Unhealthy': 'Malsain',
     'This month': 'Ce mois-ci',
     "Chat with people you follow": "Discutez avec les personnes que vous suivez",
     "Create your profile to follow people and send messages. Nothing about your money is shown unless you share it.": "Créez votre profil pour suivre des personnes et envoyer des messages. Rien sur votre argent n'est affiché sauf si vous le partagez.",
@@ -318,6 +338,11 @@ export const dict: Dict = {
     "This is your own code.": "Voici votre propre code.",
   },
   it: {
+    'Healthy': 'Sano',
+    'Necessary': 'Necessario',
+    'Comfort': 'Comfort',
+    'Luxury': 'Lusso',
+    'Unhealthy': 'Malsano',
     'This month': 'Questo mese',
     "Chat with people you follow": "Chatta con le persone che segui",
     "Create your profile to follow people and send messages. Nothing about your money is shown unless you share it.": "Crea il tuo profilo per seguire le persone e inviare messaggi. Nulla sui tuoi soldi viene mostrato, a meno che tu non lo condivida.",
