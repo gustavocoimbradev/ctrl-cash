@@ -226,6 +226,10 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
 
   const shownSpent = useTween(spentOfIncome, motion.slow);
   const hasData = months.some((m) => weight(m) > 0);
+  // the line chart starts where the history starts: months before the first one with income are left out (never past today)
+  const firstWithData = months.findIndex((m) => weight(m) > 0);
+  const start = firstWithData > 0 ? Math.min(firstWithData, half) : 0;
+  const chartMonths = months.slice(start);
   if (!hasData) return <Text style={[type.body, { color: c.textMuted }]}>{t('Nothing to show yet: add some income and expenses.')}</Text>;
 
   const colorOf = (slug: string) => {
@@ -248,20 +252,20 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
     <View style={{ gap: spacing.sm, minWidth: 0 }}>
       <ProjectionChart
         series={[
-          { values: months.map((m) => (m.incomeRel === undefined ? 100 : m.incomeRel)), color: c.income, area: true, label: t('Income') },
-          { values: months.map((m) => (weight(m) * m.spent) / 100), color: c.expense, dashed: true, label: t('Spent') },
-          { values: months.map((m) => (weight(m) * m.saved) / 100), color: c.primary, label: t('Saved') },
+          { values: chartMonths.map((m) => (m.incomeRel === undefined ? 100 : m.incomeRel)), color: c.income, area: true, label: t('Income') },
+          { values: chartMonths.map((m) => (weight(m) * m.spent) / 100), color: c.expense, dashed: true, label: t('Spent') },
+          { values: chartMonths.map((m) => (weight(m) * m.saved) / 100), color: c.primary, label: t('Saved') },
         ]}
         areaColor={c.income}
         height={wide ? 260 : 230}
-        labels={months.map((m) => formatMonth(m.key))}
-        nowIndex={half}
+        labels={chartMonths.map((m) => formatMonth(m.key))}
+        nowIndex={half - start}
         selected={sel}
         onSelect={setSel}
         format={pct}
         tipWidth={310}
         renderTip={(i) => {
-          const m = months[i];
+          const m = chartMonths[i];
           if (!m || weight(m) <= 0) return <Text style={[type.body, { color: c.textMuted }]}>{t('No income planned.')}</Text>;
           // the tooltip speaks in percent of THAT month's income (the lines are drawn scaled by how big the income was)
           const f = 1;
