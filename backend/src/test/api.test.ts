@@ -48,7 +48,7 @@ test('upsert + read back for every collection (minimal and complete docs)', asyn
   for (const c of COLLECTIONS) body[c] = [{ ...samples[c]!, id: 'min' }, full[c]!];
   const r = await put(uid, body);
   assert.equal(r.statusCode, 200);
-  assert.deepEqual(r.json(), { upserted: 12 });
+  assert.deepEqual(r.json(), { upserted: 14 });
   const back = await get(uid);
   for (const c of COLLECTIONS) {
     assert.equal(back[c]!.length, 2, c);
