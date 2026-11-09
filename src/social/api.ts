@@ -64,6 +64,9 @@ export interface Summary {
   wealth?: { start: string; planned: number[]; habit: number[] };
 }
 
+/** The body of the chat message that asks somebody to share their data: the screen shows it as a card with a button, in the reader's language. */
+export const SHARE_REQUEST = '[share-request]';
+
 const post = <T>(path: string, body: unknown) => call<T>(path, { method: 'POST', body });
 const enc = encodeURIComponent;
 

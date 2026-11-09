@@ -3,7 +3,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { radius, spacing, type, useColors } from '../theme';
 import { shortDate, timeOf } from '../domain/dates';
-import { Message, socialApi } from './api';
+import { Message, SHARE_REQUEST, socialApi } from './api';
+import { Pill } from './parts';
 import { useSocial } from './SocialProvider';
 import { Empty } from './parts';
 import { t } from '../i18n';
@@ -23,7 +24,10 @@ const dayOf = (ms: number) => {
 /** The conversation with one person: bubbles, day separators and a composer. Polls while it is open. */
 export function Thread({ id }: { id: string }) {
   const c = useColors();
-  const { refresh } = useSocial();
+  const { refresh, given, share } = useSocial();
+  const [sharing, setSharing] = useState(false);
+  /** I already share my data with the person of this thread */
+  const alreadyShare = given.some((p) => p.code === id);
   const [messages, setMessages] = useState<Message[]>([]);
   const [canSend, setCanSend] = useState(true);
   const [loaded, setLoaded] = useState(false);
@@ -98,9 +102,24 @@ export function Thread({ id }: { id: string }) {
             <React.Fragment key={m.id}>
               {showDay ? <Text style={[type.body, s.day, { color: c.textMuted }]}>{day}</Text> : null}
               <View style={[s.line, m.mine ? s.lineMine : s.lineTheirs]}>
+                {m.body === SHARE_REQUEST ? (
+                  // a request to share data: a card, with the way to say yes right in it
+                  <View style={[s.bubble, { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, gap: spacing.sm }]}>
+                    <Text style={[type.label, { color: c.text }]}>{t('Data sharing request')}</Text>
+                    <Text style={[type.body, { color: c.textMuted }]}>{m.mine ? t('You asked to see their data.') : t('They asked you to share your data with them.')}</Text>
+                    {!m.mine ? (
+                      alreadyShare ? (
+                        <Text style={[type.body, { color: c.income }]}>{t('You share your data with them.')}</Text>
+                      ) : (
+                        <Pill label={t('Share my data')} icon="share-2" primary disabled={sharing} onPress={() => { setSharing(true); void share(id).finally(() => setSharing(false)); }} />
+                      )
+                    ) : null}
+                  </View>
+                ) : (
                 <View style={[s.bubble, m.mine ? { backgroundColor: c.primary, borderBottomRightRadius: 6 } : { backgroundColor: c.surface, borderBottomLeftRadius: 6 }]}>
                   <Text style={[type.body, { color: m.mine ? c.onPrimary : c.text }, Platform.OS === 'web' && ({ whiteSpace: 'pre-wrap', wordBreak: 'break-word' } as object)]} selectable>{m.body}</Text>
                 </View>
+                )}
                 <Text style={[s.time, { color: c.textMuted }]}>{m.mine && m.readAt ? t('{time} · Seen', { time: timeOf(m.createdAt) }) : timeOf(m.createdAt)}</Text>
               </View>
             </React.Fragment>

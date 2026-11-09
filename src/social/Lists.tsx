@@ -1,12 +1,16 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { spacing, type, useColors } from '../theme';
+import { SHARE_REQUEST } from './api';
 import { useSocial } from './SocialProvider';
 import { Empty, Pill, PersonRow } from './parts';
 import { t } from '../i18n';
 
 const clean = (body: string) => body.replace(/\s+/g, ' ');
-const preview = (mine: boolean, body: string) => (mine ? t('You: {text}', { text: clean(body) }) : clean(body));
+const preview = (mine: boolean, body: string) => {
+  const text = body === SHARE_REQUEST ? t('Data sharing request') : clean(body);
+  return mine ? t('You: {text}', { text }) : text;
+};
 
 /** The conversations, newest first, with what is unread. */
 export function ChatsList({ onOpen, onNew }: { onOpen: (code: string) => void; onNew: () => void }) {

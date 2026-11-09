@@ -7,7 +7,7 @@ import { Sheet } from '../components/Sheet';
 import { buildSummary } from '../domain/summary';
 import { useStore } from '../store';
 import { desktopBreakpoint, maxContentWidth, spacing, type, useColors } from '../theme';
-import { Person, PersonDetail, Summary, socialApi } from './api';
+import { Person, PersonDetail, SHARE_REQUEST, Summary, socialApi } from './api';
 import { CodeInput, FoundPerson, useCodeLookup } from './code';
 import { ProfileForm } from './ProfileForm';
 import { useSocial } from './SocialProvider';
@@ -105,8 +105,20 @@ function ScoreBadge({ health, wide }: { health: Score; wide: boolean }) {
   );
 }
 
+/** Where the score will be, while the person's app has not published it yet (it does so the next time it is open). */
+function PendingScore({ wide }: { wide: boolean }) {
+  const c = useColors();
+  return (
+    <View style={[s.score, { alignItems: 'center', gap: spacing.xs }, wide && { paddingLeft: spacing.xl, borderLeftWidth: 1, borderLeftColor: c.border, maxWidth: 260 }]}>
+      <Text style={[type.body, { color: c.textMuted }]}>{t('Financial health')}</Text>
+      <Text style={[type.hero, { color: c.textMuted, fontSize: 40, lineHeight: 46 }]}>--</Text>
+      <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>{t('Shows up as soon as their app publishes it.')}</Text>
+    </View>
+  );
+}
+
 /** The top card of a profile: who it is, the code, the numbers and, under them, the actions; the score sits on the right. */
-function Header({ name, code, color, photo, counters, actions, health }: { name: string; code: string; color: string | null; photo?: string | null; counters?: { n: number; label: string; onPress: () => void }[]; actions?: React.ReactNode; health?: Score }) {
+function Header({ name, code, color, photo, counters, actions, health, scorePending }: { name: string; code: string; color: string | null; photo?: string | null; counters?: { n: number; label: string; onPress: () => void }[]; actions?: React.ReactNode; health?: Score; /** the data is shared but has no score yet (their app has not published it) */ scorePending?: boolean }) {
   const c = useColors();
   const { width } = useWindowDimensions();
   const wide = width >= desktopBreakpoint;
@@ -124,9 +136,11 @@ function Header({ name, code, color, photo, counters, actions, health }: { name:
           </View>
         ) : null}
         {!wide && health ? <ScoreBadge health={health} wide={false} /> : null}
+        {!wide && !health && scorePending ? <PendingScore wide={false} /> : null}
         {actions ? <View style={[s.actions, !wide && { alignSelf: 'stretch' }]}>{actions}</View> : null}
       </View>
       {wide && health ? <ScoreBadge health={health} wide /> : null}
+      {wide && !health && scorePending ? <PendingScore wide /> : null}
     </Card>
   );
 }
@@ -247,6 +261,8 @@ function OtherProfile({ code }: { code: string }) {
   const [summary, setSummary] = useState<{ summary: Summary | null; updatedAt: number | null } | null>(null);
   const [missing, setMissing] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** the request to share their data was sent from this page */
+  const [requested, setRequested] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
 
   const load = useCallback(async () => {
     try {
@@ -263,6 +279,9 @@ function OtherProfile({ code }: { code: string }) {
     setPerson(null);
     setMissing(false);
     void load();
+    // what they publish shows up here by itself while the page is open
+    const timer = setInterval(() => void load(), 10000);
+    return () => clearInterval(timer);
   }, [load]);
 
   if (missing) return <Card><Empty icon="user-x" text={t('Nobody has this code.')} /></Card>;
@@ -285,6 +304,7 @@ function OtherProfile({ code }: { code: string }) {
         color={person.color}
         photo={person.photo}
         health={summary?.summary?.health}
+        scorePending={!!person.summaryAccess}
         actions={
           <>
             <Pill label={t('Message')} icon="heart" primary grow={narrow} onPress={() => openChat(code)} />
@@ -302,6 +322,30 @@ function OtherProfile({ code }: { code: string }) {
           <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>
             {person.summaryAccess ? t('{name} shared the summary, but it has not been published yet.', { name: first }) : t('{name} has not shared a summary with you.', { name: first })}
           </Text>
+          {!person.summaryAccess ? (
+            <View style={{ alignItems: 'center', gap: spacing.sm }}>
+              {requested === 'sent' ? (
+                <Text style={[type.body, { color: c.income, textAlign: 'center' }]}>{t('Request sent. {name} will see a button to share.', { name: first })}</Text>
+              ) : (
+                <Pill
+                  label={t('Request data sharing')}
+                  icon="send"
+                  primary
+                  disabled={requested === 'sending'}
+                  onPress={async () => {
+                    setRequested('sending');
+                    try {
+                      await socialApi.send(code, SHARE_REQUEST);
+                      setRequested('sent');
+                    } catch {
+                      setRequested('failed');
+                    }
+                  }}
+                />
+              )}
+              {requested === 'failed' ? <Text style={[type.body, { color: c.expense, textAlign: 'center' }]}>{t('The request was not sent. Try again.')}</Text> : null}
+            </View>
+          ) : null}
         </Card>
       )}
     </View>
