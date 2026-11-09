@@ -16,7 +16,7 @@ type Horizon = (typeof HORIZONS)[number];
 const PALETTE = ['#E0446A', '#D9831F', '#8B5CF6', '#0EA5E9', '#1FA86A', '#F28BA3', '#B98A5E'];
 const OTHER = '#9AA5BC';
 /** the donut's largest size, its ring thickness and the room left around it for the percentage that points at a slice */
-const PIE_MAX = 232;
+const PIE_MAX = 320;
 const RING_FULL = 40;
 const RING_COMPACT = 30;
 const MARGIN_X_FULL = 104;
@@ -157,6 +157,8 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   const [slice, setSlice] = useState<string | null>(null);
   /** the pie column's size: the line chart takes its height, and the pie fits its width */
   const [pieBox, setPieBox] = useState({ w: 0, h: 0 });
+  /** the row that holds the donut and its legend */
+  const [rowW, setRowW] = useState(0);
   useEffect(() => {
     setSel(null);
     setSlice(null);
@@ -222,6 +224,9 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   };
   // every category with a value is shown (one that rounds to 0% has nothing to show); none is folded into "everything else"
   const pieRows = categories.filter((x) => r1(x.pct) > 0).map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug) }));
+  // 3 columns when the legend has room for them, else 2 (a narrow phone: 1)
+  const legendW = wide ? Math.max(0, rowW - Math.min(PIE_MAX + MARGIN_X_FULL * 2, Math.max(360, rowW * 0.55)) - spacing.lg) : rowW;
+  const legendCols = legendW >= 600 ? 3 : legendW >= 300 || !legendW ? 2 : 1;
   const pieTotal = pieRows.reduce((a, x) => a + x.value, 0) || 1;
 
   const chart = (
@@ -293,23 +298,23 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   );
 
   const pie = (
-    <View style={[{ gap: spacing.lg }, wide && { flexDirection: 'row', alignItems: 'center' }]}>
+    <View onLayout={(e) => setRowW(e.nativeEvent.layout.width)} style={[{ gap: spacing.lg }, wide && { flexDirection: 'row', alignItems: 'center' }]}>
       {pieRows.length === 0 ? (
         <Text style={[type.body, { color: c.textMuted }]}>{t('No expenses in this period.')}</Text>
       ) : (
         <>
           {/* the donut on the left (on top, on a phone) */}
-          <View onLayout={(e) => setPieBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })} style={{ width: wide ? 340 : undefined, flexShrink: 0 }}>
+          <View onLayout={(e) => setPieBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })} style={{ width: wide ? Math.min(PIE_MAX + MARGIN_X_FULL * 2, Math.max(360, rowW * 0.55)) : undefined, flexShrink: 0 }}>
           <Pie
             slices={pieRows}
             selected={slice}
             onSelect={setSlice}
             compact={!wide}
-            size={Math.max(150, Math.min(PIE_MAX, (pieBox.w || PIE_MAX + MARGIN_X_FULL * 2) - (wide ? MARGIN_X_FULL : MARGIN_X_COMPACT) * 2))}
+            size={Math.max(170, Math.min(PIE_MAX, (pieBox.w || PIE_MAX + MARGIN_X_FULL * 2) - (wide ? MARGIN_X_FULL : MARGIN_X_COMPACT) * 2))}
             center={
               <>
                 <Text style={[type.title, { color: c.expense, fontSize: wide ? 20 : 22 }]}>{pct(r1(shownSpent))}</Text>
-                <Text style={[type.body, { color: c.textMuted }]}>{wide ? t('of income spent') : t('spent')}</Text>
+                <Text style={[type.body, { color: c.textMuted }]}>{wide && pieBox.w - MARGIN_X_FULL * 2 >= 240 ? t('of income spent') : t('spent')}</Text>
               </>
             }
           />
@@ -323,7 +328,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
                 accessibilityLabel={`${x.label}: ${pct(r1((x.value / pieTotal) * 100))}`}
                 onPress={() => setSlice(slice === x.key ? null : x.key)}
                 {...({ onHoverIn: () => setSlice(x.key), onHoverOut: () => setSlice(null) } as object)}
-                style={({ hovered }: any) => [s.legendRow, s.legendCell, { backgroundColor: hovered || slice === x.key ? c.surface : 'transparent' }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '180ms' } as object)]}
+                style={({ hovered }: any) => [s.legendRow, { width: `${100 / legendCols - 2}%` as `${number}%` }, { backgroundColor: hovered || slice === x.key ? c.surface : 'transparent' }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '180ms' } as object)]}
               >
                 <View style={[s.swatch, { backgroundColor: x.color }]} />
                 <View style={{ flex: 1, minWidth: 0 }}>
@@ -363,7 +368,6 @@ const s = StyleSheet.create({
   miniTrack: { flex: 1, height: 8, borderRadius: 4, overflow: 'hidden' },
   pieCenter: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   legendGrid: { flex: 1, minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.md },
-  legendCell: { flexGrow: 1, flexBasis: 220, minWidth: 0 },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44, paddingHorizontal: spacing.sm, borderRadius: 12 },
   swatch: { width: 12, height: 12, borderRadius: 6 },
 });
