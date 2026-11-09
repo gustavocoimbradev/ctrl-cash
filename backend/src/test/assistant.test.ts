@@ -27,10 +27,10 @@ async function token(form: Record<string, string>) {
   return { status: r.statusCode, body: r.json() as any, headers: r.headers };
 }
 /** the whole way in: register, approve as `uid`, exchange the code */
-async function connect(uid: string) {
+async function connect(uid: string, write = false) {
   const reg = await register();
   const verifier = newVerifier();
-  const approve = await app.inject({ method: 'POST', url: '/api/oauth/approve', headers: bearer(uid), payload: { client_id: reg.body.client_id, redirect_uri: REDIRECT, state: 'xyz', code_challenge: challengeOf(verifier) } as object });
+  const approve = await app.inject({ method: 'POST', url: '/api/oauth/approve', headers: bearer(uid), payload: { client_id: reg.body.client_id, redirect_uri: REDIRECT, state: 'xyz', code_challenge: challengeOf(verifier), write } as object });
   assert.equal(approve.statusCode, 200);
   const redirect = new URL(approve.json().redirect);
   assert.equal(redirect.origin + redirect.pathname, REDIRECT);
@@ -140,7 +140,8 @@ test('MCP: initialize, list the tools and read only my own snapshot', async () =
 
   const list = (await mcp(a.tokens.access_token, { jsonrpc: '2.0', id: 2, method: 'tools/list' })).json();
   assert.ok(list.result.tools.length >= 8);
-  assert.ok(list.result.tools.every((t: any) => t.annotations.readOnlyHint === true));
+  // everything only reads, except adding a transaction (refused unless the person allowed it)
+  assert.deepEqual(list.result.tools.filter((t: any) => t.annotations.readOnlyHint !== true).map((t: any) => t.name), ['add_transaction']);
 
   const call = (tok: string, name: string) => mcp(tok, { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name, arguments: {} } }).then((r) => r.json());
   // nothing published yet
@@ -213,4 +214,93 @@ test('connecting again replaces the earlier connection of the same assistant', a
   assert.equal(live.rows[0].n, 1);
   assert.equal((await mcp(first.tokens.access_token, { jsonrpc: '2.0', id: 1, method: 'ping' })).statusCode, 401);
   void reg;
+});
+
+const callTool = async (tok: string, name: string, args: unknown = {}) => (await mcp(tok, { jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name, arguments: args } })).json().result as { content: { text: string }[]; isError?: boolean };
+
+test('adding transactions: read-only by default, allowed by the person, then made the way the app makes them', async () => {
+  const uid = newUid();
+  const c = await connect(uid);
+  const add = (args: unknown) => callTool(c.tokens.access_token, 'add_transaction', args);
+  const docs = async () => (await app.inject({ method: 'GET', url: '/api/data', headers: bearer(uid) })).json().transactions as any[];
+
+  // the tool is listed with its schema, and refused while the connection is read-only
+  const list = (await mcp(c.tokens.access_token, { jsonrpc: '2.0', id: 1, method: 'tools/list' })).json().result.tools;
+  assert.equal(list.find((t: any) => t.name === 'add_transaction').annotations.readOnlyHint, false);
+  const refused = await add({ type: 'expense', description: 'Pharmacy', amount: 30 });
+  assert.equal(refused.isError, true);
+  assert.match(refused.content[0]!.text, /read-only/);
+  assert.equal((await docs()).length, 0);
+
+  // somebody else cannot allow it for me; I can
+  const [conn] = (await app.inject({ method: 'GET', url: '/api/assistant/connections', headers: { ...bearer(uid), ...HOST } })).json().connections;
+  assert.equal(conn.canWrite, false);
+  const allow = (who: string, write: boolean) => app.inject({ method: 'POST', url: '/api/assistant/connections/permissions', headers: bearer(who), payload: { id: conn.id, write } as object });
+  assert.equal((await allow(newUid(), true)).statusCode, 404);
+  assert.equal((await allow(uid, true)).statusCode, 200);
+
+  // an expense: whole units in, the smallest unit stored; already paid by default
+  const ok = await add({ type: 'expense', description: 'Pharmacy', amount: 49.9, date: '2026-11-05', category: 'Health' });
+  assert.equal(ok.isError, undefined, ok.content[0]!.text);
+  const [t1] = await docs();
+  assert.equal(t1.amount, 4990);
+  assert.equal(t1.category, 'health');
+  assert.equal(t1.confirmed, true);
+  assert.equal(t1.date, '2026-11-05');
+  assert.equal(t1.fixed, false);
+
+  // income needs a category; pending when asked
+  assert.equal((await add({ type: 'income', description: 'Pay', amount: 1000 })).isError, true);
+  assert.equal((await add({ type: 'income', description: 'Pay', amount: 1000, category: 'salary', confirmed: false })).isError, undefined);
+
+  // a card purchase in 3 installments: split, on the following invoices, never confirmed
+  await app.inject({ method: 'PUT', url: '/api/data', headers: bearer(uid), payload: { cards: [{ id: 'k1', name: 'Nubank', limit: 500000, dueDay: 10 }] } as object });
+  const card = await add({ type: 'expense', description: 'Phone', amount: 1000, date: '2026-11-05', card: 'nubank', installments: 3 });
+  assert.equal(card.isError, undefined, card.content[0]!.text);
+  const phone = (await docs()).filter((d) => d.description === 'Phone').sort((a, b) => a.date.localeCompare(b.date));
+  assert.equal(phone.length, 3);
+  assert.deepEqual(phone.map((d) => d.amount), [33334, 33333, 33333]);
+  assert.deepEqual(phone.map((d) => d.invoiceKey), ['2026-12', '2027-01', '2027-02']);
+  assert.ok(phone.every((d) => d.confirmed === false && d.cardId === 'k1' && d.installment.total === 3));
+  assert.equal(new Set(phone.map((d) => d.installment.groupId)).size, 1);
+
+  // monthly (fixed)
+  assert.equal((await add({ type: 'expense', description: 'Rent', amount: 800, fixed: true, category: 'bills' })).isError, undefined);
+  assert.equal((await docs()).find((d) => d.description === 'Rent').fixed, true);
+
+  // what is wrong is refused with a reason, and nothing is written
+  const before = (await docs()).length;
+  for (const bad of [
+    { type: 'expense', description: 'x', amount: -5 },
+    { type: 'expense', description: 'x', amount: 'ten' },
+    { type: 'transfer', description: 'x', amount: 5 },
+    { type: 'expense', description: '', amount: 5 },
+    { type: 'expense', description: 'x', amount: 5, category: 'nonsense' },
+    { type: 'expense', description: 'x', amount: 5, card: 'ghost' },
+    { type: 'expense', description: 'x', amount: 5, date: '2099-01-01' },
+    { type: 'expense', description: 'x', amount: 5, date: 'yesterday' },
+    { type: 'expense', description: 'x', amount: 5, installments: 99 },
+    { type: 'expense', description: 'x', amount: 5, fixed: true, installments: 3 },
+    { type: 'income', description: 'x', amount: 5, category: 'salary', card: 'Nubank' },
+  ]) {
+    const r = await add(bad);
+    assert.equal(r.isError, true, JSON.stringify(bad));
+    assert.match(r.content[0]!.text, /^Not added: /);
+  }
+  assert.equal((await docs()).length, before);
+
+  // and read-only again stops it at once
+  assert.equal((await allow(uid, false)).statusCode, 200);
+  assert.equal((await add({ type: 'expense', description: 'Again', amount: 5 })).isError, true);
+});
+
+test('list_categories_and_cards names what can be used', async () => {
+  const uid = newUid();
+  const c = await connect(uid);
+  await app.inject({ method: 'PUT', url: '/api/data', headers: bearer(uid), payload: { cards: [{ id: 'k1', name: 'Nubank', limit: 1000, dueDay: 9 }], categories: [{ id: 'c1', slug: 'c1', kind: 'expense', name: 'Coffee', weight: 0.5 }] } as object });
+  const r = JSON.parse((await callTool(c.tokens.access_token, 'list_categories_and_cards')).content[0]!.text);
+  assert.ok(r.expenseCategories.some((x: any) => x.slug === 'groceries'));
+  assert.ok(r.expenseCategories.some((x: any) => x.name === 'Coffee'));
+  assert.ok(r.incomeCategories.some((x: any) => x.slug === 'salary'));
+  assert.deepEqual(r.cards, [{ name: 'Nubank', dueDay: 9 }]);
 });
