@@ -243,7 +243,8 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
         renderTip={(i) => {
           const m = months[i];
           if (!m || weight(m) <= 0) return <Text style={[type.body, { color: c.textMuted }]}>{t('No income planned.')}</Text>;
-          const f = weight(m) / 100;
+          // the tooltip speaks in percent of THAT month's income (the lines are drawn scaled by how big the income was)
+          const f = 1;
           const list = m.categories.slice(0, 4);
           const peak = Math.max(1, ...list.map((x) => x.pct * f));
           const over = m.saved < 0;
