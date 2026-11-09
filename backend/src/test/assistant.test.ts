@@ -285,7 +285,7 @@ test('adding transactions: read-only by default, allowed by the person, then mad
   ]) {
     const r = await add(bad);
     assert.equal(r.isError, true, JSON.stringify(bad));
-    assert.match(r.content[0]!.text, /^Not added: /);
+    assert.match(r.content[0]!.text, /^Not done: /);
   }
   assert.equal((await docs()).length, before);
 
