@@ -94,7 +94,10 @@ function ScoreBadge({ health, wide }: { health: Score; wide: boolean }) {
         {parts.map((p) => (
           <View key={p.label} style={{ gap: 2 }}>
             <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{p.label}</Text>
-            <AnimatedBar ratio={p.v / 100} color={p.v < 34 ? c.expense : p.v < 67 ? c.warning : c.primary} />
+            {/* the bar fills its width as a row child (it is built to sit in a row) */}
+            <View style={{ flexDirection: 'row' }}>
+              <AnimatedBar ratio={p.v / 100} color={p.v < 34 ? c.expense : p.v < 67 ? c.warning : c.primary} />
+            </View>
           </View>
         ))}
       </View>
