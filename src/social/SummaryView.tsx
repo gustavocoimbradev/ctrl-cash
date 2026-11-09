@@ -19,9 +19,9 @@ const OTHER = '#9AA5BC';
 const PIE_MAX = 320;
 const RING_FULL = 40;
 const RING_COMPACT = 30;
-const MARGIN_X_FULL = 104;
-const MARGIN_X_COMPACT = 62;
-const MARGIN_Y = 30;
+const MARGIN_X_FULL = 124;
+const MARGIN_X_COMPACT = 78;
+const MARGIN_Y = 64;
 
 const pct = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(1)}%`;
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -39,7 +39,7 @@ const arc = (cx: number, cy: number, r: number, a0: number, a1: number) => {
  * A donut: one slice per category. Hovering (or tapping) a slice makes it stand out and puts its percentage outside the
  * ring, at the end of a thin line from the slice. `onSelect` is told which slice the pointer is on.
  */
-function Pie({ slices, selected, onSelect, size, compact, center }: { slices: { key: string; value: number; color: string }[]; selected: string | null; onSelect: (key: string | null) => void; size: number; /** phones: a thinner ring and less room around it */ compact: boolean; center: React.ReactNode }) {
+function Pie({ slices, selected, onSelect, size, compact, center }: { slices: { key: string; value: number; color: string; /** shown beside the percentage of the chosen slice */ name?: string; tone?: { label: string; color: string } | null }[]; selected: string | null; onSelect: (key: string | null) => void; size: number; /** phones: a thinner ring and less room around it */ compact: boolean; center: React.ReactNode }) {
   const c = useColors();
   const RING = compact ? RING_COMPACT : RING_FULL;
   const MARGIN_X = compact ? MARGIN_X_COMPACT : MARGIN_X_FULL;
@@ -102,7 +102,22 @@ function Pie({ slices, selected, onSelect, size, compact, center }: { slices: { 
     leader = (
       <>
         <Path d={`M ${p0.x} ${p0.y} L ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`} stroke={chosen.color} strokeOpacity={lead} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        <SvgText x={p2.x + side * 5} y={p2.y + 6} fontSize={compact ? 16 : 17} fontWeight="700" fontFamily={fontFamily} fill={chosen.color} fillOpacity={lead} textAnchor={side > 0 ? 'start' : 'end'}>{pct(r1(((target ?? chosen).value / pieTotalOf(slices)) * 100))}</SvgText>
+        {(() => {
+          const cut = (text: string) => (text.length > (compact ? 9 : 15) ? `${text.slice(0, compact ? 8 : 14)}…` : text);
+          const anchor = side > 0 ? 'start' : 'end';
+          const x = p2.x + side * 5;
+          // above the percentage when the slice is in the top half (the ring is below it), below it otherwise
+          const up = p2.y < cy;
+          const yName = up ? (chosen.tone ? p2.y - 30 : p2.y - 12) : p2.y + 24;
+          const yTone = up ? p2.y - 12 : p2.y + 42;
+          return (
+            <>
+              <SvgText x={x} y={p2.y + 6} fontSize={compact ? 16 : 17} fontWeight="700" fontFamily={fontFamily} fill={chosen.color} fillOpacity={lead} textAnchor={anchor}>{pct(r1(((target ?? chosen).value / pieTotalOf(slices)) * 100))}</SvgText>
+              {chosen.name ? <SvgText x={x} y={yName} fontSize={16} fontFamily={fontFamily} fill={c.text} fillOpacity={lead} textAnchor={anchor}>{cut(chosen.name)}</SvgText> : null}
+              {chosen.tone ? <SvgText x={x} y={yTone} fontSize={16} fontFamily={fontFamily} fill={chosen.tone.color} fillOpacity={lead} textAnchor={anchor}>{chosen.tone.label}</SvgText> : null}
+            </>
+          );
+        })()}
       </>
     );
   }
@@ -223,7 +238,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
     return i < PALETTE.length ? PALETTE[i] : `hsl(${Math.round((i * 137.508) % 360)}, 55%, ${i % 2 ? 48 : 62}%)`;
   };
   // every category with a value is shown (one that rounds to 0% has nothing to show); none is folded into "everything else"
-  const pieRows = categories.filter((x) => r1(x.pct) > 0).map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug) }));
+  const pieRows = categories.filter((x) => r1(x.pct) > 0).map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug), name: x.label, tone: categoryTone(x.slug) ? { label: toneLabel(categoryTone(x.slug)!), color: TONE_COLORS[categoryTone(x.slug)!] } : null }));
   // two columns (a very narrow phone: one)
   const legendW = wide ? Math.max(0, rowW - Math.min(PIE_MAX + MARGIN_X_FULL * 2, Math.max(360, rowW * 0.55)) - spacing.lg) : rowW;
   const legendCols = legendW >= 300 || !legendW ? 2 : 1;
