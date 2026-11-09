@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Card } from '../components/Card';
+import { AnimatedBar } from '../components/Motion';
 import { Sheet } from '../components/Sheet';
 import { buildSummary } from '../domain/summary';
 import { useStore } from '../store';
@@ -69,16 +70,33 @@ const scoreName = (l: Score['label']) => (l === 'Critical' ? t('Critical') : l =
 function ScoreBadge({ health, wide }: { health: Score; wide: boolean }) {
   const c = useColors();
   const color = scoreColors(health.score, c);
+  const parts = [
+    { label: t('Wealth'), v: health.wealth },
+    { label: t('Debt-free'), v: health.debt },
+    { label: t('Healthy spending'), v: health.habits },
+    { label: t('Month result'), v: health.month },
+  ];
   return (
     <View
       accessible
       accessibilityLabel={t('Financial health: {score}, {label}', { score: health.score, label: scoreName(health.label) })}
-      style={[s.score, wide ? { alignItems: 'center', paddingLeft: spacing.xl, borderLeftWidth: 1, borderLeftColor: c.border } : { alignItems: 'center' }]}
+      style={[s.score, { flexDirection: wide ? 'row' : 'column', alignItems: 'center', gap: wide ? spacing.xl : spacing.md }, wide && { paddingLeft: spacing.xl, borderLeftWidth: 1, borderLeftColor: c.border }, !wide && { alignSelf: 'stretch' }]}
     >
-      <Text style={[type.body, { color: c.textMuted }]}>{t('Financial health')}</Text>
-      <Text style={[type.hero, { color, fontSize: wide ? 48 : 40, lineHeight: wide ? 54 : 46 }]}>{health.score}</Text>
-      <View style={{ backgroundColor: `${color}1F`, borderRadius: 12, paddingHorizontal: spacing.md, paddingVertical: 2 }}>
-        <Text style={[type.label, { color }]}>{scoreName(health.label)}</Text>
+      <View style={{ alignItems: 'center', gap: spacing.xs, minWidth: 150 }}>
+        <Text style={[type.body, { color: c.textMuted }]}>{t('Financial health')}</Text>
+        <Text style={[type.hero, { color, fontSize: wide ? 48 : 40, lineHeight: wide ? 54 : 46 }]}>{health.score}</Text>
+        <View style={{ backgroundColor: `${color}1F`, borderRadius: 12, paddingHorizontal: spacing.md, paddingVertical: 2 }}>
+          <Text style={[type.label, { color }]}>{scoreName(health.label)}</Text>
+        </View>
+      </View>
+      {/* what the score is made of, each part filled from 0 to 100% */}
+      <View style={{ gap: spacing.sm, width: wide ? 250 : '100%' }}>
+        {parts.map((p) => (
+          <View key={p.label} style={{ gap: 2 }}>
+            <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{p.label}</Text>
+            <AnimatedBar ratio={p.v / 100} color={p.v < 34 ? c.expense : p.v < 67 ? c.warning : c.primary} />
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -305,6 +323,6 @@ const s = StyleSheet.create({
   headInfo: { flex: 1, minWidth: 0, gap: spacing.md },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   nameRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: spacing.md },
-  score: { gap: spacing.xs, minWidth: 150 },
+  score: { minWidth: 150 },
   chip: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
 });
