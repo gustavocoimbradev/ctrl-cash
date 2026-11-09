@@ -398,7 +398,7 @@ export function SummaryView({ summary, updatedAt, real, realCurrency }: { summar
       accessibilityLabel={`${x.label}: ${sliceText(x.value)}`}
       onPress={() => setSlice(slice === x.key ? null : x.key)}
       {...({ onHoverIn: () => setSlice(x.key), onHoverOut: () => setSlice(null) } as object)}
-      style={({ hovered }: any) => [s.legendRow, { width: `${100 / legendCols - 2}%` as `${number}%` }, { backgroundColor: hovered || slice === x.key ? c.surface : 'transparent' }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '180ms' } as object)]}
+      style={({ hovered }: any) => [s.legendRow, { width: (legendCols === 1 ? '100%' : '48%') as `${number}%` }, { backgroundColor: hovered || slice === x.key ? c.surface : 'transparent' }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '180ms' } as object)]}
     >
       <View style={[s.swatch, { backgroundColor: x.color }]} />
       <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
@@ -409,13 +409,13 @@ export function SummaryView({ summary, updatedAt, real, realCurrency }: { summar
           </View>
         ) : null}
       </View>
-      <Text style={[type.label, { color: c.text }]}>{sliceText(x.value)}</Text>
+      <Text style={[type.label, { color: c.text, textAlign: 'right', flexShrink: 0, fontVariant: ['tabular-nums'] }]}>{sliceText(x.value)}</Text>
     </Pressable>
   );
   const listHead = (label: string, total: number, color: string) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.sm, paddingBottom: 2 }}>
       <Text style={[type.label, { color }]}>{label}</Text>
-      <Text style={[type.label, { color }]}>{money(total)}</Text>
+      <Text style={[type.label, { color, textAlign: 'right', fontVariant: ['tabular-nums'] }]}>{money(total)}</Text>
     </View>
   );
 
@@ -484,7 +484,8 @@ const s = StyleSheet.create({
   tipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   miniTrack: { flex: 1, height: 8, borderRadius: 4, overflow: 'hidden' },
   pieCenter: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
-  legendGrid: { minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.md },
+  /** the rows span the whole width (two columns end flush with the edges), so every amount lines up on the right with the list's total */
+  legendGrid: { minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44, paddingHorizontal: spacing.sm, borderRadius: 12 },
   swatch: { width: 12, height: 12, borderRadius: 6 },
 });
