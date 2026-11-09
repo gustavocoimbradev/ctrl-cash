@@ -1,8 +1,34 @@
-/** The platform's default currency is the US dollar, always shown with `$`. */
-const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+import { getCurrency, getLocale } from '../i18n';
 
+/** Formatters are cached per locale and currency (building one is slow). */
+const cache = new Map<string, Intl.NumberFormat>();
+function formatter(): Intl.NumberFormat {
+  const key = `${getLocale()}|${getCurrency()}`;
+  let f = cache.get(key);
+  if (!f) {
+    try {
+      f = new Intl.NumberFormat(getLocale(), { style: 'currency', currency: getCurrency() });
+    } catch {
+      f = new Intl.NumberFormat(getLocale(), { style: 'currency', currency: 'USD' });
+    }
+    cache.set(key, f);
+  }
+  return f;
+}
+
+/** Decimal places of the current currency: 2 for most, 0 for yen or won, 3 for dinars. Amounts are stored in the smallest unit. */
+export function currencyDigits(): number {
+  return formatter().resolvedOptions().maximumFractionDigits ?? 2;
+}
+
+/** How many stored units make one whole unit of the current currency (100 for dollars, 1 for yen). */
+export function minorUnit(): number {
+  return 10 ** currencyDigits();
+}
+
+/** Formats an amount stored in the smallest unit of the current currency (cents for dollars). */
 export function formatMoney(cents: number): string {
-  return usd.format(cents / 100);
+  return formatter().format(cents / minorUnit());
 }
 
 /** Converts typed digits (e.g. "12345") to cents. */

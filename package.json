@@ -35,8 +35,9 @@
     "firebase:block": "node scripts/firebase/block-user.mjs",
     "firebase:auth-privacy": "node scripts/firebase/auth-privacy.mjs",
     "firebase:export": "node scripts/firebase/export-firestore.mjs",
+    "check:i18n": "node scripts/check-i18n.mjs",
     "test:api": "bash scripts/test-api.sh",
-    "check": "npx tsc --noEmit && bash scripts/test-api.sh"
+    "check": "npx tsc --noEmit && node scripts/check-i18n.mjs && bash scripts/test-api.sh"
   },
   "private": true,
   "engines": {

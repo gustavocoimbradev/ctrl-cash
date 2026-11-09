@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, Text, View } from 'react-native';
 import Svg, { Circle, ClipPath, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
-import { formatMoney } from '../domain/money';
+import { formatMoney, minorUnit } from '../domain/money';
 import { colors as c, fontFamily, radius, spacing, type } from '../theme';
 import { motion, useGlide, useProgress, useReducedMotion, useTween, useTweenList } from '../theme/motion';
+import { t } from '../i18n';
 
 /** Smooth curve (Catmull-Rom → Bézier) through the points. */
 function smooth(pts: { x: number; y: number }[]): string {
@@ -123,7 +124,7 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
               <>
                 <Line x1={x(nowIndex)} y1={top} x2={x(nowIndex)} y2={height - bottom} stroke={c.text} strokeOpacity={0.45 * progress} strokeDasharray="2 5" strokeWidth={1.5} strokeLinecap="round" />
                 <Rect x={x(nowIndex) + 3} y={top - 2} width={46} height={22} rx={6} fill="#FFFFFF" fillOpacity={0.85 * progress} />
-                <SvgText x={x(nowIndex) + 8} y={top + 14} fontSize={16} fontWeight="600" fontFamily={fontFamily} fill={c.textMuted} fillOpacity={progress}>Now</SvgText>
+                <SvgText x={x(nowIndex) + 8} y={top + 14} fontSize={16} fontWeight="600" fontFamily={fontFamily} fill={c.textMuted} fillOpacity={progress}>{t('Now')}</SvgText>
               </>
             )}
             {min < 0 && <Line x1={0} y1={zeroY} x2={w} y2={zeroY} stroke={c.textMuted} strokeOpacity={0.4} strokeDasharray="4 4" strokeWidth={1} />}
@@ -278,7 +279,7 @@ interface BarGroup {
 
 /** Compacts the value when bars are narrow: 1,227.49 becomes "1.2k". */
 const compactMoney = (cents: number) => {
-  const v = cents / 100;
+  const v = cents / minorUnit();
   return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${Math.round(v)}`;
 };
 
@@ -436,7 +437,7 @@ export function ChartLegend({ items, extra }: { items: LegendItem[]; /** fixed i
           key={it.label}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: it.on }}
-          accessibilityLabel={`${it.on ? 'Hide' : 'Show'} ${it.label}`}
+          accessibilityLabel={it.on ? t('Hide {name}', { name: it.label }) : t('Show {name}', { name: it.label })}
           onPress={it.onPress}
           style={({ pressed, hovered }: any) => ({ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 36, paddingHorizontal: spacing.md, borderRadius: radius.pill, backgroundColor: hovered ? c.surface : 'transparent', opacity: pressed ? 0.6 : 1 })}
         >

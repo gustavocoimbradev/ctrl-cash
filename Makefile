@@ -134,6 +134,7 @@ import\:prod:
 
 test\:dev:
 	@npx tsc --noEmit
+	@node scripts/check-i18n.mjs
 	@./scripts/test-api.sh
 
 # Without :dev or :prod it is not clear what is meant.
