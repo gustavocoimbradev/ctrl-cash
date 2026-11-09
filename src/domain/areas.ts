@@ -68,16 +68,17 @@ export function areaSummary(data: AppData, area: AreaKey): AreaSummary {
   let monthly: number;
   let orders = 0;
   if (area === 'delivery') {
-    // one-off spending: every order of the last 3 months (by purchase date), newest first
+    // one-off spending: every order there is (by purchase date), newest first; the monthly cost is the average of the last 3 months
     const recent = new Set([0, 1, 2].map((k) => addMonthsToKey(cur, -k)));
-    const list = occ.filter((o) => o.type === 'expense' && o.category === slug && recent.has(monthKey(o.purchaseDate)));
+    const all = occ.filter((o) => o.type === 'expense' && o.category === slug);
+    const list = all;
     items = list
       .map((o: Occurrence) => ({ o, tx: txById.get(o.transactionId) }))
       .filter((x): x is { o: Occurrence; tx: Transaction } => !!x.tx)
       .map(({ o, tx }) => ({ key: o.key, transaction: tx, month: o.monthKey, description: o.description, amount: o.amount, day: parseISO(o.purchaseDate).d, date: o.purchaseDate, cardId: o.cardId, paid: o.confirmed }))
       .sort((a, b) => b.date.localeCompare(a.date));
     orders = items.length;
-    monthly = Math.round(items.reduce((s, x) => s + x.amount, 0) / 3);
+    monthly = Math.round(all.filter((o) => recent.has(monthKey(o.purchaseDate))).reduce((s, o) => s + o.amount, 0) / 3);
   } else {
     // fixed charges: what repeats every month, with the values of this month
     items = data.transactions
