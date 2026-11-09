@@ -255,24 +255,24 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
       <ProjectionChart
         series={real && dayMode
           ? [
-              { values: realDays.income, color: c.income, area: true, label: t('Income') },
+              { values: realDays.income, color: c.income, area: true, label: t('Received') },
               { values: realDays.spent, color: c.expense, dashed: true, label: t('Spent') },
               { values: realDays.income.map((v, i) => v - realDays.spent[i]!), color: c.primary, label: t('Saved') },
             ]
           : real
           ? [
-              { values: chartMonths.map((m) => real.months[m.key]?.income ?? 0), color: c.income, area: true, label: t('Income') },
+              { values: chartMonths.map((m) => real.months[m.key]?.income ?? 0), color: c.income, area: true, label: t('Received') },
               { values: chartMonths.map((m) => real.months[m.key]?.expense ?? 0), color: c.expense, dashed: true, label: t('Spent') },
               { values: chartMonths.map((m) => (real.months[m.key]?.income ?? 0) - (real.months[m.key]?.expense ?? 0)), color: c.primary, label: t('Saved') },
             ]
           : dayMode
           ? [
-              { values: dayIncome, color: c.income, area: true, label: t('Income') },
+              { values: dayIncome, color: c.income, area: true, label: t('Received') },
               { values: daySpent, color: c.expense, dashed: true, label: t('Spent') },
               { values: dayIncome.map((v, i) => v - daySpent[i]!), color: c.primary, label: t('Saved') },
             ]
           : [
-              { values: chartMonths.map((m) => (m.incomeRel === undefined ? 100 : m.incomeRel)), color: c.income, area: true, label: t('Income') },
+              { values: chartMonths.map((m) => (m.incomeRel === undefined ? 100 : m.incomeRel)), color: c.income, area: true, label: t('Received') },
               { values: chartMonths.map((m) => (weight(m) * m.spent) / 100), color: c.expense, dashed: true, label: t('Spent') },
               { values: chartMonths.map((m) => (weight(m) * m.saved) / 100), color: c.primary, label: t('Saved') },
             ]}
@@ -329,7 +329,7 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
       />
       <ChartLegend
         items={[
-          { label: t('Income'), color: c.income, line: true, on: true, onPress: () => {} },
+          { label: t('Received'), color: c.income, line: true, on: true, onPress: () => {} },
           { label: t('Spent'), color: c.expense, line: true, dashed: true, on: true, onPress: () => {} },
           { label: t('Saved'), color: c.primary, line: true, on: true, onPress: () => {} },
         ]}

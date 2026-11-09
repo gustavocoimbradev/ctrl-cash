@@ -3,6 +3,7 @@ import type { Dict } from '../index';
 /** Quick setup, account settings, the language/currency fields and the app shell. */
 export const dict: Dict = {
   pt: {
+    "Received": "Recebido",
     "Shows up as soon as their app publishes it.": "Aparece assim que o app da pessoa publicar.",
     "Search by name or code": "Buscar por nome ou código",
     "Search people": "Buscar pessoas",
@@ -274,6 +275,7 @@ export const dict: Dict = {
     "Cloud storage": "Armazenamento na nuvem",
   },
   es: {
+    "Received": "Recibido",
     "Shows up as soon as their app publishes it.": "Aparece en cuanto su app lo publique.",
     "Search by name or code": "Buscar por nombre o código",
     "Search people": "Buscar personas",
@@ -545,6 +547,7 @@ export const dict: Dict = {
     "Cloud storage": "Almacenamiento en la nube",
   },
   de: {
+    "Received": "Erhalten",
     "Shows up as soon as their app publishes it.": "Erscheint, sobald ihre App es veröffentlicht.",
     "Search by name or code": "Nach Name oder Code suchen",
     "Search people": "Personen suchen",
@@ -816,6 +819,7 @@ export const dict: Dict = {
     "Cloud storage": "Cloud-Speicher",
   },
   fr: {
+    "Received": "Reçu",
     "Shows up as soon as their app publishes it.": "Apparaît dès que son appli le publie.",
     "Search by name or code": "Rechercher par nom ou code",
     "Search people": "Rechercher des personnes",
@@ -1087,6 +1091,7 @@ export const dict: Dict = {
     "Cloud storage": "Stockage cloud",
   },
   it: {
+    "Received": "Ricevuto",
     "Shows up as soon as their app publishes it.": "Compare appena la sua app lo pubblica.",
     "Search by name or code": "Cerca per nome o codice",
     "Search people": "Cerca persone",
