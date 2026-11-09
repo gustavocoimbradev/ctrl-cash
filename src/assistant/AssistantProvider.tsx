@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { buildAssistantSnapshot } from '../domain/assistant';
 import { useStore } from '../store';
@@ -8,6 +9,8 @@ export interface AssistantConnection {
   name: string;
   createdAt: number;
   lastUsedAt: number | null;
+  /** may it add transactions (otherwise it only reads) */
+  canWrite: boolean;
 }
 
 interface Assistant {
@@ -20,6 +23,10 @@ interface Assistant {
   snapshotAt: number | null;
   refresh: () => Promise<void>;
   disconnect: (id: string) => Promise<void>;
+  /** lets a connection add transactions, or not */
+  setCanWrite: (id: string, write: boolean) => Promise<void>;
+  /** the link that opens Claude's "add custom connector" form already filled in; Claude then asks for the person's OK */
+  connectLink: string;
   /** publishes the picture now (used right before a connection is approved) */
   publishNow: () => Promise<void>;
 }
@@ -83,6 +90,16 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
     [refresh],
   );
 
+  const setCanWrite = useCallback(
+    async (id: string, write: boolean) => {
+      await call('/assistant/connections/permissions', { method: 'POST', body: { id, write } });
+      await refresh();
+    },
+    [refresh],
+  );
+  const address = mcpUrl || (Platform.OS === 'web' ? `${window.location.origin}/api/mcp` : '');
+  const connectLink = `https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=${encodeURIComponent('Ctrl+Cash')}&connectorUrl=${encodeURIComponent(address)}`;
+
   // a connection is about to exist: the first publish is allowed (the server keeps a snapshot only while somebody is connected)
   const publishNow = useCallback(async () => {
     lastPublished.current = '';
@@ -94,7 +111,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
     }
   }, [data]);
 
-  const value = useMemo<Assistant>(() => ({ loaded, connections, mcpUrl, snapshotAt, refresh, disconnect, publishNow }), [loaded, connections, mcpUrl, snapshotAt, refresh, disconnect, publishNow]);
+  const value = useMemo<Assistant>(() => ({ loaded, connections, mcpUrl: address, snapshotAt, refresh, disconnect, setCanWrite, connectLink, publishNow }), [loaded, connections, address, snapshotAt, refresh, disconnect, setCanWrite, connectLink, publishNow]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

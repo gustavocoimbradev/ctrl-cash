@@ -5,7 +5,6 @@ import { Button } from '../components/Button';
 import { useAssistant } from '../assistant/AssistantProvider';
 import { PrefsFields } from '../components/PrefsFields';
 import { Sheet } from '../components/Sheet';
-import { shortDate } from '../domain/dates';
 import { t } from '../i18n';
 import { authMessage, currentHasPassword, savePassword } from '../firebase/useAuth';
 import { useStore } from '../store';
@@ -15,21 +14,10 @@ import { radius, spacing, type, useColors } from '../theme';
  * Account settings: the email, the password (changed, or set for the first time when the account only uses Google)
  * and "Clear everything", which archives all the data (nothing is deleted) so the account starts over.
  */
-export function AccountSheet({ visible, email, onClose, onCleared }: { visible: boolean; email: string; onClose: () => void; onCleared: () => void }) {
+export function AccountSheet({ visible, email, onClose, onCleared, onOpenAssistant }: { visible: boolean; email: string; onClose: () => void; onCleared: () => void; onOpenAssistant: () => void }) {
   const c = useColors();
   const { clearAll } = useStore();
-  const { connections, mcpUrl, snapshotAt, disconnect } = useAssistant();
-  const [copied, setCopied] = useState(false);
-  const address = mcpUrl || (Platform.OS === 'web' ? `${window.location.origin}/api/mcp` : '');
-  const copyAddress = () => {
-    try {
-      void navigator.clipboard?.writeText(address);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch {
-      // no clipboard: the address is on screen
-    }
-  };
+  const { connections } = useAssistant();
   const [hasPassword, setHasPassword] = useState(currentHasPassword());
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
@@ -104,32 +92,9 @@ export function AccountSheet({ visible, email, onClose, onCleared }: { visible: 
         </View>
 
         <View style={{ gap: spacing.md, borderTopWidth: 1, borderTopColor: c.border, paddingTop: spacing.xl }}>
-          <Text style={[type.title, { color: c.text }]}>{t('Connect an AI assistant')}</Text>
-          <Text style={[type.body, { color: c.textMuted }]}>{t('Let Claude read your finances to answer your questions, using its own account (the free plan works). It cannot change anything.')}</Text>
-          <Text style={[type.body, { color: c.text }]}>{t('In Claude, open Settings, then Connectors, then Add custom connector, and paste this address. You will be asked here to allow it.')}</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('Copy the address')}
-            onPress={copyAddress}
-            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: c.surface, borderRadius: radius.control, paddingHorizontal: spacing.lg, minHeight: 48, opacity: pressed ? 0.7 : 1 })}
-          >
-            <Text style={[type.body, { color: c.text, flex: 1 }]} numberOfLines={1} selectable>{address}</Text>
-            <Feather name={copied ? 'check' : 'copy'} size={18} color={copied ? c.income : c.textMuted} />
-          </Pressable>
-          {connections.map((cn) => (
-            <View key={cn.id} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: c.surface, borderRadius: radius.control, paddingLeft: spacing.lg, paddingRight: spacing.xs, minHeight: 56 }}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{cn.name}</Text>
-                <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{cn.lastUsedAt ? t('Last used {date}', { date: shortDate(cn.lastUsedAt, true) }) : t('Connected {date}', { date: shortDate(cn.createdAt, true) })}</Text>
-              </View>
-              <Pressable accessibilityRole="button" accessibilityLabel={t('Disconnect {name}', { name: cn.name })} onPress={() => void disconnect(cn.id)} style={({ pressed }) => ({ minHeight: 44, paddingHorizontal: spacing.md, justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
-                <Text style={[type.label, { color: c.expense }]}>{t('Disconnect')}</Text>
-              </Pressable>
-            </View>
-          ))}
-          {connections.length > 0 ? (
-            <Text style={[type.body, { color: c.textMuted }]}>{snapshotAt ? t('While connected, the app keeps a picture of your finances up to date for the assistant (last update {date}). Disconnecting removes its access at once.', { date: shortDate(snapshotAt, true) }) : t('While connected, the app keeps a picture of your finances up to date for the assistant. Disconnecting removes its access at once.')}</Text>
-          ) : null}
+          <Text style={[type.title, { color: c.text }]}>{t('Ask Claude')}</Text>
+          <Text style={[type.body, { color: c.textMuted }]}>{connections.length > 0 ? t('Claude is connected to your finances.') : t('Connect Claude to ask about your finances and add transactions by chat.')}</Text>
+          <Button label={connections.length > 0 ? t('Manage the connection') : t('Connect with Claude')} icon="message-circle" variant="secondary" onPress={onOpenAssistant} />
         </View>
 
         <View style={{ gap: spacing.md, borderTopWidth: 1, borderTopColor: c.border, paddingTop: spacing.xl }}>

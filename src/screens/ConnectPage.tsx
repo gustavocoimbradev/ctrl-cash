@@ -4,6 +4,7 @@ import { Platform, Text, View } from 'react-native';
 import { useAssistant } from '../assistant/AssistantProvider';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { ToggleRow } from '../components/Controls';
 import { t } from '../i18n';
 import { call } from '../store/sync';
 import { spacing, type, useColors } from '../theme';
@@ -24,6 +25,8 @@ export function ConnectPage({ params, onBack }: { params: ConnectParams; onBack:
   const { publishNow, refresh } = useAssistant();
   const [name, setName] = useState<string | null>(null);
   const [state, setState] = useState<'idle' | 'busy' | 'failed'>('idle');
+  /** it may also add transactions (it asks the person each time inside Claude) */
+  const [write, setWrite] = useState(true);
   const valid = !!(params.client_id && params.redirect_uri && params.code_challenge);
 
   useEffect(() => {
@@ -38,7 +41,7 @@ export function ConnectPage({ params, onBack }: { params: ConnectParams; onBack:
     try {
       const res = await call<{ redirect: string }>(allow ? '/oauth/approve' : '/oauth/deny', {
         method: 'POST',
-        body: { client_id: params.client_id, redirect_uri: params.redirect_uri, state: params.state, code_challenge: params.code_challenge },
+        body: { client_id: params.client_id, redirect_uri: params.redirect_uri, state: params.state, code_challenge: params.code_challenge, write: allow ? write : undefined },
       });
       // the connection exists now: the picture of the finances is published before going back, so the first question already has data
       if (allow) {
@@ -71,7 +74,7 @@ export function ConnectPage({ params, onBack }: { params: ConnectParams; onBack:
       <View style={{ gap: spacing.sm }}>
         {[
           { icon: 'eye' as const, text: t('It can read: your balance, cards, debts, subscriptions, bills, delivery, categories, score and recent transactions.') },
-          { icon: 'lock' as const, text: t('It cannot change anything, and never sees your password.') },
+          { icon: 'lock' as const, text: write ? t('It can add transactions when you ask it to, never edit or remove them, and never sees your password.') : t('It cannot change anything, and never sees your password.') },
           { icon: 'x-circle' as const, text: t('You can disconnect at any time in Account settings.') },
         ].map((r) => (
           <View key={r.icon} style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' }}>
@@ -80,6 +83,7 @@ export function ConnectPage({ params, onBack }: { params: ConnectParams; onBack:
           </View>
         ))}
       </View>
+      <ToggleRow label={t('Let it add transactions')} hint={t('You still confirm each one in Claude. You can turn this off at any time.')} value={write} onChange={setWrite} />
       {state === 'failed' ? <Text style={[type.body, { color: c.expense }]}>{t('Could not complete the connection. Try again.')}</Text> : null}
       <View style={{ flexDirection: 'row', gap: spacing.md }}>
         <Button label={t('Cancel')} variant="secondary" onPress={() => void decide(false)} disabled={state === 'busy'} flex />
