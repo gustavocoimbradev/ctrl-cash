@@ -73,4 +73,7 @@ export const mappers: Record<Collection, Mapper> = {
     id, f('slug', 'slug', 'text'), f('kind', 'kind', 'text'), f('name', 'name', 'text'),
     f('weight', 'weight', 'float'), f('tone', 'tone', 'text'), created, archived,
   ], byCreated),
+  shoppingLists: mapper('shopping_lists', [
+    id, f('name', 'name', 'text'), f('items', 'items', 'json'), f('finishedAt', 'finished_at_ms', 'int'), created, archived,
+  ], byCreated),
 };

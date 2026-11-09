@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import { auth } from '../firebase/auth';
-import { AppData, CategoryRecord, CreditCard, InvoicePayment, Reserve, ReserveMove, Transaction } from '../types';
+import { AppData, CategoryRecord, CreditCard, InvoicePayment, Reserve, ReserveMove, ShoppingList, Transaction } from '../types';
 
 /**
  * Sync with the API (PostgreSQL behind it): GET /api/data and PUT /api/data.
@@ -15,7 +15,7 @@ export type RemoteMap = Map<string, string>;
 /** The API lives on the same origin on the web (`/api`); `EXPO_PUBLIC_API_URL` points elsewhere (development). */
 const API = (process.env.EXPO_PUBLIC_API_URL ?? '/api').replace(/\/$/, '');
 
-const COLLECTIONS = ['transactions', 'cards', 'payments', 'reserves', 'reserveMoves', 'categories'] as const;
+const COLLECTIONS = ['transactions', 'cards', 'payments', 'reserves', 'reserveMoves', 'categories', 'shoppingLists'] as const;
 type Col = (typeof COLLECTIONS)[number];
 
 /** Poll the server every few seconds while the app is open, so a change made on another device shows up. */
@@ -68,6 +68,7 @@ async function pull(): Promise<{ data: AppData; remote: RemoteMap }> {
       payments: (list<InvoicePayment>('payments')).sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)),
       reserves: (list<Reserve>('reserves')).sort(byCreation),
       reserveMoves: (list<ReserveMove>('reserveMoves')).sort((a, b) => a.date.localeCompare(b.date) || byCreation(a, b)),
+      shoppingLists: (list<ShoppingList>('shoppingLists')).sort(byCreation),
     },
   };
 }

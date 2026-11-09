@@ -59,3 +59,11 @@ test('categories', () => {
   const { weight: _w, ...noWeight } = c({ kind: 'income' });
   ok('categories', noWeight);
 });
+
+test('shopping lists', () => {
+  const l = (o: Doc = {}) => ({ ...samples.shoppingLists, ...o });
+  const item = (o: Doc = {}) => ({ id: 'i1', name: 'Milk', done: false, ...o });
+  for (const o of [{ name: '' }, { name: 'n'.repeat(61) }, { items: 'milk' }, { items: [item({ done: 'no' })] }, { items: [item({ name: '' })] }, { items: [item(), item()] }, { items: [item({ extra: 1 })] }, { items: Array.from({ length: 301 }, (_, i) => item({ id: `i${i}` })) }, { extra: true }, { finishedAt: 1.5 }]) bad('shoppingLists', l(o));
+  ok('shoppingLists', l({ items: [] }));
+  ok('shoppingLists', l({ items: [item({ archivedAt: 5 })], finishedAt: 7, createdAt: 3 }));
+});

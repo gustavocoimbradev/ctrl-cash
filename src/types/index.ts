@@ -147,6 +147,26 @@ export interface CategoryRecord {
   archivedAt?: number;
 }
 
+/** One thing on a shopping list. Removing it archives it (nothing is ever deleted). */
+export interface ShoppingItem {
+  id: string;
+  name: string;
+  /** checked off while shopping */
+  done: boolean;
+  archivedAt?: number;
+}
+
+/** A shopping list: its items, and when the shopping was finished (the grocery expense was created then). */
+export interface ShoppingList {
+  id: string;
+  name: string;
+  items: ShoppingItem[];
+  /** ms since the epoch: the shopping is over and billed */
+  finishedAt?: number;
+  createdAt?: number;
+  archivedAt?: number;
+}
+
 export interface AppData {
   cards: CreditCard[];
   categories: CategoryRecord[];
@@ -154,4 +174,5 @@ export interface AppData {
   payments: InvoicePayment[];
   reserves: Reserve[];
   reserveMoves: ReserveMove[];
+  shoppingLists: ShoppingList[];
 }

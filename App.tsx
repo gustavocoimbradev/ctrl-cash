@@ -7,6 +7,7 @@ import { useAuth } from './src/firebase/useAuth';
 import { LoginScreen, Splash } from './src/screens/AuthScreens';
 import { CardsSheet } from './src/screens/CardsSheet';
 import { CategoriesSheet } from './src/screens/CategoriesSheet';
+import { ShoppingSheet } from './src/screens/ShoppingSheet';
 import { Dashboard } from './src/screens/Dashboard';
 import { AccountSheet } from './src/screens/AccountSheet';
 import { Onboarding, markOnboardingSeen, onboardingSeen, resetOnboardingSeen } from './src/screens/Onboarding';
@@ -40,13 +41,14 @@ function pageFromUrl(): Page {
 
 function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOut: () => void }) {
   const c = useColors();
-  const { ready, syncError, data } = useStore();
+  const { ready, syncError, data, saveShoppingList } = useStore();
   const { width } = useWindowDimensions();
   const desktop = width >= desktopBreakpoint;
   const [month, setMonth] = useState(currentMonthKey());
   /** mobile: active tab (summary, projection or transactions), in the floating bottom bar */
   const [tab, setTab] = useState<MobileTab>('summary');
   const [cardsOpen, setCardsOpen] = useState(false);
+  const [shoppingOpen, setShoppingOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | undefined>();
@@ -65,6 +67,10 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   const myId = myProfile?.code;
   const urlSynced = useRef(false);
   const toDashboard = () => setPage({ name: 'dashboard' });
+  /** the places beside Cards and Categories, in the phone menu and in the strip above the projection */
+  const places = [
+    { key: 'shopping', icon: 'shopping-cart' as const, label: t('Shopping lists'), onPress: () => setShoppingOpen(true) },
+  ];
 
   // the address follows the page (a profile is /profile/<its code>) and the browser's Back and Forward follow the address
   useEffect(() => {
@@ -181,6 +187,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
               onMonthChange={setMonth}
               onOpenCards={() => setCardsOpen(true)}
               onOpenCategories={() => setCategoriesOpen(true)}
+              places={places}
               onPayInvoice={(p) => {
                 setEditing(undefined);
                 setPreset(p);
@@ -245,12 +252,29 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
         items={[
           { key: 'cards', icon: 'credit-card', label: t('Cards'), onPress: () => setCardsOpen(true) },
           { key: 'categories', icon: 'tag', label: t('Categories'), onPress: () => setCategoriesOpen(true) },
+          ...places,
           { key: 'account', icon: 'settings', label: t('Account settings'), onPress: () => setAccountOpen(true) },
           { key: 'out', icon: 'log-out', label: t('Sign out'), onPress: onSignOut, danger: true },
         ]}
       />
       <CardsSheet visible={cardsOpen} onClose={() => setCardsOpen(false)} />
       <CategoriesSheet visible={categoriesOpen} onClose={() => setCategoriesOpen(false)} />
+      <ShoppingSheet
+        visible={shoppingOpen}
+        onClose={() => setShoppingOpen(false)}
+        onFinish={(list) => {
+          // shopping is over: the groceries bill of today opens, pending, to put the amount on; the list is marked finished once it is saved
+          setEditing(undefined);
+          setPreset({
+            kind: 'expense',
+            description: t('Groceries'),
+            category: 'groceries',
+            confirmed: false,
+            onSaved: () => saveShoppingList({ ...list, finishedAt: Date.now() }),
+          });
+          setFormOpen(true);
+        }}
+      />
       <TransactionForm visible={formOpen} transaction={editing} occurrenceMonth={editingMonth} preset={preset} onClose={() => setFormOpen(false)} />
     </View>
   );

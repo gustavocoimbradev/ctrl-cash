@@ -2,7 +2,7 @@
 // Each validator throws ValidationError with a clear message; `validate` turns it into a result.
 
 export type Doc = Record<string, unknown>;
-export const COLLECTIONS = ['transactions', 'cards', 'payments', 'reserves', 'reserveMoves', 'categories'] as const;
+export const COLLECTIONS = ['transactions', 'cards', 'payments', 'reserves', 'reserveMoves', 'categories', 'shoppingLists'] as const;
 export type Collection = (typeof COLLECTIONS)[number];
 
 export class ValidationError extends Error {}
@@ -189,6 +189,28 @@ function category(d: Doc) {
   msTimestamp(d, 'archivedAt');
 }
 
+function shoppingList(d: Doc) {
+  onlyKeys(d, ['id', 'name', 'items', 'finishedAt', 'createdAt', 'archivedAt'], ['id', 'name', 'items']);
+  checkId(d);
+  text(d, 'name', 60);
+  if (!Array.isArray(d.items) || d.items.length > 300) fail('"items" must be a list of at most 300 items');
+  const seen = new Set<string>();
+  for (const [i, raw] of (d.items as unknown[]).entries()) {
+    if (!isObject(raw)) return fail(`items[${i}] must be an object`);
+    onlyKeys(raw, ['id', 'name', 'done', 'archivedAt'], ['id', 'name', 'done']);
+    if (typeof raw.id !== 'string' || !ID_RE.test(raw.id)) fail(`items[${i}].id is not a valid id`);
+    if (seen.has(raw.id as string)) fail(`items[${i}].id is repeated`);
+    seen.add(raw.id as string);
+    if (typeof raw.name !== 'string' || raw.name.length === 0 || strLen(raw.name) > 80) fail(`items[${i}].name must be a string of 1 to 80 characters`);
+    if ((raw.name as string).includes('\u0000')) fail(`items[${i}].name contains an invalid character`);
+    if (typeof raw.done !== 'boolean') fail(`items[${i}].done must be a boolean`);
+    if (has(raw, 'archivedAt') && (typeof raw.archivedAt !== 'number' || !Number.isSafeInteger(raw.archivedAt))) fail(`items[${i}].archivedAt must be an integer number (ms)`);
+  }
+  msTimestamp(d, 'finishedAt');
+  msTimestamp(d, 'createdAt');
+  msTimestamp(d, 'archivedAt');
+}
+
 const validators: Record<Collection, (d: Doc) => void> = {
   transactions: transaction,
   cards: card,
@@ -196,6 +218,7 @@ const validators: Record<Collection, (d: Doc) => void> = {
   reserves: reserve,
   reserveMoves: reserveMove,
   categories: category,
+  shoppingLists: shoppingList,
 };
 
 /** Returns null when valid, otherwise the first error message. */

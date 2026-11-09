@@ -72,6 +72,8 @@ interface Props {
   onOpenCards: () => void;
   /** opens category management */
   onOpenCategories: () => void;
+  /** more places for the strip above the projection (shopping lists, subscriptions...) */
+  places?: { key: string; icon: keyof typeof Feather.glyphMap; label: string; onPress: () => void }[];
 }
 
 /** Short explanations shown by the "?" next to the card titles (the totals explain themselves inside their own dialogs). */
@@ -94,7 +96,7 @@ const shortDate = (iso: string) => {
   return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
 };
 
-export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange, onAdd, onEdit, onPayInvoice, onOpenCards, onOpenCategories }: Props) {
+export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange, onAdd, onEdit, onPayInvoice, onOpenCards, onOpenCategories, places = [] }: Props) {
   const { data, toggleConfirmed, archivePayment, addTransaction } = useStore();
   // left over adjustment: the dialog, and the amount the person says they really have
   const [adjustOpen, setAdjustOpen] = useState(false);
@@ -668,6 +670,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       {[
         { key: 'cards', icon: 'credit-card' as const, label: t('Cards'), onPress: onOpenCards },
         { key: 'categories', icon: 'tag' as const, label: t('Categories'), onPress: onOpenCategories },
+        ...places,
       ].map((it) => (
         <Pressable
           key={it.key}

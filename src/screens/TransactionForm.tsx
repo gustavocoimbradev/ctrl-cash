@@ -24,6 +24,12 @@ export interface FormPreset {
   kind: 'expense' | 'invoice' | 'refund';
   cardId?: string;
   invoiceKey?: string;
+  /** starting values for a new expense (a finished shopping list opens it as the groceries bill) */
+  description?: string;
+  category?: string;
+  confirmed?: boolean;
+  /** called once the new transaction is saved */
+  onSaved?: () => void;
 }
 
 interface Props {
@@ -83,15 +89,15 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
     if (!visible) return;
     // fixed: shows the effective values of the tapped month (with per-month edits applied)
     const eff = transaction?.fixed ? fixedFieldsAt(transaction, occurrenceMonth ?? monthKey(transaction.date)) : undefined;
-    setDescription(eff?.description ?? transaction?.description ?? '');
-    setCategory(eff?.category ?? transaction?.category ?? (transaction && transaction.type === 'expense' ? DEFAULT_CATEGORY : ''));
+    setDescription(eff?.description ?? transaction?.description ?? preset?.description ?? '');
+    setCategory(eff?.category ?? transaction?.category ?? (transaction ? (transaction.type === 'expense' ? DEFAULT_CATEGORY : '') : preset?.category ?? ''));
     setCents(eff?.amount ?? transaction?.amount ?? 0);
     setDay(eff?.day ?? 1);
     setScopeOpen(false);
     setDate(transaction?.date ?? todayISO());
     setMode(transaction ? (transaction.fixed ? 'fixed' : transaction.installment ? 'installments' : 'single') : 'single');
     setInstallments(2);
-    setConfirmed(transaction?.confirmed ?? true);
+    setConfirmed(transaction?.confirmed ?? preset?.confirmed ?? true);
     setTried(false);
     setConfirmDelete(false);
     setKind(transaction?.type ?? (preset?.kind === 'refund' ? 'income' : preset?.kind) ?? 'expense');
@@ -241,6 +247,7 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
       invoiceKey: usesCard ? purchaseInvoice : undefined,
       installments: mode === 'installments' ? installments : 1,
     });
+    preset?.onSaved?.();
     onClose();
   };
 
