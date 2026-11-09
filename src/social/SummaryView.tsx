@@ -190,11 +190,12 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
 
   const colorOf = (slug: string) => {
     const i = categories.findIndex((x) => x.slug === slug);
-    return i >= 0 && i < PALETTE.length ? PALETTE[i] : OTHER;
+    if (i < 0) return OTHER;
+    // after the fixed palette every category still gets its own color (hues spread by the golden angle)
+    return i < PALETTE.length ? PALETTE[i] : `hsl(${Math.round((i * 137.508) % 360)}, 55%, ${i % 2 ? 48 : 62}%)`;
   };
-  const top = categories.slice(0, PALETTE.length);
-  const rest = categories.slice(PALETTE.length).reduce((a, x) => a + x.pct, 0);
-  const pieRows = [...top.map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug) })), ...(rest > 0 ? [{ key: '_rest', label: t('Everything else'), value: rest, color: OTHER }] : [])];
+  // every category is shown: none is folded into "everything else"
+  const pieRows = categories.map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug) }));
   const pieTotal = pieRows.reduce((a, x) => a + x.value, 0) || 1;
 
   const chart = (
