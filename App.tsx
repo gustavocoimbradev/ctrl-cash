@@ -76,8 +76,9 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   const toDashboard = () => setPage({ name: 'dashboard' });
   /** the places beside Cards and Categories, in the phone menu and in the strip above the projection */
   const places = [
-    { key: 'shopping', icon: 'shopping-cart' as const, label: t('Shopping lists'), onPress: () => setShoppingOpen(true) },
-    { key: 'wishlist', icon: 'gift' as const, label: t('Wishlist'), onPress: () => setWishOpen(true) },
+    // Shopping lists and Wishlist are built (ShoppingSheet, WishlistSheet) but switched off for now: to bring them back, add
+    // { key: 'shopping', icon: 'shopping-cart', label: t('Shopping lists'), onPress: () => setShoppingOpen(true) } and
+    // { key: 'wishlist', icon: 'gift', label: t('Wishlist'), onPress: () => setWishOpen(true) } here.
     { key: 'subscriptions', icon: 'repeat' as const, label: t('Subscriptions'), onPress: () => setArea('subscriptions') },
     { key: 'bills', icon: 'file-text' as const, label: t('Utility bills'), onPress: () => setArea('bills') },
     { key: 'delivery', icon: 'package' as const, label: t('Delivery'), onPress: () => setArea('delivery') },
