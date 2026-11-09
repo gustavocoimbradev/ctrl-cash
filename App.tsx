@@ -148,7 +148,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
       <View style={[s.topBar, { backgroundColor: c.card, borderBottomColor: c.border }, desktop && { paddingHorizontal: spacing.xxl }]}>
         {desktop ? (
           <View style={s.topInner}>
-            <View style={[s.topSide, { flex: 0 }]}>
+            <View style={[s.topSide, s.topSideFit]}>
               {/* a real link to the root: it opens in a new tab with a middle click, and a plain click stays in the app */}
               <Pressable
                 accessibilityRole="link"
@@ -186,7 +186,7 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
                 </Pressable>
               ))}
             </View>
-            <View style={[s.topSide, { flex: 0, justifyContent: 'flex-end' }]}>
+            <View style={[s.topSide, s.topSideFit, { justifyContent: 'flex-end' }]}>
               {/* my profile: the avatar (it is not highlighted on the profile page) */}
               <Pressable
                 accessibilityRole="button"
@@ -415,6 +415,8 @@ const s = StyleSheet.create({
   /** fixed top bar (outside the scroll), navy blue */
   topBar: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, borderBottomWidth: 1 },
   topInner: { width: '100%', maxWidth: maxContentWidth, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 52 },
+  /** a side of the header that is exactly as wide as what it holds (`flex: 0` would give it a zero width and let the navigation sit on top of it) */
+  topSideFit: { flexGrow: 0, flexShrink: 0, flexBasis: 'auto' },
   topSide: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   /** the places in the header: icon and label, no frame, a soft background on hover */
   nav: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, flexWrap: 'nowrap' },
