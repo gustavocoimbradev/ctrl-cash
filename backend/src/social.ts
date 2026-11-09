@@ -8,7 +8,7 @@ import type pg from 'pg';
 import { generateCode, normalizeCode } from './code.js';
 import type { Pool } from './db.js';
 import { ValidationError } from './validate.js';
-import { parseCodeBody, parseMessage, parseProfile, parseSummary, type ProfileInput } from './validate-social.js';
+import { parseAmounts, parseCodeBody, parseMessage, parseProfile, parseShareBody, parseSummary, type ProfileInput, type ShareMode } from './validate-social.js';
 
 type Authn = (req: FastifyRequest, reply: FastifyReply) => Promise<unknown>;
 type Db = pg.Pool | pg.PoolClient;
@@ -110,17 +110,18 @@ export async function sendMessageTo(pool: Pool, uid: string, to: string, body: s
 }
 
 /** Starts (or restarts) sharing my summary with the person with this code. */
-export async function shareSummaryWith(pool: Pool, uid: string, code: string): Promise<ActionResult> {
+export async function shareSummaryWith(pool: Pool, uid: string, code: string, mode: ShareMode = 'percent'): Promise<ActionResult> {
   if (!(await myProfile(pool, uid))) return { kind: 'no_profile' };
   const target = await profileByCode(pool, code);
   if (!target) return { kind: 'not_found' };
   if (target.user_id === uid) return { kind: 'self' };
   await pool.query(
-    `insert into summary_shares (owner_id, viewer_id, created_at_ms) values ($1, $2, $3)
+    `insert into summary_shares (owner_id, viewer_id, created_at_ms, mode) values ($1, $2, $3, $4)
      on conflict (owner_id, viewer_id) do update set
        created_at_ms = case when summary_shares.revoked_at_ms is not null then excluded.created_at_ms else summary_shares.created_at_ms end,
+       mode = excluded.mode,
        revoked_at_ms = null`,
-    [uid, target.user_id, Date.now()],
+    [uid, target.user_id, Date.now(), mode],
   );
   return { kind: 'ok' };
 }
@@ -134,29 +135,33 @@ export async function revokeSummaryShare(pool: Pool, uid: string, code: string):
 }
 
 /** The people I share with (`given`) and the people who share with me (`received`). */
-export async function listShares(db: Db, uid: string): Promise<{ given: Person[]; received: Person[] }> {
+export async function listShares(db: Db, uid: string): Promise<{ given: (Person & { mode: ShareMode })[]; received: (Person & { mode: ShareMode })[] }> {
   const given = await db.query(
-    `select ${CARD_COLUMNS} from profiles p
+    `select ${CARD_COLUMNS}, s.mode from profiles p
        join summary_shares s on s.viewer_id = p.user_id and s.owner_id = $1 and s.revoked_at_ms is null
       where p.code is not null order by s.created_at_ms desc, p.code`,
     [uid],
   );
   const received = await db.query(
-    `select ${CARD_COLUMNS} from profiles p
+    `select ${CARD_COLUMNS}, s.mode from profiles p
        join summary_shares s on s.owner_id = p.user_id and s.viewer_id = $1 and s.revoked_at_ms is null
       where p.code is not null order by s.created_at_ms desc, p.code`,
     [uid],
   );
-  return { given: given.rows.map(toPerson), received: received.rows.map(toPerson) };
+  const withMode = (r: Row) => ({ ...toPerson(r), mode: (r.mode === 'amounts' ? 'amounts' : 'percent') as ShareMode });
+  return { given: given.rows.map(withMode), received: received.rows.map(withMode) };
 }
 
 /** The shared summary of the owner with this code, as seen by `uid`: null when not shared with them (or no such person). */
-export async function sharedSummaryOf(db: Db, uid: string, code: string): Promise<{ owner: Person; summary: unknown; updatedAt: number | null } | null> {
+export async function sharedSummaryOf(db: Db, uid: string, code: string): Promise<{ owner: Person; summary: unknown; updatedAt: number | null; mode: ShareMode; amounts: unknown } | null> {
   const owner = await profileByCode(db, code);
   if (!owner) return null;
-  if (owner.user_id !== uid && !(await hasShare(db, owner.user_id, uid))) return null;
-  const r = (await db.query('select summary, updated_at_ms from profile_summaries where user_id = $1', [owner.user_id])).rows[0];
-  return { owner: toPerson(owner), summary: r ? r.summary : null, updatedAt: r ? Number(r.updated_at_ms) : null };
+  const share = owner.user_id === uid ? null : (await db.query('select mode from summary_shares where owner_id = $1 and viewer_id = $2 and revoked_at_ms is null', [owner.user_id, uid])).rows[0];
+  if (owner.user_id !== uid && !share) return null;
+  const r = (await db.query('select summary, amounts, updated_at_ms from profile_summaries where user_id = $1', [owner.user_id])).rows[0];
+  const mode: ShareMode = share?.mode === 'amounts' ? 'amounts' : 'percent';
+  // the real values only go to the people the owner chose to show them to
+  return { owner: toPerson(owner), summary: r ? r.summary : null, updatedAt: r ? Number(r.updated_at_ms) : null, mode, amounts: mode === 'amounts' && r ? r.amounts ?? null : null };
 }
 
 /** My conversations, newest first, with the last message and the unread count. */
@@ -372,8 +377,8 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
   });
 
   route('POST', '/api/shares', async (req, reply) => {
-    const code = parseCodeBody(req.body);
-    const r = await shareSummaryWith(pool, req.uid, code);
+    const { code, mode } = parseShareBody(req.body);
+    const r = await shareSummaryWith(pool, req.uid, code, mode);
     if (r.kind === 'no_profile') return reply.code(403).send({ error: 'profile_required' });
     if (r.kind === 'not_found') return notFound(reply);
     if (r.kind === 'self') return bad(reply, 'you cannot share with yourself');
@@ -386,11 +391,18 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
   });
 
   route('PUT', '/api/summary', async (req) => {
-    const summary = parseSummary(req.body);
+    // the real values travel apart from the percentage summary
+    const { amounts: rawAmounts, ...rest } = (typeof req.body === 'object' && req.body !== null && !Array.isArray(req.body) ? req.body : {}) as Record<string, unknown>;
+    const summary = parseSummary(typeof req.body === 'object' && req.body !== null && !Array.isArray(req.body) ? rest : req.body);
+    const amounts = rawAmounts === undefined || rawAmounts === null ? null : parseAmounts(rawAmounts);
+    // they are only kept while somebody is allowed to see them
+    const wanted = amounts
+      ? ((await pool.query("select 1 from summary_shares where owner_id = $1 and mode = 'amounts' and revoked_at_ms is null limit 1", [req.uid])).rowCount ?? 0) > 0
+      : false;
     await pool.query(
-      `insert into profile_summaries (user_id, summary, updated_at_ms) values ($1, $2::jsonb, $3)
-       on conflict (user_id) do update set summary = excluded.summary, updated_at_ms = excluded.updated_at_ms`,
-      [req.uid, JSON.stringify(summary), Date.now()],
+      `insert into profile_summaries (user_id, summary, amounts, updated_at_ms) values ($1, $2::jsonb, $3::jsonb, $4)
+       on conflict (user_id) do update set summary = excluded.summary, amounts = excluded.amounts, updated_at_ms = excluded.updated_at_ms`,
+      [req.uid, JSON.stringify(summary), wanted ? JSON.stringify(amounts) : null, Date.now()],
     );
     return { ok: true };
   });
@@ -401,6 +413,6 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
     if (!code) return denied();
     const r = await sharedSummaryOf(pool, req.uid, code);
     if (!r) return denied();
-    return { summary: r.summary, updatedAt: r.updatedAt };
+    return { summary: r.summary, updatedAt: r.updatedAt, mode: r.mode, amounts: r.amounts };
   });
 }

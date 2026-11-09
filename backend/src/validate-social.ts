@@ -192,3 +192,77 @@ export function parseSummary(input: unknown): Summary {
   }
   return out;
 }
+
+export type ShareMode = 'percent' | 'amounts';
+
+/** `{ code }` and, optionally, `{ mode }`: what the person shares (default: percentages). */
+export function parseShareBody(input: unknown): { code: string; mode: ShareMode } {
+  const d = obj(input, 'the body');
+  onlyKeys(d, ['code', 'mode'], ['code']);
+  const mode = has(d, 'mode') ? d.mode : 'percent';
+  if (mode !== 'percent' && mode !== 'amounts') fail('"mode" must be "percent" or "amounts"');
+  return { code: parseCode(d.code, 'code'), mode: mode as ShareMode };
+}
+
+/** The real values of an "amounts" share (whole cents of the owner's currency), apart from the percentage summary. */
+export interface Amounts {
+  currency: string;
+  months: Record<string, { income: number; expense: number }>;
+  days: { income: number[]; spent: number[] };
+  categories: { slug: string; label: string; tone: string | null; byMonth: Record<string, number> }[];
+  incomeCategories: { slug: string; label: string; byMonth: Record<string, number> }[];
+}
+
+const CENTS_MAX = 100_000_000_000_000;
+function cents(v: unknown, name: string): number {
+  if (typeof v !== 'number' || !Number.isSafeInteger(v) || v < -CENTS_MAX || v > CENTS_MAX) return fail(`"${name}" must be a whole number of cents`);
+  return v;
+}
+function monthRecord(raw: unknown, name: string): Record<string, number> {
+  const r = obj(raw, name);
+  const keys = Object.keys(r);
+  if (keys.length > 72) fail(`"${name}" has too many months`);
+  const out: Record<string, number> = {};
+  for (const k of keys) {
+    if (!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(k)) fail(`"${name}" has a key that is not a month`);
+    out[k] = cents(r[k], `${name}.${k}`);
+  }
+  return out;
+}
+function centsList(v: unknown, name: string): number[] {
+  if (!Array.isArray(v) || v.length > 31) return fail(`"${name}" must be a list of at most 31 numbers`);
+  return v.map((n, i) => cents(n, `${name}[${i}]`));
+}
+
+export function parseAmounts(input: unknown): Amounts {
+  const d = obj(input, 'amounts');
+  onlyKeys(d, ['currency', 'months', 'days', 'categories', 'incomeCategories'], ['currency', 'months', 'days', 'categories', 'incomeCategories']);
+  if (typeof d.currency !== 'string' || !/^[A-Z]{3}$/.test(d.currency)) fail('"amounts.currency" must be a 3 letter code');
+  const monthsRaw = obj(d.months, 'amounts.months');
+  if (Object.keys(monthsRaw).length > 72) fail('"amounts.months" has too many months');
+  const months: Amounts['months'] = {};
+  for (const [k, v] of Object.entries(monthsRaw)) {
+    if (!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(k)) fail('"amounts.months" has a key that is not a month');
+    const m = obj(v, `amounts.months.${k}`);
+    onlyKeys(m, ['income', 'expense'], ['income', 'expense']);
+    months[k] = { income: cents(m.income, 'income'), expense: cents(m.expense, 'expense') };
+  }
+  const days = obj(d.days, 'amounts.days');
+  onlyKeys(days, ['income', 'spent'], ['income', 'spent']);
+  const list = <T>(raw: unknown, name: string, max: number, one: (r: unknown, i: number) => T): T[] => {
+    if (!Array.isArray(raw) || raw.length > max) return fail(`"${name}" must be a list of at most ${max} items`);
+    return raw.map(one);
+  };
+  const categories = list(d.categories, 'amounts.categories', 60, (r, i) => {
+    const c = obj(r, `categories[${i}]`);
+    onlyKeys(c, ['slug', 'label', 'tone', 'byMonth'], ['slug', 'label', 'byMonth']);
+    const tone = c.tone === null || c.tone === undefined ? null : typeof c.tone === 'string' && ['healthy', 'necessary', 'comfort', 'luxury', 'unhealthy', 'unknown'].includes(c.tone) ? c.tone : fail('"tone" is not valid');
+    return { slug: str(c.slug, 'slug', 1, 60), label: str(c.label, 'label', 1, 60), tone, byMonth: monthRecord(c.byMonth, 'byMonth') };
+  });
+  const incomeCategories = list(d.incomeCategories, 'amounts.incomeCategories', 40, (r, i) => {
+    const c = obj(r, `incomeCategories[${i}]`);
+    onlyKeys(c, ['slug', 'label', 'byMonth'], ['slug', 'label', 'byMonth']);
+    return { slug: str(c.slug, 'slug', 1, 60), label: str(c.label, 'label', 1, 60), byMonth: monthRecord(c.byMonth, 'byMonth') };
+  });
+  return { currency: d.currency as string, months, days: { income: centsList(days.income, 'days.income'), spent: centsList(days.spent, 'days.spent') }, categories, incomeCategories };
+}

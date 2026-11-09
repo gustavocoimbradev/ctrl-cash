@@ -333,8 +333,8 @@ test('shares: many people on both sides, newest first, idempotent, and no follow
   const mine = (await call(a.uid, 'GET', '/api/shares')).body;
   assert.deepEqual(mine.given.map((p: any) => p.code), [c.code, b.code]);
   assert.equal(mine.received.length, 2);
-  assert.deepEqual(Object.keys(mine.given[0]).sort(), ['code', 'color', 'displayName', 'photo']);
-  assert.deepEqual((await call(b.uid, 'GET', '/api/shares')).body, { given: [{ code: a.code, displayName: 'A', color: null, photo: null }], received: [{ code: a.code, displayName: 'A', color: null, photo: null }] });
+  assert.deepEqual(Object.keys(mine.given[0]).sort(), ['code', 'color', 'displayName', 'mode', 'photo']);
+  assert.deepEqual((await call(b.uid, 'GET', '/api/shares')).body, { given: [{ code: a.code, displayName: 'A', color: null, photo: null, mode: 'percent' }], received: [{ code: a.code, displayName: 'A', color: null, photo: null, mode: 'percent' }] });
 });
 
 test('summary: shared people read it, revoking blocks at once, outsiders and unknown codes get the same 403', async () => {
@@ -342,7 +342,7 @@ test('summary: shared people read it, revoking blocks at once, outsiders and unk
   const b = await person();
   const c = await person();
   const outsider = await person();
-  assert.deepEqual((await readSummary(a, a)).body, { summary: null, updatedAt: null });
+  assert.deepEqual((await readSummary(a, a)).body, { summary: null, updatedAt: null, mode: 'percent', amounts: null });
   assert.equal((await call(a.uid, 'PUT', '/api/summary', summary())).status, 200);
   assert.deepEqual((await readSummary(a, a)).body.summary, summary());
   await share(a, b);
@@ -543,4 +543,68 @@ test('summary: the current month day by day is optional and only percentages', a
     { days: { ...days, spent: ['x', ...run(29)] } },
     { days: { ...days, amount: 5 } },
   ]) assert.equal((await call(a.uid, 'PUT', '/api/summary', summary(bad))).status, 400, JSON.stringify(bad).slice(0, 60));
+});
+
+const AMOUNTS = {
+  currency: 'BRL',
+  months: { '2026-10': { income: 500000, expense: 300000 }, '2026-11': { income: 520000, expense: 310000 } },
+  days: { income: [0, 0, 520000], spent: [10000, 20000, 31000] },
+  categories: [{ slug: 'bills', label: 'Bills', tone: 'necessary', byMonth: { '2026-11': 120000 } }],
+  incomeCategories: [{ slug: 'salary', label: 'Salary', byMonth: { '2026-11': 520000 } }],
+};
+
+test('share mode: percentages by default, amounts only to the people the owner chose', async () => {
+  const owner = await person('Olga');
+  const pct = await person('Percy');
+  const amt = await person('Amy');
+  const summaryWith = (extra: object = {}) => summary(extra as Record<string, unknown>);
+  // sharing is percentages unless said otherwise
+  assert.equal((await call(owner.uid, 'POST', '/api/shares', { code: pct.code })).status, 200);
+  assert.equal((await call(owner.uid, 'POST', '/api/shares', { code: amt.code, mode: 'amounts' })).status, 200);
+  const given = (await call(owner.uid, 'GET', '/api/shares')).body.given as { code: string; mode: string }[];
+  assert.equal(given.find((p) => p.code === pct.code)!.mode, 'percent');
+  assert.equal(given.find((p) => p.code === amt.code)!.mode, 'amounts');
+  assert.equal((await call(owner.uid, 'POST', '/api/shares', { code: pct.code, mode: 'cash' })).status, 400);
+  assert.equal((await call(owner.uid, 'POST', '/api/shares', { code: pct.code, mode: 'amounts', extra: 1 })).status, 400);
+
+  assert.equal((await call(owner.uid, 'PUT', '/api/summary', { ...summaryWith(), amounts: AMOUNTS })).status, 200);
+  const seenByPct = (await readSummary(pct, owner)).body;
+  assert.equal(seenByPct.mode, 'percent');
+  assert.equal(seenByPct.amounts, null);
+  assert.ok(!JSON.stringify(seenByPct).includes('520000'));
+  const seenByAmt = (await readSummary(amt, owner)).body;
+  assert.equal(seenByAmt.mode, 'amounts');
+  assert.deepEqual(seenByAmt.amounts, AMOUNTS);
+
+  // switching a person to percentages hides the values at once; to amounts shows them again
+  await call(owner.uid, 'POST', '/api/shares', { code: amt.code, mode: 'percent' });
+  assert.equal((await readSummary(amt, owner)).body.amounts, null);
+  await call(owner.uid, 'POST', '/api/shares', { code: amt.code, mode: 'amounts' });
+  assert.deepEqual((await readSummary(amt, owner)).body.amounts, AMOUNTS);
+  // revoking blocks everything
+  await call(owner.uid, 'POST', '/api/shares/revoke', { code: amt.code });
+  assert.equal((await readSummary(amt, owner)).status, 403);
+});
+
+test('share mode: the values are only kept while somebody may see them, and are validated', async () => {
+  const owner = await person('Orson');
+  const viewer = await person('Vera');
+  // nobody sees amounts: they are not stored
+  await call(owner.uid, 'POST', '/api/shares', { code: viewer.code });
+  assert.equal((await call(owner.uid, 'PUT', '/api/summary', { ...summary(), amounts: AMOUNTS })).status, 200);
+  await call(owner.uid, 'POST', '/api/shares', { code: viewer.code, mode: 'amounts' });
+  assert.equal((await readSummary(viewer, owner)).body.amounts, null);
+  assert.equal((await call(owner.uid, 'PUT', '/api/summary', { ...summary(), amounts: AMOUNTS })).status, 200);
+  assert.deepEqual((await readSummary(viewer, owner)).body.amounts, AMOUNTS);
+  for (const bad of [
+    { ...AMOUNTS, currency: 'real' },
+    { ...AMOUNTS, extra: 1 },
+    { ...AMOUNTS, months: { '2026-13': { income: 1, expense: 1 } } },
+    { ...AMOUNTS, months: { '2026-11': { income: 1.5, expense: 1 } } },
+    { ...AMOUNTS, months: { '2026-11': { income: 1, expense: 1, more: 2 } } },
+    { ...AMOUNTS, days: { income: Array(32).fill(1), spent: [] } },
+    { ...AMOUNTS, categories: [{ slug: 'x', label: 'X', tone: 'tasty', byMonth: {} }] },
+    { ...AMOUNTS, categories: Array.from({ length: 61 }, (_, i) => ({ slug: `c${i}`, label: 'C', byMonth: {} })) },
+    'nope',
+  ]) assert.equal((await call(owner.uid, 'PUT', '/api/summary', { ...summary(), amounts: bad })).status, 400, JSON.stringify(bad).slice(0, 60));
 });
