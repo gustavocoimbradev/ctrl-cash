@@ -124,9 +124,7 @@ export function Select<T extends string | number>({ label, value, options, onCha
               {filtered.map((item, idx) => (
                 <React.Fragment key={String(item.value)}>
                 {item.group && item.group !== filtered[idx - 1]?.group ? (
-                  <View style={{ backgroundColor: c.surface, borderRadius: radius.control - 4, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, marginTop: idx === 0 ? 0 : spacing.sm, marginBottom: 2 }}>
-                    <Text accessibilityRole="header" style={[type.label, { color: c.textMuted, fontSize: 16, letterSpacing: 0.8, textTransform: 'uppercase' }]}>{item.group}</Text>
-                  </View>
+                  <Text accessibilityRole="header" style={[type.body, { color: c.textMuted, opacity: 0.75, fontSize: 16, paddingHorizontal: spacing.md, paddingTop: idx === 0 ? spacing.xs : spacing.md, paddingBottom: 2 }]}>{item.group}</Text>
                 ) : null}
                 <Pressable
                   key={String(item.value)}
@@ -135,7 +133,7 @@ export function Select<T extends string | number>({ label, value, options, onCha
                     onChange(item.value);
                     close();
                   }}
-                  style={({ pressed, hovered }: any) => [s.item, item.group ? { paddingLeft: spacing.xl } : null, { backgroundColor: pressed || hovered ? c.surfaceAlt : 'transparent' }]}
+                  style={({ pressed, hovered }: any) => [s.item, { backgroundColor: pressed || hovered ? c.surfaceAlt : 'transparent' }]}
                 >
                   <Text style={[type.body, { color: c.text, flex: 1 }]}>{item.label}</Text>
                   {item.value === value && <Feather name="check" size={20} color={c.primary} />}
