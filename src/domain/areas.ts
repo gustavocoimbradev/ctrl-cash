@@ -1,6 +1,7 @@
 import { AppData, Occurrence, Transaction } from '../types';
 import { LOAN_CATEGORY } from './categories';
 import { buildInvoices, invoiceDebt, remaining } from './invoices';
+import { debtTimeline } from './statements';
 import { addMonthsToKey, currentMonthKey, monthKey, parseISO, todayISO } from './dates';
 import { buildOccurrences, fixedFieldsAt, monthOccurrences, monthTotals } from './transactions';
 
@@ -191,4 +192,43 @@ export function debtsSummary(data: AppData): DebtsSummary {
   const thisMonth = owedOcc.filter((o) => monthKey(o.date) === cur).reduce((sum, o) => sum + o.amount, 0);
   const income = recentIncome(occ, invoices);
   return { items, owed: items.reduce((sum, x) => sum + x.remaining, 0), thisMonth, income, share: income > 0 ? thisMonth / income : 0 };
+}
+
+export interface DebtMonth {
+  key: string;
+  /** still owed that falls due in this month */
+  debt: number;
+  /** the part of what fell due in this month that is already paid */
+  settled: number;
+}
+
+/**
+ * How the debts evolve, month by month, from 6 months back to 11 ahead, in one total (no split by card or account): what falls
+ * due each month, the paid part apart. The same rule as the card debt chart, plus what is filed under the Debts category on
+ * the account. The future shows what is already registered.
+ */
+export function debtsTimeline(data: AppData): DebtMonth[] {
+  const cur = currentMonthKey();
+  const today = todayISO();
+  const occ = buildOccurrences(data, addMonthsToKey(cur, 12));
+  const invoices = buildInvoices(data, occ);
+  const cards = data.cards.filter((c) => !c.archivedAt || data.transactions.some((x) => x.cardId === c.id));
+  const byCard = debtTimeline(invoices, cards, today);
+  const out: DebtMonth[] = [];
+  for (let i = -6; i <= 11; i++) {
+    const key = addMonthsToKey(cur, i);
+    let debt = 0;
+    let settled = 0;
+    for (const sl of byCard.get(key) ?? []) {
+      debt += sl.debt;
+      settled += sl.settled;
+    }
+    for (const o of occ) {
+      if (o.cardId || o.type !== 'expense' || o.category !== 'debts' || monthKey(o.date) !== key) continue;
+      if (o.confirmed) settled += o.amount;
+      else debt += o.amount;
+    }
+    out.push({ key, debt, settled });
+  }
+  return out;
 }

@@ -2,8 +2,9 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { Sheet } from '../components/Sheet';
-import { debtsSummary } from '../domain/areas';
-import { formatDate, monthLabel } from '../domain/dates';
+import { BarChart } from '../components/Charts';
+import { debtsSummary, debtsTimeline } from '../domain/areas';
+import { formatDate, monthLabel, monthName } from '../domain/dates';
 import { formatMoney } from '../domain/money';
 import { getLocale, t } from '../i18n';
 import { useStore } from '../store';
@@ -22,6 +23,20 @@ export function DebtsSheet({ visible, onClose, onAdd, onEdit }: { visible: boole
   const c = useColors();
   const { data } = useStore();
   const s = visible ? debtsSummary(data) : null;
+  const timeline = visible ? debtsTimeline(data) : [];
+  /** one color for everything; what is already paid is the lighter part */
+  const bars = timeline.map((m, i) => {
+    const mi = Number(m.key.slice(5, 7)) - 1;
+    return {
+      label: `${monthName(mi + 1).slice(0, 3)}${mi === 0 || i === 0 ? ` ${m.key.slice(2, 4)}` : ''}`,
+      segments: [...(m.settled > 0 ? [{ value: m.settled, color: c.expense, paid: true }] : []), ...(m.debt > 0 ? [{ value: m.debt, color: c.expense }] : [])],
+    };
+  });
+  // is it going down or up? the next 3 months against the 3 after them
+  const nextSum = (from: number) => timeline.slice(6 + from, 9 + from).reduce((a, m) => a + m.debt, 0);
+  const a = nextSum(0);
+  const b = nextSum(3);
+  const trend = a + b <= 0 ? null : b < a * 0.9 ? 'down' : b > a * 1.1 ? 'up' : 'flat';
   const cardName = (id?: string) => (id ? data.cards.find((x) => x.id === id)?.name : undefined);
   const tiles = s
     ? [
@@ -43,6 +58,17 @@ export function DebtsSheet({ visible, onClose, onAdd, onEdit }: { visible: boole
               </View>
             ))}
           </View>
+          {timeline.some((m) => m.debt + m.settled > 0) ? (
+            <View style={{ gap: spacing.sm }}>
+              <Text style={[type.title, { color: c.text }]}>{t('How your debts evolve')}</Text>
+              <BarChart groups={bars} />
+              {trend ? (
+                <Text style={[type.body, { color: trend === 'down' ? c.income : trend === 'up' ? c.expense : c.textMuted }]}>
+                  {trend === 'down' ? t('What you owe falls over the next months.') : trend === 'up' ? t('What you owe grows over the next months.') : t('What you owe stays about the same over the next months.')}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
           {s.items.length === 0 ? <Text style={[type.body, { color: c.textMuted }]}>{t('You owe nothing right now.')}</Text> : null}
           {s.items.length > 0 ? (
             <View style={{ gap: spacing.xs }}>

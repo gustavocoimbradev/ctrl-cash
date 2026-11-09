@@ -3,6 +3,10 @@ import type { Dict } from '../index';
 /** Quick setup, account settings, the language/currency fields and the app shell. */
 export const dict: Dict = {
   pt: {
+    "How your debts evolve": "Como suas dívidas evoluem",
+    "What you owe falls over the next months.": "O que você deve diminui nos próximos meses.",
+    "What you owe grows over the next months.": "O que você deve aumenta nos próximos meses.",
+    "What you owe stays about the same over the next months.": "O que você deve fica parecido nos próximos meses.",
     "New debt": "Nova dívida",
     "You owe nothing right now.": "Você não deve nada no momento.",
     "I lent my card": "Emprestei o cartão",
@@ -234,6 +238,10 @@ export const dict: Dict = {
     "Cloud storage": "Armazenamento na nuvem",
   },
   es: {
+    "How your debts evolve": "Cómo evolucionan tus deudas",
+    "What you owe falls over the next months.": "Lo que debes baja en los próximos meses.",
+    "What you owe grows over the next months.": "Lo que debes sube en los próximos meses.",
+    "What you owe stays about the same over the next months.": "Lo que debes se mantiene parecido en los próximos meses.",
     "New debt": "Nueva deuda",
     "You owe nothing right now.": "No debes nada por ahora.",
     "I lent my card": "Presté mi tarjeta",
@@ -465,6 +473,10 @@ export const dict: Dict = {
     "Cloud storage": "Almacenamiento en la nube",
   },
   de: {
+    "How your debts evolve": "Wie sich deine Schulden entwickeln",
+    "What you owe falls over the next months.": "Was du schuldest, sinkt in den nächsten Monaten.",
+    "What you owe grows over the next months.": "Was du schuldest, steigt in den nächsten Monaten.",
+    "What you owe stays about the same over the next months.": "Was du schuldest, bleibt in den nächsten Monaten etwa gleich.",
     "New debt": "Neue Schuld",
     "You owe nothing right now.": "Du schuldest im Moment nichts.",
     "I lent my card": "Ich habe meine Karte verliehen",
@@ -696,6 +708,10 @@ export const dict: Dict = {
     "Cloud storage": "Cloud-Speicher",
   },
   fr: {
+    "How your debts evolve": "Comment vos dettes évoluent",
+    "What you owe falls over the next months.": "Ce que vous devez baisse dans les mois à venir.",
+    "What you owe grows over the next months.": "Ce que vous devez augmente dans les mois à venir.",
+    "What you owe stays about the same over the next months.": "Ce que vous devez reste à peu près stable dans les mois à venir.",
     "New debt": "Nouvelle dette",
     "You owe nothing right now.": "Vous ne devez rien pour l'instant.",
     "I lent my card": "J'ai prêté ma carte",
@@ -927,6 +943,10 @@ export const dict: Dict = {
     "Cloud storage": "Stockage cloud",
   },
   it: {
+    "How your debts evolve": "Come evolvono i tuoi debiti",
+    "What you owe falls over the next months.": "Quello che devi diminuisce nei prossimi mesi.",
+    "What you owe grows over the next months.": "Quello che devi aumenta nei prossimi mesi.",
+    "What you owe stays about the same over the next months.": "Quello che devi resta più o meno uguale nei prossimi mesi.",
     "New debt": "Nuovo debito",
     "You owe nothing right now.": "Al momento non devi nulla.",
     "I lent my card": "Ho prestato la mia carta",
