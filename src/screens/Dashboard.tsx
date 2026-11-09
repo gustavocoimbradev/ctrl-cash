@@ -115,6 +115,8 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
   const { height: winH } = useWindowDimensions();
   /** desktop side column: height of the health card, to give the factors card only what is left of the screen */
   const [healthH, setHealthH] = useState(0);
+  /** desktop: height of the strip of places (Cards, Categories...), which sticks to the top; the side column sticks below it */
+  const [menuH, setMenuH] = useState(0);
   const cards = data.cards;
 
   useEffect(() => setChartSel(null), [horizon]);
@@ -680,7 +682,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
           style={({ pressed, hovered }: any) => [s.menuBtn, { backgroundColor: hovered ? c.surfaceAlt : c.card, opacity: pressed ? 0.8 : 1 }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '150ms' } as object)]}
         >
           <Feather name={it.icon} size={20} color={c.textMuted} />
-          <Text style={[type.label, { color: c.text }]}>{it.label}</Text>
+          <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{it.label}</Text>
         </Pressable>
       ))}
     </View>
@@ -710,19 +712,24 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
           {mobileTab === 'transactions' && <Reveal>{table}</Reveal>}
         </View>
       ) : wide ? (
+        <View style={{ gap: spacing.lg }}>
+        {/* the places, across the full width and sticky: they follow the screen while everything below scrolls */}
+        <View style={s.menuBar} onLayout={(e) => setMenuH(e.nativeEvent.layout.height)}>
+          <Reveal index={1}>{menu}</Reveal>
+        </View>
         <View style={s.cols}>
           <View style={{ flex: 1, minWidth: 0, gap: spacing.lg }}>
-            <Reveal index={1}>{menu}</Reveal>
             <Reveal index={1}>{chartCard}</Reveal>
             {figureGrid}
             <Reveal index={3}>{table}</Reveal>
           </View>
           {/* sticky: the health card follows the page while the rest scrolls */}
-          <View style={s.sideSticky}>
+          <View style={[s.sideSticky, Platform.OS === 'web' && menuH > 0 && ({ top: menuH, maxHeight: `calc(100vh - ${61 + menuH + spacing.lg}px)` } as object)]}>
             <Reveal index={1} style={{ flexShrink: 0 }}><View onLayout={(e) => setHealthH(e.nativeEvent.layout.height)}>{healthCard}</View></Reveal>
             {/* only the factors card scrolls (inside itself), and only when the screen is too short for both */}
-            <Reveal index={2} style={{ flexShrink: 1, minHeight: 0, ...(healthH > 0 ? { maxHeight: Math.max(160, winH - 61 - spacing.lg * 3 - healthH) } : null) }}><ScoreFactorsCard factors={factorsList} scroll /></Reveal>
+            <Reveal index={2} style={{ flexShrink: 1, minHeight: 0, ...(healthH > 0 ? { maxHeight: Math.max(160, winH - 61 - menuH - spacing.lg * 3 - healthH) } : null) }}><ScoreFactorsCard factors={factorsList} scroll /></Reveal>
           </View>
+        </View>
         </View>
       ) : (
         <View style={{ gap: spacing.lg }}>
@@ -826,7 +833,9 @@ const s = StyleSheet.create({
   
   summaryStack: { flexDirection: 'column', gap: spacing.md },
   menu: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
-  menuBtn: { minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  menuBtn: { flexGrow: 1, flexBasis: 150, minHeight: 44, paddingHorizontal: spacing.lg, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  /** the strip of places on desktop: stuck to the top, with the page background so what scrolls under it does not show through */
+  menuBar: { backgroundColor: c.bg, paddingTop: spacing.xs, paddingBottom: spacing.sm, ...(Platform.OS === 'web' ? ({ position: 'sticky', top: 0, zIndex: 8 } as object) : null) },
   valueRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.sm },
   /** Income / Expenses block: line, proportion bar and the two amounts stacked */
   splitBar: { flexDirection: 'row', height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: c.surface },
