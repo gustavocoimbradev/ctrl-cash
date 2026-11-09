@@ -102,6 +102,31 @@ function tBuiltin(label: string): string {
   }
 }
 
+/* these two are used by `build` below, which runs at load: they must be defined before it */
+/** The app's default tone of a built-in category, in words anybody understands. */
+const TONES: Record<string, Tone> = {
+  investments: 'healthy',
+  groceries: 'necessary',
+  butcher: 'necessary',
+  bills: 'necessary',
+  health: 'necessary',
+  taxes: 'necessary',
+  bureaucracy: 'necessary',
+  education: 'necessary',
+  car: 'comfort',
+  pets: 'comfort',
+  personal_care: 'comfort',
+  subscriptions: 'luxury',
+  delivery: 'unhealthy',
+  gifts: 'luxury',
+  leisure: 'luxury',
+  debts: 'unhealthy',
+  other: 'unknown',
+};
+
+/** Default tone from the impact weight, for a category without a built-in tone and without a choice. */
+export const toneFromWeight = (weight: number): Tone => (weight <= 0.2 ? 'necessary' : weight <= 0.5 ? 'comfort' : 'luxury');
+
 const build = (records: CategoryRecord[]): Category[] => {
   const byId = new Map(records.map((r) => [r.id, r]));
   const make = (kind: 'expense' | 'income', b: Base): Category => {
@@ -162,30 +187,6 @@ export const sharedCategoryLabel = (slug: string, given: string): string => {
   const base = EXPENSE.find((b) => b.slug === slug);
   return base ? tBuiltin(base.label) : given;
 };
-
-/** The app's default tone of a built-in category, in words anybody understands. */
-const TONES: Record<string, Tone> = {
-  investments: 'healthy',
-  groceries: 'necessary',
-  butcher: 'necessary',
-  bills: 'necessary',
-  health: 'necessary',
-  taxes: 'necessary',
-  bureaucracy: 'necessary',
-  education: 'necessary',
-  car: 'comfort',
-  pets: 'comfort',
-  personal_care: 'comfort',
-  subscriptions: 'luxury',
-  delivery: 'unhealthy',
-  gifts: 'luxury',
-  leisure: 'luxury',
-  debts: 'unhealthy',
-  other: 'unknown',
-};
-
-/** Default tone from the impact weight, for a category without a built-in tone and without a choice. */
-export const toneFromWeight = (weight: number): Tone => (weight <= 0.2 ? 'necessary' : weight <= 0.5 ? 'comfort' : 'luxury');
 
 /** The built-in default of a slug (used for snapshots that do not carry a tone); null when there is none. */
 export const defaultTone = (slug: string): Tone | null => TONES[slug] ?? null;
