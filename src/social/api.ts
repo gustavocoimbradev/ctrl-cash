@@ -1,4 +1,5 @@
 import { call } from '../store/sync';
+import type { Tone } from '../types';
 
 /** The social layer of the API (profiles, follows, messages and the shared summary). People are identified by a short code (6 characters, also the one in the profile URL), never by the account id. */
 
@@ -38,6 +39,8 @@ export interface CategoryShare {
   slug: string;
   label: string;
   pct: number;
+  /** how its owner classed it (healthy, necessary, comfort, luxury, unhealthy); older snapshots have none */
+  tone?: Tone;
 }
 
 /**

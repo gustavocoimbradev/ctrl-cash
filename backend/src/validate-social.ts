@@ -1,6 +1,6 @@
 // Validators for the social routes, in the style of validate.ts: hand written, strict, no unknown fields.
 import { normalizeCode } from './code.js';
-import { ValidationError, type Doc } from './validate.js';
+import { TONES, ValidationError, type Doc } from './validate.js';
 
 const fail = (message: string): never => {
   throw new ValidationError(message);
@@ -91,6 +91,8 @@ export interface SummaryCategory {
   slug: string;
   label: string;
   pct: number;
+  /** how the owner classed this category (healthy, necessary...); optional, older snapshots have none */
+  tone?: string;
 }
 export interface Summary {
   version: 2;
@@ -111,11 +113,13 @@ function categories(raw: unknown, name: string): SummaryCategory[] {
   if (!Array.isArray(raw) || raw.length > 40) return fail(`"${name}" must be a list of at most 40 items`);
   return raw.map((r, i) => {
     const c = obj(r, `${name}[${i}]`);
-    onlyKeys(c, ['slug', 'label', 'pct'], ['slug', 'label', 'pct']);
+    onlyKeys(c, ['slug', 'label', 'pct', 'tone'], ['slug', 'label', 'pct']);
+    if (has(c, 'tone') && (typeof c.tone !== 'string' || !TONES.includes(c.tone))) fail(`"${name}[${i}].tone" must be one of ${TONES.join(', ')}`);
     return {
       slug: str(c.slug, `${name}[${i}].slug`, 1, 40),
       label: str(c.label, `${name}[${i}].label`, 1, 40),
       pct: pct(c.pct, `${name}[${i}].pct`, 0, 1000),
+      ...(has(c, 'tone') ? { tone: c.tone as string } : {}),
     };
   });
 }

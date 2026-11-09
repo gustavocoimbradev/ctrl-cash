@@ -7,7 +7,8 @@ import { addMonthsToKey, currentMonthKey, formatMonth, shortDate } from '../doma
 import { desktopBreakpoint, fontFamily, spacing, type, useColors } from '../theme';
 import { motion, useGlide, useTween, useTweenList } from '../theme/motion';
 import { CategoryShare, Summary } from './api';
-import { TONE_COLORS, categoryColor, categoryTone, sharedCategoryLabel, toneLabel } from '../domain/categories';
+import type { Tone } from '../types';
+import { TONE_COLORS, categoryColor, defaultTone, sharedCategoryLabel, toneLabel } from '../domain/categories';
 import { t, usePrefsVersion } from '../i18n';
 
 const HORIZONS = ['month', 6, 12, 24] as const;
@@ -193,14 +194,14 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
     const total = known.reduce((a, m) => a + w(m), 0);
     let typical: Month | null = null;
     if (total > 0) {
-      const shares = new Map<string, { label: string; pct: number }>();
-      for (const m of known) for (const x of m.categories) shares.set(x.slug, { label: x.label, pct: (shares.get(x.slug)?.pct ?? 0) + (x.pct * w(m)) / total });
+      const shares = new Map<string, { label: string; pct: number; tone?: Tone }>();
+      for (const m of known) for (const x of m.categories) shares.set(x.slug, { label: x.label, tone: x.tone, pct: (shares.get(x.slug)?.pct ?? 0) + (x.pct * w(m)) / total });
       typical = {
         key: '',
         incomeRel: 100,
         spent: known.reduce((a, m) => a + m.spent * w(m), 0) / total,
         saved: known.reduce((a, m) => a + m.saved * w(m), 0) / total,
-        categories: [...shares].map(([slug, v]) => ({ slug, label: v.label, pct: v.pct })).sort((x, y) => y.pct - x.pct),
+        categories: [...shares].map(([slug, v]) => ({ slug, label: v.label, pct: v.pct, tone: v.tone })).sort((x, y) => y.pct - x.pct),
       };
     }
     return Array.from({ length: span }, (_, i) => {
@@ -218,9 +219,9 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   const { categories, spentOfIncome } = useMemo(() => {
     const scope = horizon === 'month' ? months.filter((m) => m.key === current) : months;
     const totalWeight = scope.reduce((a, m) => a + weight(m), 0);
-    const agg = new Map<string, { label: string; w: number }>();
-    for (const m of scope) for (const x of m.categories) agg.set(x.slug, { label: sharedCategoryLabel(x.slug, x.label), w: (agg.get(x.slug)?.w ?? 0) + x.pct * weight(m) });
-    const list: CategoryShare[] = totalWeight > 0 ? [...agg].map(([slug, v]) => ({ slug, label: v.label, pct: v.w / totalWeight })).filter((x) => x.pct > 0).sort((a, b) => b.pct - a.pct) : [];
+    const agg = new Map<string, { label: string; w: number; tone?: Tone }>();
+    for (const m of scope) for (const x of m.categories) agg.set(x.slug, { label: sharedCategoryLabel(x.slug, x.label), tone: x.tone, w: (agg.get(x.slug)?.w ?? 0) + x.pct * weight(m) });
+    const list: CategoryShare[] = totalWeight > 0 ? [...agg].map(([slug, v]) => ({ slug, label: v.label, pct: v.w / totalWeight, tone: v.tone })).filter((x) => x.pct > 0).sort((a, b) => b.pct - a.pct) : [];
     return { categories: list, spentOfIncome: list.reduce((a, x) => a + x.pct, 0) };
   }, [months, horizon, current, lang]);
 
@@ -242,7 +243,12 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
     return i < PALETTE.length ? PALETTE[i] : `hsl(${Math.round((i * 137.508) % 360)}, 55%, ${i % 2 ? 48 : 62}%)`;
   };
   // every category with a value is shown (one that rounds to 0% has nothing to show); none is folded into "everything else"
-  const pieRows = categories.filter((x) => r1(x.pct) > 0).map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug), name: x.label, tone: categoryTone(x.slug) ? { label: toneLabel(categoryTone(x.slug)!), color: TONE_COLORS[categoryTone(x.slug)!] } : null }));
+  // the owner's own classification; snapshots from before it existed fall back to the built-in default
+  const toneOf = (x: CategoryShare) => {
+    const tn = x.tone ?? defaultTone(x.slug);
+    return tn ? { label: toneLabel(tn), color: TONE_COLORS[tn] } : null;
+  };
+  const pieRows = categories.filter((x) => r1(x.pct) > 0).map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug), name: x.label, tone: toneOf(x) }));
   // two columns (a very narrow phone: one)
   const legendW = wide ? Math.max(0, rowW - Math.min(PIE_MAX + MARGIN_X_FULL * 2, Math.max(360, rowW * 0.55)) - spacing.lg) : rowW;
   const legendCols = legendW >= 300 || !legendW ? 2 : 1;
@@ -352,9 +358,9 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
                 <View style={[s.swatch, { backgroundColor: x.color }]} />
                 <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                   <Text style={[type.body, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{x.label}</Text>
-                  {categoryTone(x.key) ? (
-                    <View style={{ backgroundColor: `${TONE_COLORS[categoryTone(x.key)!]}1F`, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 1 }}>
-                      <Text style={[type.body, { color: TONE_COLORS[categoryTone(x.key)!], fontSize: 16 }]} numberOfLines={1}>{toneLabel(categoryTone(x.key)!)}</Text>
+                  {x.tone ? (
+                    <View style={{ backgroundColor: `${x.tone.color}1F`, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 1 }}>
+                      <Text style={[type.body, { color: x.tone.color, fontSize: 16 }]} numberOfLines={1}>{x.tone.label}</Text>
                     </View>
                   ) : null}
                 </View>

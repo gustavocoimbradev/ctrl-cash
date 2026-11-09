@@ -53,8 +53,9 @@ test('reserves and moves', () => {
 
 test('categories', () => {
   const c = (o: Doc = {}) => ({ ...samples.categories, ...o });
-  for (const o of [{ kind: 'transfer' }, { name: '' }, { name: 'n'.repeat(41) }, { weight: 2 }, { weight: -0.1 }, { kind: 'income', weight: 0.5 }, { extra: true }, { slug: '' }]) bad('categories', c(o));
+  for (const o of [{ kind: 'transfer' }, { name: '' }, { name: 'n'.repeat(41) }, { weight: 2 }, { weight: -0.1 }, { kind: 'income', weight: 0.5 }, { extra: true }, { slug: '' }, { tone: 'tasty' }, { tone: 3 }, { kind: 'income', tone: 'healthy' }]) bad('categories', c(o));
   ok('categories', c({ weight: 0 }));
+  for (const tone of ['healthy', 'necessary', 'comfort', 'luxury', 'unhealthy', 'unknown']) ok('categories', c({ tone }));
   const { weight: _w, ...noWeight } = c({ kind: 'income' });
   ok('categories', noWeight);
 });

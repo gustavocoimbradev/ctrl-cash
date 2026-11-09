@@ -2,6 +2,7 @@ import type { Dict } from '../index';
 
 export const dict: Dict = {
   pt: {
+    'Unknown': 'Desconhecido',
     'Direct payment': 'Pagamento à vista',
     'Credit cards': 'Cartão de crédito',
     '"{description}" will be archived.': '"{description}" será arquivada.',
@@ -94,7 +95,7 @@ export const dict: Dict = {
     'Only this ({month})': 'Só esta ({month})',
     'Orange': 'Laranja',
     'Organize where your money goes. Archive a category you no longer use: it disappears from new transactions, and everything already recorded keeps it.': 'Organize para onde vai o seu dinheiro. Arquive uma categoria que você não usa mais: ela some das novas transações, e tudo o que já foi registrado continua com ela.',
-    'Other': 'Desconhecido',
+    'Other': 'Outros',
     'Paperwork': 'Burocracia',
     'Pay card': 'Pagar cartão',
     'Pay with': 'Pagar com',
@@ -140,6 +141,7 @@ export const dict: Dict = {
     '{name} (archived)': '{name} (arquivado)',
   },
   es: {
+    'Unknown': 'Desconocido',
     'Direct payment': 'Pago al contado',
     'Credit cards': 'Tarjeta de crédito',
     '"{description}" will be archived.': '"{description}" se archivará.',
@@ -232,7 +234,7 @@ export const dict: Dict = {
     'Only this ({month})': 'Solo esta ({month})',
     'Orange': 'Naranja',
     'Organize where your money goes. Archive a category you no longer use: it disappears from new transactions, and everything already recorded keeps it.': 'Organiza adónde va tu dinero. Archiva una categoría que ya no uses: desaparece de las nuevas transacciones y todo lo ya registrado la conserva.',
-    'Other': 'Desconocido',
+    'Other': 'Otros',
     'Paperwork': 'Trámites',
     'Pay card': 'Pagar tarjeta',
     'Pay with': 'Pagar con',
@@ -278,6 +280,7 @@ export const dict: Dict = {
     '{name} (archived)': '{name} (archivado)',
   },
   de: {
+    'Unknown': 'Unbekannt',
     'Direct payment': 'Barzahlung',
     'Credit cards': 'Kreditkarte',
     '"{description}" will be archived.': '„{description}“ wird archiviert.',
@@ -370,7 +373,7 @@ export const dict: Dict = {
     'Only this ({month})': 'Nur diese ({month})',
     'Orange': 'Orange',
     'Organize where your money goes. Archive a category you no longer use: it disappears from new transactions, and everything already recorded keeps it.': 'Ordne, wohin dein Geld fließt. Archiviere eine Kategorie, die du nicht mehr brauchst: Sie verschwindet bei neuen Transaktionen, und alles bereits Erfasste behält sie.',
-    'Other': 'Unbekannt',
+    'Other': 'Sonstiges',
     'Paperwork': 'Behördenkram',
     'Pay card': 'Karte bezahlen',
     'Pay with': 'Bezahlen mit',
@@ -416,6 +419,7 @@ export const dict: Dict = {
     '{name} (archived)': '{name} (archiviert)',
   },
   fr: {
+    'Unknown': 'Inconnu',
     'Direct payment': 'Paiement comptant',
     'Credit cards': 'Carte de crédit',
     '"{description}" will be archived.': '« {description} » sera archivé.',
@@ -508,7 +512,7 @@ export const dict: Dict = {
     'Only this ({month})': 'Seulement celle-ci ({month})',
     'Orange': 'Orange',
     'Organize where your money goes. Archive a category you no longer use: it disappears from new transactions, and everything already recorded keeps it.': 'Organisez où va votre argent. Archivez une catégorie que vous n\'utilisez plus : elle disparaît des nouvelles transactions, et tout ce qui est déjà enregistré la conserve.',
-    'Other': 'Inconnu',
+    'Other': 'Autres',
     'Paperwork': 'Démarches',
     'Pay card': 'Payer la carte',
     'Pay with': 'Payer avec',
@@ -554,6 +558,7 @@ export const dict: Dict = {
     '{name} (archived)': '{name} (archivé)',
   },
   it: {
+    'Unknown': 'Sconosciuto',
     'Direct payment': 'Pagamento in contanti',
     'Credit cards': 'Carta di credito',
     '"{description}" will be archived.': '"{description}" verrà archiviata.',
@@ -646,7 +651,7 @@ export const dict: Dict = {
     'Only this ({month})': 'Solo questa ({month})',
     'Orange': 'Arancione',
     'Organize where your money goes. Archive a category you no longer use: it disappears from new transactions, and everything already recorded keeps it.': 'Organizza dove va il tuo denaro. Archivia una categoria che non usi più: sparisce dalle nuove transazioni e tutto ciò che è già registrato la mantiene.',
-    'Other': 'Sconosciuto',
+    'Other': 'Altro',
     'Paperwork': 'Burocrazia',
     'Pay card': 'Paga carta',
     'Pay with': 'Paga con',

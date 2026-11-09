@@ -71,6 +71,6 @@ export const mappers: Record<Collection, Mapper> = {
   ], byDate),
   categories: mapper('categories', [
     id, f('slug', 'slug', 'text'), f('kind', 'kind', 'text'), f('name', 'name', 'text'),
-    f('weight', 'weight', 'float'), created, archived,
+    f('weight', 'weight', 'float'), f('tone', 'tone', 'text'), created, archived,
   ], byCreated),
 };

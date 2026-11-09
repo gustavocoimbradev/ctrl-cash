@@ -1,6 +1,6 @@
 import type { Summary } from '../social/api';
 import { AppData } from '../types';
-import { LOAN_CATEGORY, REFUND_CATEGORY, categoryLabel } from './categories';
+import { LOAN_CATEGORY, REFUND_CATEGORY, categoryLabel, categoryOf, toneOfCategory } from './categories';
 import { addMonthsToKey, currentMonthKey } from './dates';
 import { buildOccurrences, monthOccurrences } from './transactions';
 
@@ -8,6 +8,12 @@ import { buildOccurrences, monthOccurrences } from './transactions';
 export const SUMMARY_BACK = 12;
 export const SUMMARY_AHEAD = 12;
 const MAX_CATEGORIES = 40;
+
+/** the owner's own classification of a category, shared with it */
+const toneOf = (slug: string) => {
+  const tone = toneOfCategory(slug);
+  return tone ? { tone } : {};
+};
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -36,7 +42,8 @@ export function buildSummary(data: AppData, now = Date.now()): Summary {
       if (o.type === 'income') {
         if (!o.cardId) income += o.amount;
       } else {
-        const slug = o.category ?? 'other';
+        // a category that no longer exists counts as "Other" (what the app shows for it), so there is only one of those
+        const slug = categoryOf(o.category).slug;
         byCategory.set(slug, (byCategory.get(slug) ?? 0) + o.amount);
       }
     }
@@ -60,7 +67,7 @@ export function buildSummary(data: AppData, now = Date.now()): Summary {
         .filter(([, amount]) => amount > 0)
         .sort((a, b) => b[1] - a[1])
         .slice(0, MAX_CATEGORIES)
-        .map(([slug, amount]) => ({ slug, label: categoryLabel(slug).slice(0, 40), pct: round1((amount / income) * 100) })),
+        .map(([slug, amount]) => ({ slug, label: categoryLabel(slug).slice(0, 40), pct: round1((amount / income) * 100), ...toneOf(slug) })),
     });
   }
 
@@ -73,7 +80,7 @@ export function buildSummary(data: AppData, now = Date.now()): Summary {
         .filter(([, amount]) => amount > 0)
         .sort((a, b) => b[1] - a[1])
         .slice(0, MAX_CATEGORIES)
-        .map(([slug, amount]) => ({ slug, label: categoryLabel(slug).slice(0, 40), pct: round1((amount / totalIncome) * 100) }))
+        .map(([slug, amount]) => ({ slug, label: categoryLabel(slug).slice(0, 40), pct: round1((amount / totalIncome) * 100), ...toneOf(slug) }))
     : [];
   const spent = totalIncome > 0 ? round1((totalSpent / totalIncome) * 100) : 0;
   return { version: 2, generatedAt: now, spent, saved: totalIncome > 0 ? round1(100 - (totalSpent / totalIncome) * 100) : 0, months, categories };

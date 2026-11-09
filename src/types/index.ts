@@ -130,6 +130,9 @@ export interface Occurrence {
  * Category stored on the server. Built-in categories exist in code and only get a record when
  * the person changes them (id `${kind}_${slug}`); custom ones are always records (slug = id).
  */
+/** How an expense category counts for financial health. */
+export type Tone = 'healthy' | 'necessary' | 'comfort' | 'luxury' | 'unhealthy' | 'unknown';
+
 export interface CategoryRecord {
   id: string;
   /** what transactions store in `category` */
@@ -138,6 +141,8 @@ export interface CategoryRecord {
   name: string;
   /** expenses only: how much spending here weighs against financial health, 0 (essential) to 1 (futile) */
   weight?: number;
+  /** expenses only: the person's own classification (healthy, necessary...); absent = the app's default for it */
+  tone?: Tone;
   createdAt?: number;
   archivedAt?: number;
 }

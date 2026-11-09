@@ -3,6 +3,8 @@ import type { Dict } from '../index';
 /** Quick setup, account settings, the language/currency fields and the app shell. */
 export const dict: Dict = {
   pt: {
+    "Type of spending": "Tipo de gasto",
+    "Shown beside the category in your shared summary: healthy, necessary, comfort, luxury, unhealthy or unknown.": "Aparece ao lado da categoria no seu resumo compartilhado: saudável, necessário, conforto, luxo, não saudável ou desconhecido.",
     "Invoices": "Faturas",
     "Adjust": "Reajustar",
     "Adjust invoice": "Reajustar fatura",
@@ -135,6 +137,8 @@ export const dict: Dict = {
     "Cloud storage": "Armazenamento na nuvem",
   },
   es: {
+    "Type of spending": "Tipo de gasto",
+    "Shown beside the category in your shared summary: healthy, necessary, comfort, luxury, unhealthy or unknown.": "Aparece junto a la categoría en tu resumen compartido: saludable, necesario, comodidad, lujo, poco saludable o desconocido.",
     "Invoices": "Resúmenes",
     "Adjust": "Reajustar",
     "Adjust invoice": "Reajustar resumen",
@@ -267,6 +271,8 @@ export const dict: Dict = {
     "Cloud storage": "Almacenamiento en la nube",
   },
   de: {
+    "Type of spending": "Art der Ausgabe",
+    "Shown beside the category in your shared summary: healthy, necessary, comfort, luxury, unhealthy or unknown.": "Wird im geteilten Überblick neben der Kategorie angezeigt: gesund, notwendig, Komfort, Luxus, ungesund oder unbekannt.",
     "Invoices": "Abrechnungen",
     "Adjust": "Anpassen",
     "Adjust invoice": "Abrechnung anpassen",
@@ -399,6 +405,8 @@ export const dict: Dict = {
     "Cloud storage": "Cloud-Speicher",
   },
   fr: {
+    "Type of spending": "Type de dépense",
+    "Shown beside the category in your shared summary: healthy, necessary, comfort, luxury, unhealthy or unknown.": "Affiché à côté de la catégorie dans votre résumé partagé : sain, nécessaire, confort, luxe, malsain ou inconnu.",
     "Invoices": "Relevés",
     "Adjust": "Ajuster",
     "Adjust invoice": "Ajuster le relevé",
@@ -531,6 +539,8 @@ export const dict: Dict = {
     "Cloud storage": "Stockage cloud",
   },
   it: {
+    "Type of spending": "Tipo di spesa",
+    "Shown beside the category in your shared summary: healthy, necessary, comfort, luxury, unhealthy or unknown.": "Appare accanto alla categoria nel tuo riepilogo condiviso: sano, necessario, comfort, lusso, malsano o sconosciuto.",
     "Invoices": "Estratti conto",
     "Adjust": "Rettifica",
     "Adjust invoice": "Rettifica estratto conto",

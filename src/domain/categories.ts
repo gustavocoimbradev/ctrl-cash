@@ -6,7 +6,7 @@
  */
 
 import { t } from '../i18n';
-import { CategoryRecord } from '../types';
+import { CategoryRecord, Tone } from '../types';
 
 export interface Category {
   slug: string;
@@ -19,6 +19,8 @@ export interface Category {
   custom: boolean;
   /** the app logic depends on it: it can be renamed but never archived */
   system: boolean;
+  /** how it counts for financial health (expenses only); the person's choice, else a default */
+  tone: Tone | null;
 }
 
 type Base = { slug: string; label: string; weight: number };
@@ -115,13 +117,14 @@ const build = (records: CategoryRecord[]): Category[] => {
       archived: !!r?.archivedAt && !system,
       custom: false,
       system,
+      tone: kind === 'expense' ? r?.tone ?? TONES[b.slug] ?? toneFromWeight(r?.weight ?? b.weight) : null,
     };
   };
   const builtinIds = new Set([...EXPENSE.map((b) => builtinRecordId('expense', b.slug)), ...INCOME.map((b) => builtinRecordId('income', b.slug))]);
   const custom = records
     .filter((r) => !builtinIds.has(r.id))
     .sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0))
-    .map((r): Category => ({ slug: r.slug, kind: r.kind, label: r.name, weight: r.weight ?? 0.45, archived: !!r.archivedAt, custom: true, system: false }));
+    .map((r): Category => ({ slug: r.slug, kind: r.kind, label: r.name, weight: r.weight ?? 0.45, archived: !!r.archivedAt, custom: true, system: false, tone: r.kind === 'expense' ? r.tone ?? toneFromWeight(r.weight ?? 0.45) : null }));
   // "Other" stays last among expenses so it keeps being the fallback
   const exp = EXPENSE.filter((b) => b.slug !== DEFAULT_CATEGORY).map((b) => make('expense', b));
   const other = make('expense', EXPENSE.find((b) => b.slug === DEFAULT_CATEGORY)!);
@@ -158,9 +161,7 @@ export const sharedCategoryLabel = (slug: string, given: string): string => {
   return base ? tBuiltin(base.label) : given;
 };
 
-/** How a built-in category counts for financial health, in words anybody understands. */
-export type Tone = 'healthy' | 'necessary' | 'comfort' | 'luxury' | 'unhealthy';
-
+/** The app's default tone of a built-in category, in words anybody understands. */
 const TONES: Record<string, Tone> = {
   investments: 'healthy',
   groceries: 'necessary',
@@ -177,10 +178,16 @@ const TONES: Record<string, Tone> = {
   gifts: 'luxury',
   leisure: 'luxury',
   debts: 'unhealthy',
+  other: 'unknown',
 };
 
-/** The tone of a built-in category by slug; null for the ones that have none (custom categories, "Other"). */
-export const categoryTone = (slug: string): Tone | null => TONES[slug] ?? null;
+/** Default tone from the impact weight, for a category without a built-in tone and without a choice. */
+export const toneFromWeight = (weight: number): Tone => (weight <= 0.2 ? 'necessary' : weight <= 0.5 ? 'comfort' : 'luxury');
+
+/** The built-in default of a slug (used for snapshots that do not carry a tone); null when there is none. */
+export const defaultTone = (slug: string): Tone | null => TONES[slug] ?? null;
+
+export const TONE_LIST: Tone[] = ['healthy', 'necessary', 'comfort', 'luxury', 'unhealthy', 'unknown'];
 
 export const TONE_COLORS: Record<Tone, string> = {
   healthy: '#1FA86A',
@@ -188,6 +195,7 @@ export const TONE_COLORS: Record<Tone, string> = {
   comfort: '#D9A31F',
   luxury: '#C25BD6',
   unhealthy: '#DC2626',
+  unknown: '#8A94AB',
 };
 
 /** The tone's name in the language on screen. */
@@ -198,6 +206,7 @@ export function toneLabel(tone: Tone): string {
     case 'comfort': return t('Comfort');
     case 'luxury': return t('Luxury');
     case 'unhealthy': return t('Unhealthy');
+    case 'unknown': return t('Unknown');
   }
 }
 
@@ -221,3 +230,9 @@ const SLUG_COLORS: Record<string, string> = {
   other: '#9AA5BC',
 };
 export const categoryColor = (slug: string): string | null => SLUG_COLORS[slug] ?? null;
+
+/** The English name a built-in category is stored under when it is renamed or edited without a new name (never the translated one). */
+export const builtinBaseName = (kind: 'expense' | 'income', slug: string): string | undefined => (kind === 'expense' ? EXPENSE : INCOME).find((b) => b.slug === slug)?.label;
+
+/** The tone of one of MY expense categories by slug. */
+export const toneOfCategory = (slug: string): Tone | null => registry.find((c) => c.kind === 'expense' && c.slug === slug)?.tone ?? null;

@@ -4,11 +4,13 @@ import { Pressable, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { PillToggle, ToggleRow } from '../components/Controls';
 import { Field, TextField } from '../components/Fields';
+import { Select } from '../components/Select';
 import { Sheet } from '../components/Sheet';
 import { t } from '../i18n';
-import { Category, IMPACT_LEVELS, allCategories } from '../domain/categories';
+import { Category, IMPACT_LEVELS, TONE_LIST, allCategories, builtinBaseName, toneFromWeight, toneLabel } from '../domain/categories';
 import { useStore } from '../store';
 import { colors as c, radius, spacing, type } from '../theme';
+import type { Tone } from '../types';
 
 type Kind = 'expense' | 'income';
 
@@ -87,6 +89,8 @@ function CategoryForm({ visible, kind: listKind, category, onClose }: { visible:
   const [name, setName] = useState('');
   const [impact, setImpact] = useState<number>(IMPACT_LEVELS[1].value);
   const [impactTouched, setImpactTouched] = useState(false);
+  const [tone, setTone] = useState<Tone>('comfort');
+  const [toneTouched, setToneTouched] = useState(false);
   const [tried, setTried] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
 
@@ -96,6 +100,8 @@ function CategoryForm({ visible, kind: listKind, category, onClose }: { visible:
     setName(category?.label ?? '');
     setImpact(category ? nearestImpact(category.weight).value : IMPACT_LEVELS[1].value);
     setImpactTouched(false);
+    setTone(category?.tone ?? toneFromWeight(category?.weight ?? IMPACT_LEVELS[1].value));
+    setToneTouched(false);
     setTried(false);
     setConfirmArchive(false);
   }, [visible, category]);
@@ -109,9 +115,12 @@ function CategoryForm({ visible, kind: listKind, category, onClose }: { visible:
     saveCategory({
       kind,
       slug: category?.slug,
-      name,
+      // a built-in category left with its shown name keeps its English name (so it keeps following the language)
+      name: category && !category.custom && name.trim() === category.label ? builtinBaseName(category.kind, category.slug) ?? name : name,
       // an existing category keeps its exact impact unless the person picked another level
       weight: kind === 'expense' ? (category && !impactTouched ? category.weight : impact) : undefined,
+      // the person's pick; untouched, a new category takes the tone its impact suggests, an old one keeps what it has
+      tone: kind === 'expense' ? (toneTouched ? tone : category ? undefined : toneFromWeight(impact)) : undefined,
     });
     onClose();
   };
@@ -181,6 +190,20 @@ function CategoryForm({ visible, kind: listKind, category, onClose }: { visible:
             {t('How much spending here counts against your financial health: essentials barely count, discretionary spending counts the most.')}
           </Text>
         </Field>
+      )}
+      {kind === 'expense' && (
+        <Select
+          label={t('Type of spending')}
+          value={toneTouched || category ? tone : toneFromWeight(impact)}
+          options={TONE_LIST.map((x) => ({ value: x, label: toneLabel(x) }))}
+          onChange={(v) => {
+            setTone(v as Tone);
+            setToneTouched(true);
+          }}
+        />
+      )}
+      {kind === 'expense' && (
+        <Text style={[type.body, { color: c.textMuted }]}>{t('Shown beside the category in your shared summary: healthy, necessary, comfort, luxury, unhealthy or unknown.')}</Text>
       )}
 
       <Sheet

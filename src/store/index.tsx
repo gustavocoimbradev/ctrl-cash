@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { RemoteMap, push, subscribe } from './sync';
-import { AppData, CategoryRecord, CreditCard, InvoicePayment, OccurrenceFields, Reserve, ReserveMove, Revision, Transaction } from '../types';
+import { AppData, CategoryRecord, CreditCard, InvoicePayment, OccurrenceFields, Reserve, ReserveMove, Revision, Tone, Transaction } from '../types';
 import { allCategories, builtinRecordId, setCategoryRecords } from '../domain/categories';
 import { t } from '../i18n';
 import { newId } from '../domain/money';
@@ -60,7 +60,7 @@ interface Store {
   archiveCard: (cardId: string) => void;
   restoreCard: (cardId: string) => void;
   /** creates a category, or edits one (a built-in one gets a record the first time it is changed) */
-  saveCategory: (input: { kind: 'expense' | 'income'; slug?: string; name: string; weight?: number }) => void;
+  saveCategory: (input: { kind: 'expense' | 'income'; slug?: string; name: string; weight?: number; tone?: Tone }) => void;
   archiveCategory: (kind: 'expense' | 'income', slug: string) => void;
   restoreCategory: (kind: 'expense' | 'income', slug: string) => void;
 }
@@ -294,20 +294,22 @@ export function StoreProvider({ uid, children }: { uid: string; children: React.
     setData((d) => ({ ...d, cards: d.cards.map((c) => (c.id === cardId ? { ...c, archivedAt: undefined } : c)) }));
   }, []);
 
-  const saveCategory = useCallback((input: { kind: 'expense' | 'income'; slug?: string; name: string; weight?: number }) => {
+  const saveCategory = useCallback((input: { kind: 'expense' | 'income'; slug?: string; name: string; weight?: number; tone?: Tone }) => {
     setData((d) => {
       const name = input.name.trim();
       const weight = input.kind === 'expense' ? input.weight : undefined;
+      const tone = input.kind === 'expense' ? input.tone : undefined;
+      const extra = { ...(weight !== undefined ? { weight } : {}), ...(tone !== undefined ? { tone } : {}) };
       if (!input.slug) {
         const id = newId();
-        const rec: CategoryRecord = { id, slug: id, kind: input.kind, name, ...(weight !== undefined ? { weight } : {}), createdAt: Date.now() };
+        const rec: CategoryRecord = { id, slug: id, kind: input.kind, name, ...extra, createdAt: Date.now() };
         return { ...d, categories: [...d.categories, rec] };
       }
       // existing: a built-in one (record id by kind and slug) or a custom one (record id = slug)
       const builtinId = builtinRecordId(input.kind, input.slug);
       const found = d.categories.find((r) => r.id === builtinId || (r.slug === input.slug && r.kind === input.kind));
-      if (found) return { ...d, categories: d.categories.map((r) => (r === found ? { ...r, name, ...(weight !== undefined ? { weight } : {}) } : r)) };
-      const rec: CategoryRecord = { id: builtinId, slug: input.slug, kind: input.kind, name, ...(weight !== undefined ? { weight } : {}), createdAt: Date.now() };
+      if (found) return { ...d, categories: d.categories.map((r) => (r === found ? { ...r, name, ...extra } : r)) };
+      const rec: CategoryRecord = { id: builtinId, slug: input.slug, kind: input.kind, name, ...extra, createdAt: Date.now() };
       return { ...d, categories: [...d.categories, rec] };
     });
   }, []);

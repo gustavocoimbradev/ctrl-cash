@@ -167,8 +167,11 @@ function payment(d: Doc) {
   msTimestamp(d, 'archivedAt');
 }
 
+/** How an expense category counts for financial health. */
+export const TONES: string[] = ['healthy', 'necessary', 'comfort', 'luxury', 'unhealthy', 'unknown'];
+
 function category(d: Doc) {
-  onlyKeys(d, ['id', 'slug', 'kind', 'name', 'weight', 'createdAt', 'archivedAt'], ['id', 'slug', 'kind', 'name']);
+  onlyKeys(d, ['id', 'slug', 'kind', 'name', 'weight', 'tone', 'createdAt', 'archivedAt'], ['id', 'slug', 'kind', 'name']);
   checkId(d);
   text(d, 'slug', 60);
   if (d.kind !== 'expense' && d.kind !== 'income') fail('"kind" must be expense or income');
@@ -177,6 +180,10 @@ function category(d: Doc) {
     const w = d.weight;
     if (typeof w !== 'number' || !Number.isFinite(w) || w < 0 || w > 1) fail('"weight" must be a number from 0 to 1');
     if (d.kind !== 'expense') fail('"weight" is only allowed on an expense category');
+  }
+  if (has(d, 'tone')) {
+    if (typeof d.tone !== 'string' || !TONES.includes(d.tone)) fail('"tone" must be one of ' + TONES.join(', '));
+    if (d.kind !== 'expense') fail('"tone" is only allowed on an expense category');
   }
   msTimestamp(d, 'createdAt');
   msTimestamp(d, 'archivedAt');

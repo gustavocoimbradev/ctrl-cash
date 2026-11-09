@@ -502,3 +502,11 @@ test('CORS allows POST', async () => {
   assert.match(String(r.headers['access-control-allow-methods']), /POST/);
   await cors.close();
 });
+
+test('summary: a category may carry a tone, and only a known one', async () => {
+  const a = await person();
+  const month = (tone: unknown) => summary({ categories: [{ slug: 'debts', label: 'Debts', pct: 10, tone }] });
+  assert.equal((await call(a.uid, 'PUT', '/api/summary', month('unhealthy'))).status, 200);
+  assert.equal((await call(a.uid, 'PUT', '/api/summary', month('tasty'))).status, 400);
+  assert.equal((await call(a.uid, 'PUT', '/api/summary', month(7))).status, 400);
+});
