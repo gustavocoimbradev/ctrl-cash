@@ -2,7 +2,7 @@ import type { Dict } from '../index';
 
 export const dict: Dict = {
   pt: {
-    'Direct payment': 'Pagamento direto',
+    'Direct payment': 'Pagamento à vista',
     'Credit cards': 'Cartões de crédito',
     'Credit card: {name}': 'Cartão de crédito: {name}',
     '"{description}" will be archived.': '"{description}" será arquivada.',
@@ -141,7 +141,7 @@ export const dict: Dict = {
     '{name} (archived)': '{name} (arquivado)',
   },
   es: {
-    'Direct payment': 'Pago directo',
+    'Direct payment': 'Pago al contado',
     'Credit cards': 'Tarjetas de crédito',
     'Credit card: {name}': 'Tarjeta de crédito: {name}',
     '"{description}" will be archived.': '"{description}" se archivará.',
@@ -280,7 +280,7 @@ export const dict: Dict = {
     '{name} (archived)': '{name} (archivado)',
   },
   de: {
-    'Direct payment': 'Direkte Zahlung',
+    'Direct payment': 'Barzahlung',
     'Credit cards': 'Kreditkarten',
     'Credit card: {name}': 'Kreditkarte: {name}',
     '"{description}" will be archived.': '„{description}“ wird archiviert.',
@@ -419,7 +419,7 @@ export const dict: Dict = {
     '{name} (archived)': '{name} (archiviert)',
   },
   fr: {
-    'Direct payment': 'Paiement direct',
+    'Direct payment': 'Paiement comptant',
     'Credit cards': 'Cartes de crédit',
     'Credit card: {name}': 'Carte de crédit : {name}',
     '"{description}" will be archived.': '« {description} » sera archivé.',
@@ -558,7 +558,7 @@ export const dict: Dict = {
     '{name} (archived)': '{name} (archivé)',
   },
   it: {
-    'Direct payment': 'Pagamento diretto',
+    'Direct payment': 'Pagamento in contanti',
     'Credit cards': 'Carte di credito',
     'Credit card: {name}': 'Carta di credito: {name}',
     '"{description}" will be archived.': '"{description}" verrà archiviata.',
