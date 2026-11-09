@@ -149,7 +149,17 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
         {desktop ? (
           <View style={s.topInner}>
             <View style={[s.topSide, { flex: 0 }]}>
-              <Pressable accessibilityRole="button" accessibilityLabel={t('Dashboard')} onPress={toDashboard} style={s.brandRow}>
+              {/* a real link to the root: it opens in a new tab with a middle click, and a plain click stays in the app */}
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel={t('Dashboard')}
+                {...(Platform.OS === 'web' ? ({ href: '/' } as object) : {})}
+                onPress={(e: any) => {
+                  e?.preventDefault?.();
+                  toDashboard();
+                }}
+                style={[s.brandRow, Platform.OS === 'web' && ({ cursor: 'pointer' } as object)]}
+              >
                 <Brand size={18} color={c.text} />
               </Pressable>
             </View>
