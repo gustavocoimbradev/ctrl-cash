@@ -510,3 +510,22 @@ test('summary: a category may carry a tone, and only a known one', async () => {
   assert.equal((await call(a.uid, 'PUT', '/api/summary', month('tasty'))).status, 400);
   assert.equal((await call(a.uid, 'PUT', '/api/summary', month(7))).status, 400);
 });
+
+test('summary: health and the wealth projection are optional, bounded and carry no amounts', async () => {
+  const a = await person();
+  const health = { score: 640, label: 'Good', wealth: 55, debt: 100, habits: 70.5, month: 100 };
+  const wealth = { start: '2026-11', planned: [0, 4.2, 9.1], habit: [0, 2, 5] };
+  assert.equal((await call(a.uid, 'PUT', '/api/summary', summary({ health, wealth }))).status, 200);
+  const r = await call(a.uid, 'GET', `/api/people/${a.code}/summary`);
+  assert.deepEqual(r.body.summary.health, health);
+  assert.deepEqual(r.body.summary.wealth, wealth);
+  for (const bad of [
+    { health: { ...health, score: 1001 } },
+    { health: { ...health, label: 'Great' } },
+    { health: { ...health, balance: 5 } },
+    { wealth: { ...wealth, planned: [] } },
+    { wealth: { ...wealth, habit: Array(25).fill(1) } },
+    { wealth: { ...wealth, start: '2026-13' } },
+    { wealth: { ...wealth, balance: 1 } },
+  ]) assert.equal((await call(a.uid, 'PUT', '/api/summary', summary(bad))).status, 400, JSON.stringify(bad));
+});

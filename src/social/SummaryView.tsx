@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Svg, { Path, Rect, Text as SvgText } from 'react-native-svg';
-import { ChartLegend, ProjectionChart } from '../components/Charts';
+import { ChartLegend, Gauge, ProjectionChart } from '../components/Charts';
+import { AnimatedBar, Counter } from '../components/Motion';
 import { PillToggle } from '../components/Controls';
 import { addMonthsToKey, currentMonthKey, formatMonth, shortDate } from '../domain/dates';
 import { desktopBreakpoint, fontFamily, spacing, type, useColors } from '../theme';
@@ -183,6 +184,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   const [horizon, setHorizon] = useState<Horizon>('month');
   const [sel, setSel] = useState<number | null>(null);
   const [slice, setSlice] = useState<string | null>(null);
+  const [wealthSel, setWealthSel] = useState<number | null>(null);
   /** the pie column's size: the line chart takes its height, and the pie fits its width */
   const [pieBox, setPieBox] = useState({ w: 0, h: 0 });
   /** the row that holds the donut and its legend */
@@ -385,6 +387,61 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
     </View>
   );
 
+  // ---- financial health (the score and its parts, in percent) and the wealth projection (percent change, never an amount)
+  const health = summary.health;
+  const healthColor = health ? (health.score < 250 ? c.expense : health.score < 500 ? c.warning : c.primary) : c.primary;
+  const healthName = (l: NonNullable<Summary['health']>['label']) => (l === 'Critical' ? t('Critical') : l === 'Warning' ? t('Warning') : l === 'Good' ? t('Good') : t('Excellent'));
+  const healthBlock = health ? (
+    <View style={{ gap: spacing.md, flex: wide ? 1 : undefined, minWidth: 0 }}>
+      <Text style={[type.title, { color: c.text }]}>{t('Financial health')}</Text>
+      <View style={{ alignItems: 'center' }}>
+        <Gauge segments={[{ value: Math.max(health.score, 1), color: healthColor }]} total={1000} size={200} gradient={health.score < 250 ? ['#F28BA3', '#E0446A'] : health.score < 500 ? ['#F5C16B', '#D9831F'] : ['#6F8FF5', '#2D55D9']}>
+          <Counter value={health.score} style={[type.hero, { color: healthColor, lineHeight: 42 }]} />
+          <Text style={[type.label, { color: healthColor }]}>{healthName(health.label)}</Text>
+        </Gauge>
+      </View>
+      {[
+        { label: t('Wealth'), v: health.wealth },
+        { label: t('Debt-free'), v: health.debt },
+        { label: t('Healthy spending'), v: health.habits },
+        { label: t('Month result'), v: health.month },
+      ].map((f) => (
+        <View key={f.label} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <Text style={[type.body, { color: c.textMuted, width: 150 }]} numberOfLines={1}>{f.label}</Text>
+          <AnimatedBar ratio={f.v / 100} color={f.v < 34 ? c.expense : f.v < 67 ? c.warning : c.primary} />
+          <Text style={[type.label, { color: c.text, width: 56, textAlign: 'right' }]}>{pct(r1(f.v))}</Text>
+        </View>
+      ))}
+    </View>
+  ) : null;
+
+  const wealth = summary.wealth;
+  const wealthCount = wealth ? Math.min(horizon === 'month' ? 12 : horizon, wealth.planned.length) : 0;
+  const signed = (v: number) => `${v > 0 ? '+' : ''}${pct(r1(v))}`;
+  const wealthBlock = wealth && wealthCount > 0 ? (
+    <View style={{ gap: spacing.sm, flex: wide ? 1.6 : undefined, minWidth: 0 }}>
+      <Text style={[type.title, { color: c.text }]}>{t('Wealth projection')}</Text>
+      <Text style={[type.body, { color: c.textMuted }]}>{t('Change from today, in percent of the wealth accumulated today.')}</Text>
+      <ProjectionChart
+        series={[
+          { values: wealth.planned.slice(0, wealthCount), color: c.primary, area: true, label: t('Planned') },
+          { values: wealth.habit.slice(0, wealthCount), color: c.expense, dashed: true, label: t('Historical') },
+        ]}
+        labels={Array.from({ length: wealthCount }, (_, i) => formatMonth(addMonthsToKey(wealth.start, i)))}
+        selected={wealthSel}
+        onSelect={setWealthSel}
+        format={signed}
+        height={wide ? 260 : 230}
+      />
+      <ChartLegend
+        items={[
+          { label: t('Planned'), color: c.primary, line: true, on: true, onPress: () => {} },
+          { label: t('Historical'), color: c.expense, line: true, dashed: true, on: true, onPress: () => {} },
+        ]}
+      />
+    </View>
+  ) : null;
+
   return (
     <View style={{ gap: spacing.lg }}>
       <View style={s.head}>
@@ -395,6 +452,12 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
         {chart}
         {pie}
       </View>
+      {healthBlock || wealthBlock ? (
+        <View style={[{ gap: spacing.xl }, wide && { flexDirection: 'row', alignItems: 'flex-start' }]}>
+          {healthBlock}
+          {wealthBlock}
+        </View>
+      ) : null}
       {updatedAt ? <Text style={[type.body, { color: c.textMuted }]}>{t('Updated {date}', { date: shortDate(updatedAt) })}</Text> : null}
     </View>
   );

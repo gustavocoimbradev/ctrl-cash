@@ -102,6 +102,10 @@ export interface Summary {
   /** `incomeRel`: the month's income as a % of the person's average monthly income (100 = an average month); optional */
   months: { key: string; spent: number; saved: number; incomeRel?: number; categories: SummaryCategory[] }[];
   categories: SummaryCategory[];
+  /** the financial health score and how full each part is, in percent; optional */
+  health?: { score: number; label: string; wealth: number; debt: number; habits: number; month: number };
+  /** wealth projection as the percent change from today's; 24 months at most; never an amount */
+  wealth?: { start: string; planned: number[]; habit: number[] };
 }
 
 function pct(v: unknown, name: string, min: number, max: number): number {
@@ -126,7 +130,7 @@ function categories(raw: unknown, name: string): SummaryCategory[] {
 
 export function parseSummary(input: unknown): Summary {
   const d = obj(input, 'the body');
-  onlyKeys(d, ['version', 'generatedAt', 'spent', 'saved', 'months', 'categories'], ['version', 'generatedAt', 'spent', 'saved', 'months', 'categories']);
+  onlyKeys(d, ['version', 'generatedAt', 'spent', 'saved', 'months', 'categories', 'health', 'wealth'], ['version', 'generatedAt', 'spent', 'saved', 'months', 'categories']);
   if (d.version !== 2) fail('"version" must be 2');
   const generatedAt = int(d.generatedAt, 'generatedAt', 0, 100_000_000_000_000);
   const spent = pct(d.spent, 'spent', 0, 1000);
@@ -147,5 +151,29 @@ export function parseSummary(input: unknown): Summary {
       categories: categories(m.categories, `months[${i}].categories`),
     };
   });
-  return { version: 2, generatedAt, spent, saved, months, categories: categories(d.categories, 'categories') };
+  const out: Summary = { version: 2, generatedAt, spent, saved, months, categories: categories(d.categories, 'categories') };
+  if (d.health !== undefined) {
+    const h = obj(d.health, 'health');
+    onlyKeys(h, ['score', 'label', 'wealth', 'debt', 'habits', 'month'], ['score', 'label', 'wealth', 'debt', 'habits', 'month']);
+    if (typeof h.label !== 'string' || !['Critical', 'Warning', 'Good', 'Excellent'].includes(h.label)) fail('"health.label" must be Critical, Warning, Good or Excellent');
+    out.health = {
+      score: int(h.score, 'health.score', 0, 1000),
+      label: h.label as string,
+      wealth: pct(h.wealth, 'health.wealth', 0, 100),
+      debt: pct(h.debt, 'health.debt', 0, 100),
+      habits: pct(h.habits, 'health.habits', 0, 100),
+      month: pct(h.month, 'health.month', 0, 100),
+    };
+  }
+  if (d.wealth !== undefined) {
+    const w = obj(d.wealth, 'wealth');
+    onlyKeys(w, ['start', 'planned', 'habit'], ['start', 'planned', 'habit']);
+    if (typeof w.start !== 'string' || !/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(w.start)) fail('"wealth.start" must be a month as YYYY-MM');
+    const series = (v: unknown, name: string) => {
+      if (!Array.isArray(v) || v.length < 1 || v.length > 24) return fail(`"${name}" must be a list of 1 to 24 numbers`);
+      return v.map((n, i) => pct(n, `${name}[${i}]`, -1000, 1000));
+    };
+    out.wealth = { start: w.start as string, planned: series(w.planned, 'wealth.planned'), habit: series(w.habit, 'wealth.habit') };
+  }
+  return out;
 }

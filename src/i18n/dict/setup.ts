@@ -3,6 +3,7 @@ import type { Dict } from '../index';
 /** Quick setup, account settings, the language/currency fields and the app shell. */
 export const dict: Dict = {
   pt: {
+    "Change from today, in percent of the wealth accumulated today.": "Variação em relação a hoje, em porcentagem do patrimônio acumulado hoje.",
     "Type of spending": "Tipo de gasto",
     "Shown beside the category in your shared summary: healthy, necessary, comfort, luxury, unhealthy or unknown.": "Aparece ao lado da categoria no seu resumo compartilhado: saudável, necessário, conforto, luxo, não saudável ou desconhecido.",
     "Invoices": "Faturas",
@@ -137,6 +138,7 @@ export const dict: Dict = {
     "Cloud storage": "Armazenamento na nuvem",
   },
   es: {
+    "Change from today, in percent of the wealth accumulated today.": "Variación respecto a hoy, en porcentaje del patrimonio acumulado hoy.",
     "Type of spending": "Tipo de gasto",
     "Shown beside the category in your shared summary: healthy, necessary, comfort, luxury, unhealthy or unknown.": "Aparece junto a la categoría en tu resumen compartido: saludable, necesario, comodidad, lujo, poco saludable o desconocido.",
     "Invoices": "Resúmenes",
@@ -271,6 +273,7 @@ export const dict: Dict = {
     "Cloud storage": "Almacenamiento en la nube",
   },
   de: {
+    "Change from today, in percent of the wealth accumulated today.": "Veränderung gegenüber heute, in Prozent des heute angesparten Vermögens.",
     "Type of spending": "Art der Ausgabe",
     "Shown beside the category in your shared summary: healthy, necessary, comfort, luxury, unhealthy or unknown.": "Wird im geteilten Überblick neben der Kategorie angezeigt: gesund, notwendig, Komfort, Luxus, ungesund oder unbekannt.",
     "Invoices": "Abrechnungen",
@@ -405,6 +408,7 @@ export const dict: Dict = {
     "Cloud storage": "Cloud-Speicher",
   },
   fr: {
+    "Change from today, in percent of the wealth accumulated today.": "Variation par rapport à aujourd'hui, en pourcentage du patrimoine accumulé aujourd'hui.",
     "Type of spending": "Type de dépense",
     "Shown beside the category in your shared summary: healthy, necessary, comfort, luxury, unhealthy or unknown.": "Affiché à côté de la catégorie dans votre résumé partagé : sain, nécessaire, confort, luxe, malsain ou inconnu.",
     "Invoices": "Relevés",
@@ -539,6 +543,7 @@ export const dict: Dict = {
     "Cloud storage": "Stockage cloud",
   },
   it: {
+    "Change from today, in percent of the wealth accumulated today.": "Variazione rispetto a oggi, in percentuale del patrimonio accumulato oggi.",
     "Type of spending": "Tipo di spesa",
     "Shown beside the category in your shared summary: healthy, necessary, comfort, luxury, unhealthy or unknown.": "Appare accanto alla categoria nel tuo riepilogo condiviso: sano, necessario, comfort, lusso, malsano o sconosciuto.",
     "Invoices": "Estratti conto",

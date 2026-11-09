@@ -58,6 +58,10 @@ export interface Summary {
   months: { key: string; spent: number; saved: number; incomeRel?: number; categories: CategoryShare[] }[];
   /** overall spending by category, % of income, biggest first */
   categories: CategoryShare[];
+  /** the financial health score (0 to 1000) and how full each of its parts is, in percent; absent in older snapshots */
+  health?: { score: number; label: 'Critical' | 'Warning' | 'Good' | 'Excellent'; wealth: number; debt: number; habits: number; month: number };
+  /** wealth projection as the percent change from today's, 24 months from `start`; never an amount */
+  wealth?: { start: string; planned: number[]; habit: number[] };
 }
 
 const post = <T>(path: string, body: unknown) => call<T>(path, { method: 'POST', body });
