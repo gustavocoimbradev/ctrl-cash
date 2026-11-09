@@ -184,7 +184,6 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   const [horizon, setHorizon] = useState<Horizon>('month');
   const [sel, setSel] = useState<number | null>(null);
   const [slice, setSlice] = useState<string | null>(null);
-  const [wealthSel, setWealthSel] = useState<number | null>(null);
   /** the pie column's size: the line chart takes its height, and the pie fits its width */
   const [pieBox, setPieBox] = useState({ w: 0, h: 0 });
   /** the row that holds the donut and its legend */
@@ -415,35 +414,6 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
     </View>
   ) : null;
 
-  const wealth = summary.wealth;
-  const wealthCount = wealth ? Math.min(horizon === 'month' ? 12 : horizon, wealth.planned.length) : 0;
-  // no numbers for this one: only whether the wealth ends up above, below or at today's level
-  const direction = (v: number) => (v > 0.05 ? t('Above today') : v < -0.05 ? t('Below today') : t('Same as today'));
-  const wealthBlock = wealth && wealthCount > 0 ? (
-    <View style={{ gap: spacing.sm, flex: wide ? 1.6 : undefined, minWidth: 0 }}>
-      <Text style={[type.title, { color: c.text }]}>{t('Wealth projection')}</Text>
-      <Text style={[type.body, { color: c.textMuted }]}>{t('Where the wealth is heading compared with today. Only the shape is shared, never a number.')}</Text>
-      <ProjectionChart
-        series={[
-          { values: wealth.planned.slice(0, wealthCount), color: c.primary, area: true, label: t('Planned') },
-          { values: wealth.habit.slice(0, wealthCount), color: c.expense, dashed: true, label: t('Historical') },
-        ]}
-        labels={Array.from({ length: wealthCount }, (_, i) => formatMonth(addMonthsToKey(wealth.start, i)))}
-        selected={wealthSel}
-        onSelect={setWealthSel}
-        format={direction}
-        tipWidth={240}
-        height={wide ? 260 : 230}
-      />
-      <ChartLegend
-        items={[
-          { label: t('Planned'), color: c.primary, line: true, on: true, onPress: () => {} },
-          { label: t('Historical'), color: c.expense, line: true, dashed: true, on: true, onPress: () => {} },
-        ]}
-      />
-    </View>
-  ) : null;
-
   return (
     <View style={{ gap: spacing.lg }}>
       <View style={s.head}>
@@ -454,10 +424,9 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
         {chart}
         {pie}
       </View>
-      {healthBlock || wealthBlock ? (
+      {healthBlock ? (
         <View style={[{ gap: spacing.xl }, wide && { flexDirection: 'row', alignItems: 'flex-start' }]}>
           {healthBlock}
-          {wealthBlock}
         </View>
       ) : null}
       {updatedAt ? <Text style={[type.body, { color: c.textMuted }]}>{t('Updated {date}', { date: shortDate(updatedAt) })}</Text> : null}

@@ -2,7 +2,7 @@ import type { Summary } from '../social/api';
 import { AppData } from '../types';
 import { LOAN_CATEGORY, REFUND_CATEGORY, categoryLabel, categoryOf, toneOfCategory } from './categories';
 import { addMonthsToKey, currentMonthKey } from './dates';
-import { currentHealth, wealthProjectionPct } from './health';
+import { currentHealth } from './health';
 import { buildOccurrences, monthOccurrences } from './transactions';
 
 /** The summary covers this many months back and ahead of now (the current month is the first of the "ahead"), so a viewer can pick 6, 12 or 24 months around today. */
@@ -86,6 +86,5 @@ export function buildSummary(data: AppData, now = Date.now()): Summary {
   const spent = totalIncome > 0 ? round1((totalSpent / totalIncome) * 100) : 0;
   const hp = currentHealth(data);
   const health = hp ? { score: hp.health.score, label: hp.health.label, wealth: round1((hp.health.saved / 40) * 100), debt: round1((hp.health.debt / 30) * 100), habits: round1((hp.health.habits / 30) * 100), month: round1(hp.health.month * 100) } : undefined;
-  const wealth = hp ? wealthProjectionPct(data, hp.balance, hp.avgExpense) ?? undefined : undefined;
-  return { version: 2, generatedAt: now, spent, saved: totalIncome > 0 ? round1(100 - (totalSpent / totalIncome) * 100) : 0, months, categories, ...(health ? { health } : {}), ...(wealth ? { wealth } : {}) };
+  return { version: 2, generatedAt: now, spent, saved: totalIncome > 0 ? round1(100 - (totalSpent / totalIncome) * 100) : 0, months, categories, ...(health ? { health } : {}) };
 }

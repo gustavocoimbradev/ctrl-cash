@@ -3,10 +3,6 @@ import type { Dict } from '../index';
 /** Quick setup, account settings, the language/currency fields and the app shell. */
 export const dict: Dict = {
   pt: {
-    "Above today": "Acima de hoje",
-    "Below today": "Abaixo de hoje",
-    "Same as today": "Igual a hoje",
-    "Where the wealth is heading compared with today. Only the shape is shared, never a number.": "Para onde o patrimônio caminha em relação a hoje. Só o formato é compartilhado, nunca um número.",
     "Wishlist": "Lista de desejos",
     "New wish": "Novo desejo",
     "Edit wish": "Editar desejo",
@@ -217,10 +213,6 @@ export const dict: Dict = {
     "Cloud storage": "Armazenamento na nuvem",
   },
   es: {
-    "Above today": "Por encima de hoy",
-    "Below today": "Por debajo de hoy",
-    "Same as today": "Igual que hoy",
-    "Where the wealth is heading compared with today. Only the shape is shared, never a number.": "Hacia dónde va el patrimonio respecto a hoy. Solo se comparte la forma, nunca un número.",
     "Wishlist": "Lista de deseos",
     "New wish": "Nuevo deseo",
     "Edit wish": "Editar deseo",
@@ -431,10 +423,6 @@ export const dict: Dict = {
     "Cloud storage": "Almacenamiento en la nube",
   },
   de: {
-    "Above today": "Über heute",
-    "Below today": "Unter heute",
-    "Same as today": "Wie heute",
-    "Where the wealth is heading compared with today. Only the shape is shared, never a number.": "Wohin sich das Vermögen im Vergleich zu heute entwickelt. Nur der Verlauf wird geteilt, nie eine Zahl.",
     "Wishlist": "Wunschliste",
     "New wish": "Neuer Wunsch",
     "Edit wish": "Wunsch bearbeiten",
@@ -645,10 +633,6 @@ export const dict: Dict = {
     "Cloud storage": "Cloud-Speicher",
   },
   fr: {
-    "Above today": "Au-dessus d'aujourd'hui",
-    "Below today": "En dessous d'aujourd'hui",
-    "Same as today": "Comme aujourd'hui",
-    "Where the wealth is heading compared with today. Only the shape is shared, never a number.": "Où va le patrimoine par rapport à aujourd'hui. Seule la forme est partagée, jamais un chiffre.",
     "Wishlist": "Liste de souhaits",
     "New wish": "Nouveau souhait",
     "Edit wish": "Modifier le souhait",
@@ -859,10 +843,6 @@ export const dict: Dict = {
     "Cloud storage": "Stockage cloud",
   },
   it: {
-    "Above today": "Sopra oggi",
-    "Below today": "Sotto oggi",
-    "Same as today": "Come oggi",
-    "Where the wealth is heading compared with today. Only the shape is shared, never a number.": "Dove va il patrimonio rispetto a oggi. Si condivide solo l'andamento, mai un numero.",
     "Wishlist": "Lista dei desideri",
     "New wish": "Nuovo desiderio",
     "Edit wish": "Modifica desiderio",
