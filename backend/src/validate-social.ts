@@ -54,11 +54,13 @@ export interface ProfileInput {
   color: string | null;
   /** `undefined`: the key was absent (keep the stored photo); `null`: clear it; a string: set it */
   photo: string | null | undefined;
+  /** `undefined`: keep as it is; shown in the people list or not */
+  discoverable: boolean | undefined;
 }
 
 export function parseProfile(input: unknown): ProfileInput {
   const d = obj(input, 'the body');
-  onlyKeys(d, ['displayName', 'color', 'photo'], ['displayName']);
+  onlyKeys(d, ['displayName', 'color', 'photo', 'discoverable'], ['displayName']);
   const displayName = str(d.displayName, 'displayName', 1, 40);
   if (displayName.trim().length === 0) fail('"displayName" cannot be blank');
   let color: string | null = null;
@@ -73,7 +75,8 @@ export function parseProfile(input: unknown): ProfileInput {
     else if (!PHOTO_RE.test(d.photo as string)) fail('"photo" must be a data:image/jpeg;base64 URL');
     else photo = d.photo as string;
   }
-  return { displayName: displayName.trim(), color, photo };
+  if (has(d, 'discoverable') && typeof d.discoverable !== 'boolean') fail('"discoverable" must be true or false');
+  return { displayName: displayName.trim(), color, photo, discoverable: has(d, 'discoverable') ? (d.discoverable as boolean) : undefined };
 }
 
 export function parseMessage(input: unknown): { to: string; body: string } {

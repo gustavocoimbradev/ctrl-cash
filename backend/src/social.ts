@@ -63,7 +63,7 @@ async function assignCode(pool: Pool, uid: string): Promise<string> {
 
 /** My profile row, with its code assigned if it was still missing; null when I have none. */
 export async function myProfile(pool: Pool, uid: string): Promise<Row | null> {
-  const res = await pool.query('select user_id, code, display_name, color, photo from profiles where user_id = $1', [uid]);
+  const res = await pool.query('select user_id, code, display_name, color, photo, discoverable from profiles where user_id = $1', [uid]);
   const r = res.rows[0];
   if (!r) return null;
   if (r.code === null) r.code = await assignCode(pool, uid);
@@ -78,14 +78,15 @@ export async function upsertProfile(pool: Pool, uid: string, p: ProfileInput): P
     const code = existing?.code ?? (await generateCode({ exists: (c) => codeExists(pool, c) }));
     try {
       const res = await pool.query(
-        `insert into profiles (user_id, display_name, color, photo, code, created_at_ms) values ($1, $2, $3, $4, $5, $7)
+        `insert into profiles (user_id, display_name, color, photo, code, created_at_ms, discoverable) values ($1, $2, $3, $4, $5, $7, coalesce($8::boolean, true))
          on conflict (user_id) do update set display_name = excluded.display_name, color = excluded.color,
            photo = case when $6::boolean then excluded.photo else profiles.photo end,
+           discoverable = case when $8::boolean is not null then $8::boolean else profiles.discoverable end,
            code = coalesce(profiles.code, excluded.code), updated_at = now()
-         returning code, display_name, color, photo`,
-        [uid, p.displayName, p.color, photoGiven ? p.photo : null, code, photoGiven, Date.now()],
+         returning code, display_name, color, photo, discoverable`,
+        [uid, p.displayName, p.color, photoGiven ? p.photo : null, code, photoGiven, Date.now(), p.discoverable ?? null],
       );
-      return toPerson(res.rows[0]);
+      return { ...toPerson(res.rows[0]), discoverable: res.rows[0].discoverable === true } as Person;
     } catch (e) {
       // two requests picked the same free code at once: pick another
       if (!isUniqueViolation(e)) throw e;
@@ -233,13 +234,56 @@ export function registerSocial(app: FastifyInstance, opts: SocialOptions, authen
   // ---- profile
   route('GET', '/api/profile', async (req) => {
     const r = await myProfile(pool, req.uid);
-    return { profile: r ? toPerson(r) : null };
+    return { profile: r ? { ...toPerson(r), discoverable: r.discoverable === true } : null };
   });
 
   route('PUT', '/api/profile', async (req) => {
     const p = parseProfile(req.body);
     return { profile: await upsertProfile(pool, req.uid, p) };
   });
+
+  // ---- the people list of the new-chat screen: people I already talk to or share with first, then everybody who can be found. Search
+  // by name (part of it) or by code. Photos only come with the people I already know (the list stays light).
+  route(
+    'GET',
+    '/api/people',
+    async (req) => {
+      const q = (req.query as { q?: unknown; offset?: unknown }).q;
+      const text = typeof q === 'string' ? q.trim().slice(0, 40) : '';
+      const offset = Math.min(Math.max(Number((req.query as { offset?: unknown }).offset) || 0, 0), 5000);
+      const like = `%${text.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
+      const PAGE = 20;
+      const res = await pool.query(
+        `with related as (
+           select recipient_id as other from messages where sender_id = $1
+           union select sender_id from messages where recipient_id = $1
+           union select viewer_id from summary_shares where owner_id = $1 and revoked_at_ms is null
+           union select owner_id from summary_shares where viewer_id = $1 and revoked_at_ms is null
+         ), last_chat as (
+           select other, max(at) as at from (
+             select recipient_id as other, created_at_ms as at from messages where sender_id = $1
+             union all select sender_id, created_at_ms from messages where recipient_id = $1
+           ) m group by other
+         )
+         select p.code, p.display_name, p.color, case when r.other is not null then p.photo end as photo, (r.other is not null) as related
+           from profiles p
+           left join related r on r.other = p.user_id
+           left join last_chat l on l.other = p.user_id
+          where p.user_id <> $1 and p.code is not null
+            and (r.other is not null or p.discoverable or ($2 <> '' and p.code = upper($2)))
+            and ($2 = '' or p.display_name ilike $3 escape '\\' or p.code = upper($2))
+          order by (r.other is not null) desc, l.at desc nulls last, lower(p.display_name), p.code
+          limit ${PAGE + 1} offset $4`,
+        [req.uid, text, like, offset],
+      );
+      const rows = res.rows.slice(0, PAGE);
+      return {
+        people: rows.map((r) => ({ code: r.code as string, displayName: r.display_name as string, color: (r.color as string | null) ?? null, photo: (r.photo as string | null) ?? null, related: r.related === true })),
+        more: res.rows.length > PAGE,
+      };
+    },
+    30,
+  );
 
   // ---- look somebody up by code
   route(

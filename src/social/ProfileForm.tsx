@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Text, View } from 'react-native';
 import { Button } from '../components/Button';
+import { ToggleRow } from '../components/Controls';
 import { TextField } from '../components/Fields';
 import { spacing, type, useColors } from '../theme';
 import { MyProfile } from './api';
@@ -18,6 +19,8 @@ export function ProfileForm({ email, existing, onDone }: { email: string; existi
   /** the photo shown now; `changed` says whether it differs from the saved one (so an untouched photo is not sent again) */
   const [photo, setPhoto] = useState<string | null>(existing?.photo ?? null);
   const [changed, setChanged] = useState(false);
+  /** shown in the people list (the new-chat screen) */
+  const [discoverable, setDiscoverable] = useState(existing?.discoverable !== false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -27,7 +30,7 @@ export function ProfileForm({ email, existing, onDone }: { email: string; existi
     setBusy(true);
     setError('');
     try {
-      await saveProfile({ displayName: name.trim(), ...(changed ? { photo } : {}) });
+      await saveProfile({ displayName: name.trim(), discoverable, ...(changed ? { photo } : {}) });
       onDone();
     } catch (e) {
       setError(t('Could not save. Try again.'));
@@ -53,6 +56,7 @@ export function ProfileForm({ email, existing, onDone }: { email: string; existi
       </View>
       {!existing ? <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>{t('Create your profile to follow people and chat. Nothing about your money is shown unless you choose to share it.')}</Text> : null}
       <TextField label={t('Name')} value={name} onChangeText={setName} maxLength={40} placeholder={t('Your name')} />
+      <ToggleRow label={t('Show me in the people list')} hint={t('Anyone can find you by your name when starting a chat. Turn it off and only your code finds you.')} value={discoverable} onChange={setDiscoverable} />
       {error ? <Text style={[type.body, { color: c.expense }]}>{error}</Text> : null}
       <Button label={busy ? t('Saving...') : existing ? t('Save profile') : t('Create profile')} icon="check" onPress={submit} disabled={busy} />
     </View>

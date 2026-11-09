@@ -6,7 +6,7 @@ import { motion, useReducedMotion } from '../theme/motion';
 import { ChatsList } from './Lists';
 import { useSocial } from './SocialProvider';
 import { Thread } from './Thread';
-import { CodeInput, FoundPerson, useCodeLookup } from './code';
+import { People } from './People';
 import { Person, socialApi } from './api';
 import { Avatar, Pill } from './parts';
 import { t } from '../i18n';
@@ -24,7 +24,6 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
   const { loaded, profile, conversations, given, received, unread, chat, openChat, closeChat, chatList, refresh } = useSocial();
   /** starting a conversation: type the other person's code, see who it is, confirm */
   const [composing, setComposing] = useState(false);
-  const finder = useCodeLookup();
   /** the person of a conversation that is not in the lists yet (no message sent so far) */
   const [fetched, setFetched] = useState<Person | null>(null);
   const { height: winH } = useWindowDimensions();
@@ -80,14 +79,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
     }
     if (composing) {
       return (
-        <View style={{ gap: spacing.lg }}>
-          <Text style={[type.body, { color: c.textMuted }]}>{t('Type the code of the person you want to talk to. You will see who it is before starting.')}</Text>
-          <CodeInput value={finder.text} onChange={finder.setText} autoFocus />
-          <FoundPerson
-            lookup={finder.lookup}
-            actions={(p) => <Pill label={t('Start chat')} icon="heart" primary onPress={() => { setComposing(false); finder.clear(); openChat(p.code); }} />}
-          />
-        </View>
+        <People onPick={(code) => { setComposing(false); openChat(code); }} />
       );
     }
     return <ChatsList onOpen={(code) => openChat(code)} onNew={() => setComposing(true)} />;
@@ -116,6 +108,9 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
         </Pressable>
       ) : null}
 
+      {/* open on a computer: a click anywhere outside the window folds it */}
+      {!mobile && chat.open ? <Pressable accessible={false} focusable={false} onPress={closeChat} style={s.backdrop} /> : null}
+
       {/* open: the window */}
       {mounted ? (
         <Animated.View
@@ -132,7 +127,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
                 <Pressable accessibilityRole="button" accessibilityLabel={t('Back')} onPress={chatList} style={s.iconBtn}>
                   <Feather name="arrow-left" size={22} color={c.text} />
                 </Pressable>
-                <Pressable accessibilityRole="button" onPress={() => chat.with && onOpenProfile(chat.with)} style={s.who}>
+                <Pressable accessibilityRole="button" onPress={() => { if (chat.with) { onOpenProfile(chat.with); closeChat(); } }} style={s.who}>
                   {peer ? <Avatar name={peer.displayName} id={peer.code} color={peer.color} photo={peer.photo} size={36} /> : null}
                   <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{peer?.displayName ?? t('Conversation')}</Text>
                 </Pressable>
@@ -145,7 +140,7 @@ export function ChatDock({ mobile, onOpenProfile }: { mobile: boolean; onOpenPro
                   </Pressable>
                 ) : null}
                 {composing ? (
-                  <Pressable accessibilityRole="button" accessibilityLabel={t('Back')} onPress={() => { setComposing(false); finder.clear(); }} style={[s.iconBtn, { marginLeft: -spacing.sm }]}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={t('Back')} onPress={() => setComposing(false)} style={[s.iconBtn, { marginLeft: -spacing.sm }]}>
                     <Feather name="arrow-left" size={22} color={c.text} />
                   </Pressable>
                 ) : null}
@@ -181,6 +176,7 @@ const s = StyleSheet.create({
   badge: { position: 'absolute', top: -8, right: -10, minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   badgeText: { color: '#FFFFFF', fontSize: 12, lineHeight: 14, fontWeight: '700' },
   count: { minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  backdrop: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 29 },
   window: { position: 'absolute', zIndex: 31, overflow: 'hidden', borderWidth: 1 },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 60, paddingHorizontal: spacing.sm, borderBottomWidth: 1 },
   /** a screen's top bar on the phone, with a back arrow (the chat sits inside the app, which is already below the banner and the status area) */

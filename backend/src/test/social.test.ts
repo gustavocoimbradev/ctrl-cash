@@ -78,11 +78,10 @@ test('every social route needs a token', async () => {
   }
 });
 
-test('the follow and search routes are gone', async () => {
+test('the follow routes are gone (the people list is a search, not a follow)', async () => {
   const a = await person();
   for (const [method, url, payload] of [
     ['POST', '/api/follow', { code: NOBODY }], ['POST', '/api/unfollow', { code: NOBODY }], ['GET', '/api/follows', undefined],
-    ['GET', '/api/people?q=ana', undefined], ['GET', '/api/people', undefined],
   ] as const) {
     const r = await call(a.uid, method, url, payload);
     assert.equal(r.status, 404, `${method} ${url}`);
@@ -96,10 +95,10 @@ test('profile: empty, create with a code, update, read back and validation', asy
   assert.equal(created.status, 200);
   const code = created.body.profile.code as string;
   assert.match(code, CODE);
-  assert.deepEqual(created.body.profile, { code, displayName: 'Ana Lima', color: '#2D55D9', photo: null });
+  assert.deepEqual(created.body.profile, { code, displayName: 'Ana Lima', color: '#2D55D9', photo: null, discoverable: true });
   const again = await call(uid, 'PUT', '/api/profile', { displayName: 'Ana' });
-  assert.deepEqual(again.body.profile, { code, displayName: 'Ana', color: null, photo: null });
-  assert.deepEqual((await call(uid, 'GET', '/api/profile')).body, { profile: { code, displayName: 'Ana', color: null, photo: null } });
+  assert.deepEqual(again.body.profile, { code, displayName: 'Ana', color: null, photo: null, discoverable: true });
+  assert.deepEqual((await call(uid, 'GET', '/api/profile')).body, { profile: { code, displayName: 'Ana', color: null, photo: null, discoverable: true } });
 
   for (const bad of [
     {}, { displayName: '' }, { displayName: '   ' }, { displayName: 'x'.repeat(41) }, { displayName: 'x', color: 'red' },

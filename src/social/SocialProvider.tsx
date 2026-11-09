@@ -16,7 +16,7 @@ interface Social {
   received: Person[];
   /** fresh lists (the chat polls faster while it is open) */
   refresh: () => Promise<void>;
-  saveProfile: (p: { displayName: string; color?: string; photo?: string | null }) => Promise<void>;
+  saveProfile: (p: { displayName: string; color?: string; photo?: string | null; discoverable?: boolean }) => Promise<void>;
   share: (id: string) => Promise<void>;
   revoke: (id: string) => Promise<void>;
   /** the floating chat: open or collapsed, and which conversation it shows (null = the list) */

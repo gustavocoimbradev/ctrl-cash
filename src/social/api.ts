@@ -11,7 +11,15 @@ export interface Person {
   /** a small square JPEG as a data URL */
   photo: string | null;
 }
-export interface MyProfile extends Person {}
+/** `discoverable`: shown in the people list of the new-chat screen */
+export interface MyProfile extends Person {
+  discoverable?: boolean;
+}
+
+/** Somebody in the people list; `related` = I already talk to them or share with them (they come first). */
+export interface ListedPerson extends Person {
+  related: boolean;
+}
 export interface PersonDetail extends Person {
   self: boolean;
   /** I can read their summary now */
@@ -74,7 +82,9 @@ const enc = encodeURIComponent;
 
 export const socialApi = {
   profile: () => call<{ profile: MyProfile | null }>('/profile'),
-  saveProfile: (p: { displayName: string; color?: string; /** a data URL sets it, null clears it, absent leaves it */ photo?: string | null }) => call<{ profile: MyProfile }>('/profile', { method: 'PUT', body: p }),
+  saveProfile: (p: { displayName: string; color?: string; /** a data URL sets it, null clears it, absent leaves it */ photo?: string | null; discoverable?: boolean }) => call<{ profile: MyProfile }>('/profile', { method: 'PUT', body: p }),
+  /** the people list: people I know first, then everybody who can be found; `q` is part of a name or a code */
+  people: (q: string, offset = 0) => call<{ people: ListedPerson[]; more: boolean }>(`/people?q=${enc(q)}&offset=${offset}`),
   /** who a code belongs to (404 when nobody) */
   person: (code: string) => call<{ person: PersonDetail }>(`/people/${enc(code)}`),
   conversations: () => call<{ conversations: Conversation[] }>('/conversations'),
