@@ -214,8 +214,8 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
     // after the fixed palette every category still gets its own color (hues spread by the golden angle)
     return i < PALETTE.length ? PALETTE[i] : `hsl(${Math.round((i * 137.508) % 360)}, 55%, ${i % 2 ? 48 : 62}%)`;
   };
-  // every category is shown: none is folded into "everything else"
-  const pieRows = categories.map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug) }));
+  // every category with a value is shown (one that rounds to 0% has nothing to show); none is folded into "everything else"
+  const pieRows = categories.filter((x) => r1(x.pct) > 0).map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug) }));
   const pieTotal = pieRows.reduce((a, x) => a + x.value, 0) || 1;
 
   const chart = (
