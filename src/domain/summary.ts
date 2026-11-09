@@ -124,6 +124,8 @@ export interface OwnChart {
   days: { income: number[]; spent: number[] };
   /** spending by category and month, cents (same rules) */
   categories: { slug: string; label: string; tone: Tone | null; byMonth: Record<string, number> }[];
+  /** what came in, by income category and month, cents (same rules) */
+  incomeCategories: { slug: string; label: string; byMonth: Record<string, number> }[];
 }
 
 export function buildOwnChart(data: AppData, today = todayISO()): OwnChart {
@@ -133,6 +135,7 @@ export function buildOwnChart(data: AppData, today = todayISO()): OwnChart {
   const dayIncome: number[] = [];
   const daySpent: number[] = [];
   const byCat = new Map<string, Record<string, number>>();
+  const byIncome = new Map<string, Record<string, number>>();
   for (let k = addMonthsToKey(current, -SUMMARY_BACK); k <= current; k = addMonthsToKey(k, 1)) {
     let income = 0;
     let expense = 0;
@@ -143,6 +146,10 @@ export function buildOwnChart(data: AppData, today = todayISO()): OwnChart {
         if (o.cardId) continue;
         income += o.amount;
         if (k === current) dayIncome[day] = (dayIncome[day] ?? 0) + o.amount;
+        const slug = o.category ?? 'income';
+        const row = byIncome.get(slug) ?? {};
+        row[k] = (row[k] ?? 0) + o.amount;
+        byIncome.set(slug, row);
       } else {
         expense += o.amount;
         if (k === current) daySpent[day] = (daySpent[day] ?? 0) + o.amount;
@@ -166,5 +173,6 @@ export function buildOwnChart(data: AppData, today = todayISO()): OwnChart {
     spent.push(sp);
   }
   const categories = [...byCat].map(([slug, byMonth]) => ({ slug, label: categoryLabel(slug), tone: categoryOf(slug).tone, byMonth }));
-  return { months, days: { income, spent }, categories };
+  const incomeCategories = [...byIncome].map(([slug, byMonth]) => ({ slug, label: categoryLabel(slug === 'income' ? undefined : slug, 'income'), byMonth }));
+  return { months, days: { income, spent }, categories, incomeCategories };
 }

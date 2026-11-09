@@ -42,7 +42,7 @@ const arc = (cx: number, cy: number, r: number, a0: number, a1: number) => {
  * A donut: one slice per category. Hovering (or tapping) a slice makes it stand out and puts its percentage outside the
  * ring, at the end of a thin line from the slice. `onSelect` is told which slice the pointer is on.
  */
-function Pie({ slices, selected, onSelect, size, compact, center, valueText }: { slices: { key: string; value: number; color: string; /** shown beside the percentage of the chosen slice */ name?: string; tone?: { label: string; color: string } | null }[]; selected: string | null; onSelect: (key: string | null) => void; size: number; /** phones: a thinner ring and less room around it */ compact: boolean; center: React.ReactNode; /** how the chosen slice's value is written beside it (default: its share of the pie) */ valueText?: (v: number) => string }) {
+function Pie({ slices, outer, selected, onSelect, size, compact, center, valueText }: { slices: { key: string; value: number; color: string; /** shown beside the percentage of the chosen slice */ name?: string; tone?: { label: string; color: string } | null }[]; selected: string | null; onSelect: (key: string | null) => void; size: number; /** phones: a thinner ring and less room around it */ compact: boolean; center: React.ReactNode; /** an outer, thin ring (what came in), split by category, drawn around the donut; its keys must not clash with the slices' */ outer?: { key: string; value: number; color: string; name?: string }[]; /** how the chosen slice's value is written beside it (default: its share of the pie) */ valueText?: (v: number) => string }) {
   const c = useColors();
   const RING = compact ? RING_COMPACT : RING_FULL;
   const MARGIN_X = compact ? MARGIN_X_COMPACT : MARGIN_X_FULL;
@@ -51,12 +51,20 @@ function Pie({ slices, selected, onSelect, size, compact, center, valueText }: {
   const values = useTweenList(slices.map((sl) => sl.value), motion.slow);
   const amounts = useTweenList([...slices.map((sl) => (selected === sl.key ? 1 : 0)), ...slices.map((sl) => (selected !== null && selected !== sl.key ? 1 : 0))], motion.fast + 60);
   const total = values.reduce((a, b) => a + b, 0) || 1;
+  // the outer ring (when there is one): thin, around the donut, which then gets a little smaller
+  const ring2 = outer && outer.length > 0 ? (compact ? 12 : 16) : 0;
+  const GAP = ring2 ? 6 : 0;
+  const outerList = outer ?? [];
+  const outerValues = useTweenList(outerList.map((sl) => sl.value), motion.slow);
+  const outerAmounts = useTweenList([...outerList.map((sl) => (selected === sl.key ? 1 : 0)), ...outerList.map((sl) => (selected !== null && selected !== sl.key ? 1 : 0))], motion.fast + 60);
+  const outerTotal = outerValues.reduce((a, b) => a + b, 0) || 1;
   const W = size + MARGIN_X * 2;
   const H = size + MARGIN_Y * 2;
   const cx = W / 2;
   const cy = H / 2;
   // the ring is drawn so that even the grown slice stays inside `size`
-  const r = size / 2 - RING / 2 - 4;
+  const r = size / 2 - ring2 - GAP - RING / 2 - 4;
+  const rOuter = size / 2 - ring2 / 2 - 4;
   // each slice's angles, from 12 o'clock clockwise
   let acc = 0;
   const spans = slices.map((sl, i) => {
@@ -65,12 +73,21 @@ function Pie({ slices, selected, onSelect, size, compact, center, valueText }: {
     acc += sweep;
     return span;
   });
-  const target = spans.find((x) => x.key === selected);
+  let accOut = 0;
+  const outerSpans = outerList.map((sl, i) => {
+    const sweep = ((outerValues[i] ?? 0) / outerTotal) * 360;
+    const span = { ...sl, a0: accOut, a1: accOut + sweep, grow: outerAmounts[i] ?? 0, dim: outerAmounts[outerList.length + i] ?? 0 };
+    accOut += sweep;
+    return span;
+  });
+  const everySpan = [...spans, ...outerSpans];
+  const target = everySpan.find((x) => x.key === selected);
 
   // the leader line: it remembers the last slice so it can fade out in place, and it glides the short way round between slices
   const lastKey = useRef<string | null>(null);
   if (selected) lastKey.current = selected;
-  const chosen = spans.find((x) => x.key === (selected ?? lastKey.current));
+  const chosen = everySpan.find((x) => x.key === (selected ?? lastKey.current));
+  const chosenOuter = !!chosen && outerSpans.some((x) => x.key === chosen.key);
   const midTarget = chosen ? (chosen.a0 + chosen.a1) / 2 : 0;
   const unwrapped = useRef(midTarget);
   if (selected && chosen) {
@@ -90,8 +107,10 @@ function Pie({ slices, selected, onSelect, size, compact, center, valueText }: {
     const dx = px - cx;
     const dy = py - cy;
     const dist = Math.hypot(dx, dy);
-    if (dist < size / 2 - RING - 10 || dist > size / 2 + 6) return null;
     const angle = ((Math.atan2(dx, -dy) * 180) / Math.PI + 360) % 360;
+    // the thin outer ring first, then the donut
+    if (ring2 && dist >= rOuter - ring2 / 2 - 4 && dist <= size / 2 + 6) return outerSpans.find((x2) => angle >= x2.a0 && angle < x2.a1)?.key ?? null;
+    if (dist < r - RING / 2 - 8 || dist > r + RING / 2 + 8) return null;
     return spans.find((x2) => angle >= x2.a0 && angle < x2.a1)?.key ?? null;
   };
 
@@ -99,7 +118,8 @@ function Pie({ slices, selected, onSelect, size, compact, center, valueText }: {
   let leader: React.ReactNode = null;
   if (chosen && lead > 0.01) {
     const side = Math.sin((mid * Math.PI) / 180) >= 0 ? 1 : -1;
-    const p0 = polar(cx, cy, size / 2 + 3, mid);
+    // from the edge of the slice that was chosen (the donut's, or the outer ring's), out past the outside of everything
+    const p0 = polar(cx, cy, chosenOuter || !ring2 ? size / 2 + 3 : r + RING / 2 + 2, mid);
     const p1 = polar(cx, cy, size / 2 + 3 + (compact ? 9 : 17) * lead, mid);
     const p2 = { x: p1.x + side * (compact ? 7 : 18) * lead, y: p1.y };
     leader = (
@@ -114,7 +134,7 @@ function Pie({ slices, selected, onSelect, size, compact, center, valueText }: {
           const yName = up ? p2.y - 12 : p2.y + 24;
           return (
             <>
-              <SvgText x={x} y={p2.y + 6} fontSize={compact ? 16 : 17} fontWeight="700" fontFamily={fontFamily} fill={chosen.color} fillOpacity={lead} textAnchor={anchor}>{valueText ? valueText((target ?? chosen).value) : pct(r1(((target ?? chosen).value / pieTotalOf(slices)) * 100))}</SvgText>
+              <SvgText x={x} y={p2.y + 6} fontSize={compact ? 16 : 17} fontWeight="700" fontFamily={fontFamily} fill={chosen.color} fillOpacity={lead} textAnchor={anchor}>{valueText ? valueText((target ?? chosen).value) : pct(r1(((target ?? chosen).value / pieTotalOf(chosenOuter ? outerList : slices)) * 100))}</SvgText>
               {chosen.name ? <SvgText x={x} y={yName} fontSize={16} fontFamily={fontFamily} fill={c.text} fillOpacity={lead} textAnchor={anchor}>{cut(chosen.name)}</SvgText> : null}
             </>
           );
@@ -131,6 +151,13 @@ function Pie({ slices, selected, onSelect, size, compact, center, valueText }: {
           const sweep = sl.a1 - sl.a0;
           if (sweep < 0.4) return null;
           return <Path key={sl.key} d={arc(cx, cy, r, sl.a0 + 0.6, Math.max(sl.a1 - 0.6, sl.a0 + 0.2))} stroke={sl.color} strokeWidth={RING + 8 * sl.grow} strokeOpacity={1 - 0.65 * sl.dim} fill="none" />;
+        })}
+        {/* what came in: a thin ring around the donut, whole (it is 100%), split by income category */}
+        {ring2 ? <Path d={arc(cx, cy, rOuter, 0, 359.99)} stroke={c.surface} strokeWidth={ring2} fill="none" /> : null}
+        {outerSpans.map((sl) => {
+          const sweep = sl.a1 - sl.a0;
+          if (sweep < 0.4) return null;
+          return <Path key={sl.key} d={arc(cx, cy, rOuter, sl.a0 + 0.6, Math.max(sl.a1 - 0.6, sl.a0 + 0.2))} stroke={sl.color} strokeWidth={ring2 + 5 * sl.grow} strokeOpacity={1 - 0.65 * sl.dim} fill="none" />;
         })}
         {leader}
       </Svg>
@@ -352,9 +379,48 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
     </View>
   );
 
+  // my own profile: what came in (100%), by income category, as a thin ring around the donut and as its own list
+  const INCOME_COLORS = ['#1FA86A', '#3DC18A', '#12805A', '#7DD6AC', '#2E9E6F', '#A5E3C6'];
+  const incomeCats = real
+    ? real.incomeCategories
+        .map((x) => ({ slug: x.slug, label: x.label, amount: rangeKeys.reduce((a, k) => a + (x.byMonth[k] ?? 0), 0) }))
+        .filter((x) => x.amount > 0)
+        .sort((a, b) => b.amount - a.amount)
+    : [];
+  const incomeRows = incomeCats.map((x, i) => ({ key: `in:${x.slug}`, label: x.label, value: x.amount, color: INCOME_COLORS[i % INCOME_COLORS.length]!, name: x.label, tone: null as { label: string; color: string } | null }));
+  const incomeTotal = incomeRows.reduce((a, x) => a + x.value, 0);
+
+  const legendRow = (x: { key: string; label: string; value: number; color: string; tone: { label: string; color: string } | null }) => (
+    <Pressable
+      key={x.key}
+      accessibilityRole="button"
+      accessibilityLabel={`${x.label}: ${sliceText(x.value)}`}
+      onPress={() => setSlice(slice === x.key ? null : x.key)}
+      {...({ onHoverIn: () => setSlice(x.key), onHoverOut: () => setSlice(null) } as object)}
+      style={({ hovered }: any) => [s.legendRow, { width: `${100 / legendCols - 2}%` as `${number}%` }, { backgroundColor: hovered || slice === x.key ? c.surface : 'transparent' }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '180ms' } as object)]}
+    >
+      <View style={[s.swatch, { backgroundColor: x.color }]} />
+      <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <Text style={[type.body, { color: c.text, flexShrink: 1, minWidth: 0 }]} numberOfLines={1}>{x.label}</Text>
+        {x.tone ? (
+          <View style={{ flexShrink: 0, backgroundColor: `${x.tone.color}1F`, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 1 }}>
+            <Text style={[type.body, { color: x.tone.color, fontSize: 16 }]} numberOfLines={1}>{x.tone.label}</Text>
+          </View>
+        ) : null}
+      </View>
+      <Text style={[type.label, { color: c.text }]}>{sliceText(x.value)}</Text>
+    </Pressable>
+  );
+  const listHead = (label: string, total: number, color: string) => (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.sm, paddingBottom: 2 }}>
+      <Text style={[type.label, { color }]}>{label}</Text>
+      <Text style={[type.label, { color }]}>{formatMoneyShort(total)}</Text>
+    </View>
+  );
+
   const pie = (
     <View onLayout={(e) => setRowW(e.nativeEvent.layout.width)} style={[{ gap: spacing.lg }, wide && { flexDirection: 'row', alignItems: 'center' }]}>
-      {pieRows.length === 0 ? (
+      {pieRows.length === 0 && incomeRows.length === 0 ? (
         <Text style={[type.body, { color: c.textMuted }]}>{t('No expenses in this period.')}</Text>
       ) : (
         <>
@@ -362,6 +428,7 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
           <View onLayout={(e) => setPieBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })} style={{ width: wide ? Math.min(PIE_MAX + MARGIN_X_FULL * 2, Math.max(360, rowW * 0.55)) : undefined, flexShrink: 0 }}>
           <Pie
             slices={pieRows}
+            outer={incomeRows}
             valueText={realCats ? sliceText : undefined}
             selected={slice}
             onSelect={setSlice}
@@ -376,28 +443,17 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
           />
           </View>
           {/* the legend: a grid that fills the width beside the donut */}
-          <View style={s.legendGrid}>
-            {pieRows.map((x) => (
-              <Pressable
-                key={x.key}
-                accessibilityRole="button"
-                accessibilityLabel={`${x.label}: ${sliceText(x.value)}`}
-                onPress={() => setSlice(slice === x.key ? null : x.key)}
-                {...({ onHoverIn: () => setSlice(x.key), onHoverOut: () => setSlice(null) } as object)}
-                style={({ hovered }: any) => [s.legendRow, { width: `${100 / legendCols - 2}%` as `${number}%` }, { backgroundColor: hovered || slice === x.key ? c.surface : 'transparent' }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '180ms' } as object)]}
-              >
-                <View style={[s.swatch, { backgroundColor: x.color }]} />
-                <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                  <Text style={[type.body, { color: c.text, flexShrink: 1, minWidth: 0 }]} numberOfLines={1}>{x.label}</Text>
-                  {x.tone ? (
-                    <View style={{ flexShrink: 0, backgroundColor: `${x.tone.color}1F`, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 1 }}>
-                      <Text style={[type.body, { color: x.tone.color, fontSize: 16 }]} numberOfLines={1}>{x.tone.label}</Text>
-                    </View>
-                  ) : null}
-                </View>
-                <Text style={[type.label, { color: c.text }]}>{sliceText(x.value)}</Text>
-              </Pressable>
-            ))}
+          <View style={{ flex: wide ? 1 : undefined, minWidth: 0, gap: spacing.md }}>
+            {incomeRows.length > 0 ? (
+              <View style={{ gap: 2 }}>
+                {listHead(t('Received'), incomeTotal, c.income)}
+                <View style={s.legendGrid}>{incomeRows.map(legendRow)}</View>
+              </View>
+            ) : null}
+            <View style={{ gap: 2 }}>
+              {incomeRows.length > 0 ? listHead(t('Spent'), realTotal, c.expense) : null}
+              <View style={s.legendGrid}>{pieRows.map(legendRow)}</View>
+            </View>
           </View>
         </>
       )}
@@ -427,7 +483,7 @@ const s = StyleSheet.create({
   tipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   miniTrack: { flex: 1, height: 8, borderRadius: 4, overflow: 'hidden' },
   pieCenter: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
-  legendGrid: { flex: 1, minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.md },
+  legendGrid: { minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.md },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44, paddingHorizontal: spacing.sm, borderRadius: 12 },
   swatch: { width: 12, height: 12, borderRadius: 6 },
 });
