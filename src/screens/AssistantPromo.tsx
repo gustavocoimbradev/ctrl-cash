@@ -16,7 +16,7 @@ export function AssistantPromo() {
       <ClaudeBadge size={52} />
       <View style={{ flex: 1, minWidth: 220, gap: 2 }}>
         <Text style={[type.title, { color: c.text }]}>{t('Talk to Claude about your money')}</Text>
-        <Text style={[type.body, { color: c.textMuted }]}>{t('Ask how you are doing and have it add transactions for you, with your own Claude account. It costs nothing.')}</Text>
+        <Text style={[type.body, { color: c.textMuted }]}>{t('Ask how you are doing and have it add transactions for you.')}</Text>
       </View>
       <ClaudeButton label={t('Connect with Claude')} onPress={() => openExternal(connectLink)} />
     </View>

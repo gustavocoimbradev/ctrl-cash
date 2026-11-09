@@ -103,6 +103,8 @@ export interface Summary {
   months: { key: string; spent: number; saved: number; incomeRel?: number; categories: SummaryCategory[] }[];
   categories: SummaryCategory[];
   /** the financial health score and how full each part is, in percent; optional */
+  /** the current month day by day, cumulative percent of that month's income; optional */
+  days?: { month: string; income: number[]; spent: number[] };
   health?: { score: number; label: string; wealth: number; debt: number; habits: number; month: number };
   /** wealth projection as the percent change from today's; 24 months at most; never an amount */
   wealth?: { start: string; planned: number[]; habit: number[] };
@@ -130,7 +132,7 @@ function categories(raw: unknown, name: string): SummaryCategory[] {
 
 export function parseSummary(input: unknown): Summary {
   const d = obj(input, 'the body');
-  onlyKeys(d, ['version', 'generatedAt', 'spent', 'saved', 'months', 'categories', 'health', 'wealth'], ['version', 'generatedAt', 'spent', 'saved', 'months', 'categories']);
+  onlyKeys(d, ['version', 'generatedAt', 'spent', 'saved', 'months', 'categories', 'health', 'wealth', 'days'], ['version', 'generatedAt', 'spent', 'saved', 'months', 'categories']);
   if (d.version !== 2) fail('"version" must be 2');
   const generatedAt = int(d.generatedAt, 'generatedAt', 0, 100_000_000_000_000);
   const spent = pct(d.spent, 'spent', 0, 1000);
@@ -164,6 +166,16 @@ export function parseSummary(input: unknown): Summary {
       habits: pct(h.habits, 'health.habits', 0, 100),
       month: pct(h.month, 'health.month', 0, 100),
     };
+  }
+  if (d.days !== undefined) {
+    const dd = obj(d.days, 'days');
+    onlyKeys(dd, ['month', 'income', 'spent'], ['month', 'income', 'spent']);
+    if (typeof dd.month !== 'string' || !/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(dd.month)) fail('"days.month" must be a month as YYYY-MM');
+    const run = (v: unknown, name: string) => {
+      if (!Array.isArray(v) || v.length < 28 || v.length > 31) return fail(`"${name}" must be a list of 28 to 31 numbers`);
+      return v.map((n, i) => pct(n, `${name}[${i}]`, 0, 10000));
+    };
+    out.days = { month: dd.month as string, income: run(dd.income, 'days.income'), spent: run(dd.spent, 'days.spent') };
   }
   if (d.wealth !== undefined) {
     const w = obj(d.wealth, 'wealth');

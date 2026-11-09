@@ -47,12 +47,14 @@ interface ProjectionProps {
   areaColor?: string;
   /** index of the point that is "now": a dotted vertical line and a small label mark it */
   nowIndex?: number;
+  /** the header of the default tooltip, when it should say more than the axis label (a full date for a day number) */
+  tipLabels?: string[];
   /** use the whole width: the first point at the left edge and the last at the right (few points, small screens) */
   fill?: boolean;
 }
 
 /** Line chart (up to 2 series, the first with an area), vertical guide and tooltip at the selected point. */
-export function ProjectionChart({ series, labels, selected, onSelect, height = 230, format = formatMoney, renderTip, tipWidth = 190, areaColor = c.primary, nowIndex, fill }: ProjectionProps) {
+export function ProjectionChart({ series, labels, selected, onSelect, height = 230, format = formatMoney, renderTip, tipWidth = 190, areaColor = c.primary, nowIndex, fill, tipLabels }: ProjectionProps) {
   const [w, setW] = useState(0);
   /** drawing: the lines reveal from left to right on enter and when the horizon changes */
   const progress = useProgress(`proj-${labels.length}`);
@@ -91,9 +93,11 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
   const tipW = tipWidth;
   /** diagonal labels need about 28px per column; with less, show every Nth (still the full MM/YYYY) */
   const gap = fill && n > 1 ? (w - PAD * 2) / (n - 1) : step;
-  const labelEvery = Math.max(1, Math.ceil(28 / Math.max(gap, 1)));
+  const shortAxis = labels.every((l) => l.length <= 3);
+  const labelEvery = Math.max(1, Math.ceil((shortAxis ? 22 : 28) / Math.max(gap, 1)));
   /** columns wide enough for a label lying flat: no diagonal, no wasted height */
-  const flat = gap >= 76;
+  const shortLabels = labels.every((l) => l.length <= 3);
+  const flat = gap >= 76 || shortLabels;
   const LABEL_W = 84;
   // narrow charts (phones): steeper labels, so the first one does not stick out to the left of the card
   const steep = w < 520;
@@ -185,7 +189,7 @@ export function ProjectionChart({ series, labels, selected, onSelect, height = 2
               elevation: 6,
             }}
           >
-            <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{labels[tipSel]}</Text>
+            <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{(tipLabels ?? labels)[tipSel]}</Text>
             {renderTip
               ? renderTip(tipSel)
               : series.map((sr, k) => (

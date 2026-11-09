@@ -59,6 +59,8 @@ export interface Summary {
   /** overall spending by category, % of income, biggest first */
   categories: CategoryShare[];
   /** the financial health score (0 to 1000) and how full each of its parts is, in percent; absent in older snapshots */
+  /** the current month day by day, as cumulative percent of that month's income (income that came in, spending so far) */
+  days?: { month: string; income: number[]; spent: number[] };
   health?: { score: number; label: 'Critical' | 'Warning' | 'Good' | 'Excellent'; wealth: number; debt: number; habits: number; month: number };
   /** wealth projection as the percent change from today's, 24 months from `start`; never an amount */
   wealth?: { start: string; planned: number[]; habit: number[] };

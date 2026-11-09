@@ -3,7 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from
 import Svg, { Path, Text as SvgText } from 'react-native-svg';
 import { ChartLegend, ProjectionChart } from '../components/Charts';
 import { PillToggle } from '../components/Controls';
-import { addMonthsToKey, currentMonthKey, formatMonth, shortDate } from '../domain/dates';
+import { addMonthsToKey, currentMonthKey, formatDate, formatMonth, pad, shortDate, todayISO } from '../domain/dates';
 import { desktopBreakpoint, fontFamily, spacing, type, useColors } from '../theme';
 import { motion, useGlide, useTween, useTweenList } from '../theme/motion';
 import { CategoryShare, Summary } from './api';
@@ -252,24 +252,38 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   const legendCols = wide ? 2 : 1;
   const pieTotal = pieRows.reduce((a, x) => a + x.value, 0) || 1;
 
+  // "this month": the days of the month, 1 to the last, with what came in and went out so far (percent of that month's income)
+  const days = summary.days && summary.days.month === current ? summary.days : undefined;
+  const dayMode = horizon === 'month' && !!days;
+  const dayLabels = days ? days.income.map((_, i) => String(i + 1)) : [];
+  const dayTips = days ? days.income.map((_, i) => formatDate(`${current}-${pad(i + 1)}`)) : [];
+  const todayIndex = Number(todayISO().slice(8, 10)) - 1;
+
   const chart = (
     <View style={{ gap: spacing.sm, minWidth: 0 }}>
       <ProjectionChart
-        series={[
-          { values: chartMonths.map((m) => (m.incomeRel === undefined ? 100 : m.incomeRel)), color: c.income, area: true, label: t('Income') },
-          { values: chartMonths.map((m) => (weight(m) * m.spent) / 100), color: c.expense, dashed: true, label: t('Spent') },
-          { values: chartMonths.map((m) => (weight(m) * m.saved) / 100), color: c.primary, label: t('Saved') },
-        ]}
+        series={dayMode
+          ? [
+              { values: days!.income, color: c.income, area: true, label: t('Income') },
+              { values: days!.spent, color: c.expense, dashed: true, label: t('Spent') },
+              { values: days!.income.map((v, i) => v - days!.spent[i]!), color: c.primary, label: t('Saved') },
+            ]
+          : [
+              { values: chartMonths.map((m) => (m.incomeRel === undefined ? 100 : m.incomeRel)), color: c.income, area: true, label: t('Income') },
+              { values: chartMonths.map((m) => (weight(m) * m.spent) / 100), color: c.expense, dashed: true, label: t('Spent') },
+              { values: chartMonths.map((m) => (weight(m) * m.saved) / 100), color: c.primary, label: t('Saved') },
+            ]}
         areaColor={c.income}
         height={wide ? 260 : 230}
-        labels={chartMonths.map((m) => formatMonth(m.key))}
-        nowIndex={half - start}
+        labels={dayMode ? dayLabels : chartMonths.map((m) => formatMonth(m.key))}
+        tipLabels={dayMode ? dayTips : undefined}
+        nowIndex={dayMode ? todayIndex : half - start}
         selected={sel}
         onSelect={setSel}
         format={pct}
         fill
         tipWidth={310}
-        renderTip={(i) => {
+        renderTip={dayMode ? undefined : (i) => {
           const m = chartMonths[i];
           if (!m || weight(m) <= 0) return <Text style={[type.body, { color: c.textMuted }]}>{t('No income planned.')}</Text>;
           // the tooltip speaks in percent of THAT month's income (the lines are drawn scaled by how big the income was)

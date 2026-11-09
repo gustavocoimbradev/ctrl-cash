@@ -1,7 +1,7 @@
 import type { Summary } from '../social/api';
 import { AppData } from '../types';
 import { LOAN_CATEGORY, REFUND_CATEGORY, categoryLabel, categoryOf, toneOfCategory } from './categories';
-import { addMonthsToKey, currentMonthKey } from './dates';
+import { addMonthsToKey, currentMonthKey, daysInMonth } from './dates';
 import { currentHealth } from './health';
 import { buildOccurrences, monthOccurrences } from './transactions';
 
@@ -34,20 +34,30 @@ export function buildSummary(data: AppData, now = Date.now()): Summary {
   const overall = new Map<string, number>();
   let totalIncome = 0;
   let totalSpent = 0;
+  // the current month day by day (what is already registered counts for the days ahead)
+  const dayIncome: number[] = [];
+  const daySpent: number[] = [];
+  let currentIncome = 0;
 
   for (let k = first; k <= last; k = addMonthsToKey(k, 1)) {
     let income = 0;
     const byCategory = new Map<string, number>();
     for (const o of monthOccurrences(occ, k)) {
       if (o.category === REFUND_CATEGORY || o.category === LOAN_CATEGORY) continue;
+      const day = Number(o.date.slice(8, 10)) - 1;
       if (o.type === 'income') {
-        if (!o.cardId) income += o.amount;
+        if (!o.cardId) {
+          income += o.amount;
+          if (k === current) dayIncome[day] = (dayIncome[day] ?? 0) + o.amount;
+        }
       } else {
+        if (k === current) daySpent[day] = (daySpent[day] ?? 0) + o.amount;
         // a category that no longer exists counts as "Other" (what the app shows for it), so there is only one of those
         const slug = categoryOf(o.category).slug;
         byCategory.set(slug, (byCategory.get(slug) ?? 0) + o.amount);
       }
     }
+    if (k === current) currentIncome = income;
     // a month without income has nothing to take a percentage of: it stays in the list, empty, so the months stay in line
     if (income <= 0) {
       incomes.push(0);
@@ -84,8 +94,24 @@ export function buildSummary(data: AppData, now = Date.now()): Summary {
         .map(([slug, amount]) => ({ slug, label: categoryLabel(slug).slice(0, 40), pct: round1((amount / totalIncome) * 100), ...toneOf(slug) }))
     : [];
   const spent = totalIncome > 0 ? round1((totalSpent / totalIncome) * 100) : 0;
+  // cumulative percent of the month's income, per day: income that came in and spending so far
+  let days: Summary['days'];
+  if (currentIncome > 0) {
+    const n = daysInMonth(Number(current.slice(0, 4)), Number(current.slice(5, 7)));
+    let inc = 0;
+    let sp = 0;
+    const incomeCum: number[] = [];
+    const spentCum: number[] = [];
+    for (let d = 0; d < n; d++) {
+      inc += dayIncome[d] ?? 0;
+      sp += daySpent[d] ?? 0;
+      incomeCum.push(round1((inc / currentIncome) * 100));
+      spentCum.push(round1((sp / currentIncome) * 100));
+    }
+    days = { month: current, income: incomeCum, spent: spentCum };
+  }
   const hp = currentHealth(data);
   // without data to judge yet, the score starts at its best, as it does on the dashboard
   const health = hp ? { score: hp.health.score, label: hp.health.label, wealth: round1((hp.health.saved / 40) * 100), debt: round1((hp.health.debt / 30) * 100), habits: round1((hp.health.habits / 30) * 100), month: round1(hp.health.month * 100) } : { score: 1000, label: 'Excellent' as const, wealth: 100, debt: 100, habits: 100, month: 100 };
-  return { version: 2, generatedAt: now, spent, saved: totalIncome > 0 ? round1(100 - (totalSpent / totalIncome) * 100) : 0, months, categories, health };
+  return { version: 2, generatedAt: now, spent, saved: totalIncome > 0 ? round1(100 - (totalSpent / totalIncome) * 100) : 0, months, categories, health, ...(days ? { days } : {}) };
 }

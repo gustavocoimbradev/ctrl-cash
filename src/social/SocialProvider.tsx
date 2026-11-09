@@ -108,7 +108,7 @@ export function SocialProvider({ children, account }: { children: React.ReactNod
     if (!ready || given.length === 0) return;
     const timer = setTimeout(() => {
       const summary = buildSummary(data);
-      const fingerprint = JSON.stringify({ s: summary.spent, v: summary.saved, m: summary.months, c: summary.categories, h: summary.health });
+      const fingerprint = JSON.stringify({ s: summary.spent, v: summary.saved, m: summary.months, c: summary.categories, h: summary.health, d: summary.days });
       if (fingerprint === lastPublished.current) return;
       socialApi.publishSummary(summary).then(() => { lastPublished.current = fingerprint; }).catch(() => {});
     }, PUBLISH_DELAY_MS);

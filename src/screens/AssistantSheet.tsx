@@ -31,7 +31,7 @@ export function AssistantSheet({ visible, onClose }: { visible: boolean; onClose
       <View style={{ alignItems: 'center', gap: spacing.sm }}>
         <ClaudeBadge size={72} />
         <Text style={[type.title, { color: c.text, textAlign: 'center' }]}>{t('Talk to Claude about your money')}</Text>
-        <Text style={[type.body, { color: c.textMuted, textAlign: 'center', maxWidth: 420 }]}>{t('It uses your own Claude account, so it costs nothing.')}</Text>
+        <Text style={[type.body, { color: c.textMuted, textAlign: 'center', maxWidth: 420 }]}>{t('It uses your own Claude account.')}</Text>
       </View>
 
       <View style={{ gap: spacing.md }}>

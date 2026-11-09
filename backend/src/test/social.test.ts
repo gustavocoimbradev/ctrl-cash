@@ -529,3 +529,19 @@ test('summary: health and the wealth projection are optional, bounded and carry 
     { wealth: { ...wealth, balance: 1 } },
   ]) assert.equal((await call(a.uid, 'PUT', '/api/summary', summary(bad))).status, 400, JSON.stringify(bad));
 });
+
+test('summary: the current month day by day is optional and only percentages', async () => {
+  const a = await person();
+  const run = (n: number, v = 10) => Array.from({ length: n }, () => v);
+  const days = { month: '2026-11', income: run(30, 100), spent: run(30, 40) };
+  assert.equal((await call(a.uid, 'PUT', '/api/summary', summary({ days }))).status, 200);
+  assert.deepEqual((await call(a.uid, 'GET', `/api/people/${a.code}/summary`)).body.summary.days, days);
+  for (const bad of [
+    { days: { ...days, month: '2026-13' } },
+    { days: { ...days, income: run(27) } },
+    { days: { ...days, spent: run(32) } },
+    { days: { ...days, spent: run(30, -1) } },
+    { days: { ...days, spent: ['x', ...run(29)] } },
+    { days: { ...days, amount: 5 } },
+  ]) assert.equal((await call(a.uid, 'PUT', '/api/summary', summary(bad))).status, 400, JSON.stringify(bad).slice(0, 60));
+});
