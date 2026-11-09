@@ -5,6 +5,7 @@ import { Button } from '../components/Button';
 import { Field, MoneyField, TextField } from '../components/Fields';
 import { CARD_COLORS, cardColorLabel } from '../domain/cards';
 import { Select } from '../components/Select';
+import { CardInvoices } from './CardInvoices';
 import { Sheet } from '../components/Sheet';
 import { t } from '../i18n';
 import { useStore } from '../store';
@@ -93,6 +94,8 @@ export function CardForm({ visible, card, onClose }: { visible: boolean; card?: 
           ))}
         </View>
       </Field>
+
+      {card ? <CardInvoices card={card} /> : null}
 
       <Sheet
         visible={confirmArchive}

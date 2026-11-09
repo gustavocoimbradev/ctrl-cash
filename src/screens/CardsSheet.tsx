@@ -50,7 +50,6 @@ function CardsList({ onEdit }: { onEdit: (card: CreditCard) => void }) {
               <Text style={[type.label, { color: debt > 0 ? c.expense : c.text }]}>{formatMoney(debt)}</Text>
               <Text style={[type.body, { color: c.textMuted }]}>{t('debt')}</Text>
             </View>
-            <Feather name="edit-2" size={16} color={c.textMuted} />
           </Pressable>
         );
       })}
