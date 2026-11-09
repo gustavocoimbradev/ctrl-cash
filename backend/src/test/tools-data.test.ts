@@ -78,13 +78,14 @@ test('the tools are listed with their schemas', async () => {
 test('cards: add, update, archive and restore, amounts in whole units stored in cents', async () => {
   const c = await fresh();
   await c.ok('add_card', { name: 'Visa Gold', limit: 5000.5, dueDay: 12, color: 'Coral' });
-  let card = (await c.data()).cards[0]!;
+  // found by name: two cards made in the same millisecond have no fixed order
+  let card = (await c.data()).cards.find((x) => x.name === 'Visa Gold')!;
   assert.equal(card.name, 'Visa Gold');
   assert.equal(card.limit, 500050);
   assert.equal(card.dueDay, 12);
   assert.equal(card.color, '#E0446A');
   await c.ok('add_card', { name: 'Master', limit: 100, dueDay: 31 });
-  assert.equal((await c.data()).cards[1]!.color, '#8B3FD9');
+  assert.equal((await c.data()).cards.find((x) => x.name === 'Master')!.color, '#8B3FD9');
 
   await c.refused('add_card', { name: 'visa gold', limit: 10, dueDay: 5 }, /already a card/);
   await c.refused('add_card', { name: 'X', limit: 0, dueDay: 5 }, /limit/);
