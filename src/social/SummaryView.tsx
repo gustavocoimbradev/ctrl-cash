@@ -167,9 +167,29 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   const half = horizon / 2;
   const months: Month[] = useMemo(() => {
     const byKey = new Map(summary.months.map((m) => [m.key, m]));
+    const w = (m: Month) => (m.incomeRel === undefined ? (m.spent > 0 || m.saved !== 0 ? 100 : 0) : m.incomeRel);
+    // what is known up to now: a month ahead with nothing planned is projected from it (an average month of the history
+    // available, however short), instead of showing an empty future
+    const known = summary.months.filter((m) => m.key <= current && w(m) > 0);
+    const total = known.reduce((a, m) => a + w(m), 0);
+    let typical: Month | null = null;
+    if (total > 0) {
+      const shares = new Map<string, { label: string; pct: number }>();
+      for (const m of known) for (const x of m.categories) shares.set(x.slug, { label: x.label, pct: (shares.get(x.slug)?.pct ?? 0) + (x.pct * w(m)) / total });
+      typical = {
+        key: '',
+        incomeRel: 100,
+        spent: known.reduce((a, m) => a + m.spent * w(m), 0) / total,
+        saved: known.reduce((a, m) => a + m.saved * w(m), 0) / total,
+        categories: [...shares].map(([slug, v]) => ({ slug, label: v.label, pct: v.pct })).sort((x, y) => y.pct - x.pct),
+      };
+    }
     return Array.from({ length: horizon }, (_, i) => {
       const k = addMonthsToKey(current, i - half);
-      return byKey.get(k) ?? { key: k, spent: 0, saved: 0, incomeRel: 0, categories: [] };
+      const own = byKey.get(k);
+      if (own && w(own) > 0) return own;
+      if (typical && k > current) return { ...typical, key: k };
+      return own ?? { key: k, spent: 0, saved: 0, incomeRel: 0, categories: [] };
     });
   }, [summary, horizon, half, current]);
   const weight = (m: Month) => (m.incomeRel === undefined ? (m.spent > 0 || m.saved !== 0 ? 100 : 0) : m.incomeRel);
