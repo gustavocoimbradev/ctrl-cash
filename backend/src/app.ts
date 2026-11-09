@@ -4,6 +4,8 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import type { Verifier } from './auth.js';
 import { readAll, upsertDocs, withTransaction, type Docs, type Pool } from './db.js';
+import { registerAssistant } from './assistant.js';
+import { registerMcp } from './mcp.js';
 import { registerSettings } from './settings.js';
 import { registerSocial } from './social.js';
 import { COLLECTIONS, validate, type Doc } from './validate.js';
@@ -22,6 +24,8 @@ export interface AppOptions {
   verify: Verifier;
   allowedOrigins?: string[];
   trustProxy?: boolean;
+  /** the public address of the site (PUBLIC_URL), for the OAuth and MCP addresses */
+  publicUrl?: string;
   rateLimitMax?: number;
   logger?: FastifyServerOptions['logger'];
 }
@@ -88,6 +92,8 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
   registerSocial(app, { pool: opts.pool, strictMax: opts.rateLimitMax }, authenticate);
 
   registerSettings(app, opts.pool, authenticate);
+  registerAssistant(app, { pool: opts.pool, publicUrl: opts.publicUrl, strictMax: opts.rateLimitMax }, authenticate);
+  registerMcp(app, opts.pool, opts.publicUrl);
 
   app.route({
     method: 'GET',

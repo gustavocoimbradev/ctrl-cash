@@ -17,6 +17,7 @@ const app = await buildApp({
   verify: config.emulator ? createEmulatorVerifier(config.projectId) : createFirebaseVerifier(config.projectId),
   allowedOrigins: config.allowedOrigins,
   trustProxy: config.trustProxy,
+  publicUrl: config.publicUrl,
   logger: { level: process.env.LOG_LEVEL ?? 'info' },
 });
 if (config.emulator) app.log.warn('FIREBASE_AUTH_EMULATOR=1: tokens are NOT cryptographically verified (development only)');

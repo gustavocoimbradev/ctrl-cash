@@ -44,6 +44,7 @@ services:
       DATABASE_URL: "postgres://ctrlcash:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is empty, run make up:prod to generate it}@postgres:5432/ctrlcash"
       FIREBASE_PROJECT_ID: "${FIREBASE_PROJECT_ID:?FIREBASE_PROJECT_ID is empty, set it in .env.prod}"
       RUN_MIGRATIONS: "1"
+      PUBLIC_URL: "${PUBLIC_URL:-}"
     depends_on:
       postgres:
         condition: service_healthy

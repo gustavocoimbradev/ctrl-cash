@@ -8,6 +8,7 @@ export interface Config {
   emulator: boolean;
   production: boolean;
   trustProxy: boolean;
+  publicUrl?: string;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -32,5 +33,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     emulator,
     production,
     trustProxy: env.TRUST_PROXY === '1',
+    publicUrl: env.PUBLIC_URL || undefined,
   };
 }

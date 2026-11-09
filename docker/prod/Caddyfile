@@ -28,6 +28,11 @@
 		reverse_proxy api:3000
 	}
 
+	# OAuth discovery for the AI assistant connection (the endpoints themselves live under /api)
+	handle /.well-known/oauth-* {
+		reverse_proxy api:3000
+	}
+
 	# Single-page app: any path that is not a file gets the page.
 	handle {
 		try_files {path} /index.html
