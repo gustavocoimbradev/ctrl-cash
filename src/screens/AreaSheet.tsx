@@ -6,7 +6,7 @@ import { Sheet } from '../components/Sheet';
 import { AreaKey, areaSummary } from '../domain/areas';
 import { shortDate } from '../domain/dates';
 import { formatMoney } from '../domain/money';
-import { t } from '../i18n';
+import { getLocale, t } from '../i18n';
 import { useStore } from '../store';
 import { radius, spacing, type, useColors } from '../theme';
 import { Transaction } from '../types';
@@ -20,7 +20,8 @@ const AREAS: Record<AreaKey, { icon: Icon; color: string }> = {
   delivery: { icon: 'package', color: '#F97316' },
 };
 
-const pct = (v: number) => `${Math.round(v * 100)}%`;
+/** A small share keeps a decimal (0.4%), so it never reads as a flat 0%. */
+const pct = (v: number) => `${(v * 100).toLocaleString(getLocale(), { maximumFractionDigits: v < 0.1 ? 1 : 0 })}%`;
 
 /** What to say when there is nothing in the area yet (not an insight: those live in the score dialog). */
 const emptyText = (area: AreaKey) =>
