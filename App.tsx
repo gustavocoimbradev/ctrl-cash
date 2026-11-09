@@ -10,6 +10,8 @@ import { CategoriesSheet } from './src/screens/CategoriesSheet';
 import { ShoppingSheet } from './src/screens/ShoppingSheet';
 import { AreaSheet } from './src/screens/AreaSheet';
 import { WishlistSheet } from './src/screens/WishlistSheet';
+import { ConnectPage, ConnectParams } from './src/screens/ConnectPage';
+import { AssistantProvider } from './src/assistant/AssistantProvider';
 import { DebtsSheet } from './src/screens/DebtsSheet';
 import type { AreaKey } from './src/domain/areas';
 import { Dashboard } from './src/screens/Dashboard';
@@ -32,11 +34,16 @@ import { t, usePrefsVersion } from './src/i18n';
 import { Transaction } from './src/types';
 import { desktopBreakpoint, maxContentWidth, minTouch, radius, spacing, type, useColors } from './src/theme';
 
-type Page = { name: 'dashboard' } | { name: 'profile'; id: string | 'me' };
+type Page = { name: 'dashboard' } | { name: 'profile'; id: string | 'me' } | { name: 'connect'; params: ConnectParams };
 
 /** The page the address asks for: `/` is the dashboard, `/profile/<code>` somebody's profile and `/profile` your own. */
 function pageFromUrl(): Page {
   if (Platform.OS !== 'web') return { name: 'dashboard' };
+  // an AI assistant asked to connect: the consent page, with what the assistant sent in the address
+  if (window.location.pathname === '/connect') {
+    const q = new URLSearchParams(window.location.search);
+    return { name: 'connect', params: { client_id: q.get('client_id') ?? undefined, redirect_uri: q.get('redirect_uri') ?? undefined, state: q.get('state') ?? undefined, code_challenge: q.get('code_challenge') ?? undefined } };
+  }
   const m = /^\/profile(?:\/([^/]+))?\/?$/.exec(window.location.pathname);
   if (!m) return { name: 'dashboard' };
   if (!m[1]) return { name: 'profile', id: 'me' };
@@ -90,6 +97,8 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   // the address follows the page (a profile is /profile/<its code>) and the browser's Back and Forward follow the address
   useEffect(() => {
     if (Platform.OS !== 'web') return;
+    // the consent page keeps its address (and what is in it) until the person decides
+    if (page.name === 'connect') return;
     const target = page.name === 'dashboard' ? '/' : page.id === 'me' ? (myId ? `/profile/${myId}` : '/profile') : `/profile/${page.id}`;
     if (window.location.pathname !== target) {
       // the first sync and the "me" shortcut replace the entry, so Back does not land on an address that redirects
@@ -212,6 +221,9 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
               <Skeleton height={300} />
               <Skeleton height={220} />
             </View>
+          ) : null}
+          {ready && page.name === 'connect' ? (
+            <ConnectPage params={page.params} onBack={() => { if (Platform.OS === 'web') window.history.replaceState(null, '', '/'); setPage({ name: 'dashboard' }); }} />
           ) : null}
           {ready && page.name === 'profile' ? (
             <ProfilePage id={page.id} email={email} onEditAccount={() => setAccountOpen(true)} onOpen={(h) => setPage({ name: 'profile', id: h })} />
@@ -367,11 +379,13 @@ export default function App() {
   return (
     <StoreProvider uid={state.uid}>
       <PrefsProvider>
-        <HelpProvider>
-          <SocialProvider account={{ email: state.email, name: state.name }}>
-            <Shell uid={state.uid} email={state.email} onSignOut={signOut} />
-          </SocialProvider>
-        </HelpProvider>
+        <AssistantProvider>
+          <HelpProvider>
+            <SocialProvider account={{ email: state.email, name: state.name }}>
+              <Shell uid={state.uid} email={state.email} onSignOut={signOut} />
+            </SocialProvider>
+          </HelpProvider>
+        </AssistantProvider>
       </PrefsProvider>
     </StoreProvider>
   );
