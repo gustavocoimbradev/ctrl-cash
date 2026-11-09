@@ -6,8 +6,8 @@ import { currentHealth } from './health';
 import { buildOccurrences, monthOccurrences } from './transactions';
 
 /** The summary covers this many months back and ahead of now (the current month is the first of the "ahead"), so a viewer can pick 6, 12 or 24 months around today. */
-export const SUMMARY_BACK = 12;
-export const SUMMARY_AHEAD = 12;
+export const SUMMARY_BACK = 59;
+export const SUMMARY_AHEAD = 1;
 const MAX_CATEGORIES = 40;
 
 /** the owner's own classification of a category, shared with it */

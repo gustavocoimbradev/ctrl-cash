@@ -140,7 +140,7 @@ export function parseSummary(input: unknown): Summary {
   const generatedAt = int(d.generatedAt, 'generatedAt', 0, 100_000_000_000_000);
   const spent = pct(d.spent, 'spent', 0, 1000);
   const saved = pct(d.saved, 'saved', -1000, 100);
-  if (!Array.isArray(d.months) || d.months.length > 24) fail('"months" must be a list of at most 24 items');
+  if (!Array.isArray(d.months) || d.months.length > 72) fail('"months" must be a list of at most 72 items');
   const seen = new Set<string>();
   const months = (d.months as unknown[]).map((raw, i) => {
     const m = obj(raw, `months[${i}]`);

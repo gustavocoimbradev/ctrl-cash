@@ -13,7 +13,7 @@ import type { Tone } from '../types';
 import { TONE_COLORS, categoryColor, defaultTone, sharedCategoryLabel, toneLabel } from '../domain/categories';
 import { t, usePrefsVersion } from '../i18n';
 
-const HORIZONS = ['month', 6, 12, 24] as const;
+const HORIZONS = ['month', 6, 12, 24, 'all'] as const;
 type Horizon = (typeof HORIZONS)[number];
 /** category colors: the app's palette without the brand blue, which means "saved" */
 const PALETTE = ['#E0446A', '#D9831F', '#8B5CF6', '#0EA5E9', '#1FA86A', '#F28BA3', '#B98A5E'];
@@ -183,7 +183,13 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
   // the months of the range, ending in this one: what actually happened, never a projection. A month the summary does not have is an empty one
   const current = currentMonthKey();
   // "this month" narrows the percentages to the current month; the line chart then shows its days (and keeps a 6 month window as a fallback)
-  const span = horizon === 'month' ? 6 : horizon;
+  // the first month with anything in it: "since the start" begins there (never earlier, never fewer than three months)
+  const firstDataKey = useMemo(() => {
+    if (real) return Object.keys(real.months).sort().find((k) => (real.months[k]!.income || real.months[k]!.expense) > 0);
+    return [...summary.months].sort((a, b) => a.key.localeCompare(b.key)).find((m) => m.spent > 0 || m.saved !== 0 || (m.incomeRel ?? 0) > 0)?.key;
+  }, [real, summary]);
+  const sinceStart = firstDataKey ? (Number(current.slice(0, 4)) * 12 + Number(current.slice(5, 7))) - (Number(firstDataKey.slice(0, 4)) * 12 + Number(firstDataKey.slice(5, 7))) + 1 : 3;
+  const span = horizon === 'month' ? 6 : horizon === 'all' ? Math.max(3, sinceStart) : horizon;
   const months: Month[] = useMemo(() => {
     const byKey = new Map(summary.months.map((m) => [m.key, m]));
     return Array.from({ length: span }, (_, i) => {
@@ -205,13 +211,8 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
   }, [months, horizon, current, lang]);
 
   const shownSpent = useTween(spentOfIncome, motion.slow);
-  const hasData = months.some((m) => weight(m) > 0);
-  // the line chart starts where the history starts: months before the first one with income are left out (never past today)
-  const firstWithData = months.findIndex((m) => weight(m) > 0);
-  // ... but never fewer than three months, so a single month of history still draws a line, with the data at the end
-  const start = firstWithData > 0 ? Math.max(0, Math.min(firstWithData, span - 3)) : 0;
-  const chartMonths = months.slice(start);
-  if (!hasData) return <Text style={[type.body, { color: c.textMuted }]}>{t('Nothing to show yet: add some income and expenses.')}</Text>;
+  // the chart is always drawn, with the whole range selected (empty months included); only the pie says when there is nothing to show
+  const chartMonths = months;
 
   // my own profile: the amounts spent in the range (this month, or the months of the range), biggest first
   const rangeKeys = horizon === 'month' ? [current] : months.map((m) => m.key);
@@ -249,13 +250,14 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
 
   // "this month": the days of the month, 1 to the last, with what came in and went out so far (percent of that month's income)
   const days = summary.days && summary.days.month === current ? summary.days : undefined;
-  const dayMode = horizon === 'month' && !!days;
+  const dayMode = horizon === 'month';
   // only up to today: what is still to come is not drawn
   const todayIndex = Number(todayISO().slice(8, 10)) - 1;
-  const dayIncome = days ? days.income.slice(0, todayIndex + 1) : [];
-  const daySpent = days ? days.spent.slice(0, todayIndex + 1) : [];
+  const zeros = Array.from({ length: todayIndex + 1 }, () => 0);
+  const dayIncome = days ? days.income.slice(0, todayIndex + 1) : zeros;
+  const daySpent = days ? days.spent.slice(0, todayIndex + 1) : zeros;
   // my own chart in real money: the days so far (kept to the days the summary draws)
-  const realDays = { income: real ? real.days.income.slice(0, dayIncome.length) : [], spent: real ? real.days.spent.slice(0, dayIncome.length) : [] };
+  const realDays = { income: real ? real.days.income.slice(0, dayIncome.length) : zeros, spent: real ? real.days.spent.slice(0, dayIncome.length) : zeros };
   // "Day 1", "Day 2"...: long enough to lie on a diagonal, with every Nth shown when the days are tight
   const dayLabels = dayIncome.map((_, i) => t('Day {day}', { day: i + 1 }));
   const dayTips = dayIncome.map((_, i) => formatDate(`${current}-${pad(i + 1)}`));
@@ -406,7 +408,7 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
     <View style={{ gap: spacing.lg }}>
       <View style={s.head}>
         <Text style={[type.label, { color: c.text, flexShrink: 1 }]}>{rangeTitle}</Text>
-        <PillToggle stretch={!wide} value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: h === 'month' ? t('This month') : wide ? t('{n} months', { n: h }) : t('{n} mo.', { n: h }) }))} />
+        <PillToggle stretch={!wide} value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: h === 'month' ? t('This month') : h === 'all' ? (wide ? t('Since the start') : t('All')) : wide ? t('{n} months', { n: h }) : t('{n} mo.', { n: h }) }))} />
       </View>
       <View style={{ gap: spacing.xl }}>
         {chart}

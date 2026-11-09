@@ -3,6 +3,8 @@ import type { Dict } from '../index';
 /** Quick setup, account settings, the language/currency fields and the app shell. */
 export const dict: Dict = {
   pt: {
+    "Since the start": "Desde o início",
+    "All": "Tudo",
     "Received": "Recebido",
     "Shows up as soon as their app publishes it.": "Aparece assim que o app da pessoa publicar.",
     "Search by name or code": "Buscar por nome ou código",
@@ -272,6 +274,8 @@ export const dict: Dict = {
     "Cloud storage": "Armazenamento na nuvem",
   },
   es: {
+    "Since the start": "Desde el inicio",
+    "All": "Todo",
     "Received": "Recibido",
     "Shows up as soon as their app publishes it.": "Aparece en cuanto su app lo publique.",
     "Search by name or code": "Buscar por nombre o código",
@@ -541,6 +545,8 @@ export const dict: Dict = {
     "Cloud storage": "Almacenamiento en la nube",
   },
   de: {
+    "Since the start": "Seit Beginn",
+    "All": "Alles",
     "Received": "Erhalten",
     "Shows up as soon as their app publishes it.": "Erscheint, sobald ihre App es veröffentlicht.",
     "Search by name or code": "Nach Name oder Code suchen",
@@ -810,6 +816,8 @@ export const dict: Dict = {
     "Cloud storage": "Cloud-Speicher",
   },
   fr: {
+    "Since the start": "Depuis le début",
+    "All": "Tout",
     "Received": "Reçu",
     "Shows up as soon as their app publishes it.": "Apparaît dès que son appli le publie.",
     "Search by name or code": "Rechercher par nom ou code",
@@ -1079,6 +1087,8 @@ export const dict: Dict = {
     "Cloud storage": "Stockage cloud",
   },
   it: {
+    "Since the start": "Dall'inizio",
+    "All": "Tutto",
     "Received": "Ricevuto",
     "Shows up as soon as their app publishes it.": "Compare appena la sua app lo pubblica.",
     "Search by name or code": "Cerca per nome o codice",
