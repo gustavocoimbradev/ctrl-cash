@@ -3,7 +3,7 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import { Sheet } from '../components/Sheet';
-import { AreaKey, AreaSummary, areaSummary } from '../domain/areas';
+import { AreaKey, areaSummary } from '../domain/areas';
 import { shortDate } from '../domain/dates';
 import { formatMoney } from '../domain/money';
 import { t } from '../i18n';
@@ -20,42 +20,19 @@ const AREAS: Record<AreaKey, { icon: Icon; color: string }> = {
   delivery: { icon: 'package', color: '#F97316' },
 };
 
-interface Insight {
-  icon: Icon;
-  tone: 'good' | 'bad' | 'neutral';
-  text: string;
-}
-
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
-/** What the area says about the person's own numbers, in plain words. */
-function insightsOf(area: AreaKey, s: AreaSummary): Insight[] {
-  const out: Insight[] = [];
-  const say = (tone: Insight['tone'], icon: Icon, text: string) => out.push({ tone, icon, text });
-  const money = formatMoney;
-  if (area === 'subscriptions') {
-    if (s.items.length === 0) return [{ tone: 'neutral', icon: 'info', text: t('No subscriptions yet. Add the ones you pay every month to see what they cost you.') }];
-    say('neutral', 'repeat', t('You pay {amount} a month in subscriptions: {year} a year.', { amount: money(s.monthly), year: money(s.yearly) }));
-    if (s.share > 0) say(s.share >= 0.1 ? 'bad' : 'good', 'percent', s.share >= 0.1 ? t('That is {share} of your income, a lot for things you can cancel.', { share: pct(s.share) }) : t('That is {share} of your income.', { share: pct(s.share) }));
-    if (s.biggest && s.items.length > 1) say('neutral', 'arrow-up-right', t('{name} is the biggest one: {amount} a month.', { name: s.biggest.description, amount: money(s.biggest.amount) }));
-  } else if (area === 'bills') {
-    if (s.items.length === 0) return [{ tone: 'neutral', icon: 'info', text: t('No bills yet. Add rent, electricity, water, internet... to keep them all in one place.') }];
-    // the totals sit in the tiles above: no sentences repeating them
-  } else {
-    if (s.items.length === 0) return [{ tone: 'good', icon: 'home', text: t('No delivery in the last 3 months. Cooking at home is the best choice for your wallet and your score.') }];
-    say('bad', 'package', t('You spend {amount} a month on delivery: {year} a year.', { amount: money(s.monthly), year: money(s.yearly) }));
-    say('neutral', 'hash', t('Delivery orders in the last 3 months: {orders}.', { orders: s.orders }));
-    say('neutral', 'tag', t('Each order costs {amount} on average.', { amount: money(Math.round((s.monthly * 3) / Math.max(s.orders, 1))) }));
-    if (s.share > 0) say(s.share >= 0.08 ? 'bad' : 'neutral', 'percent', t('That is {share} of your income.', { share: pct(s.share) }));
-    say('good', 'home', t('Cooking at home would keep about {amount} a month in your pocket.', { amount: money(Math.round((s.monthly * 2) / 3)) }));
-    say('bad', 'heart', t('Delivery weighs heavily against your financial health score.'));
-  }
-  return out;
-}
+/** What to say when there is nothing in the area yet (not an insight: those live in the score dialog). */
+const emptyText = (area: AreaKey) =>
+  area === 'subscriptions'
+    ? t('No subscriptions yet. Add the ones you pay every month to see what they cost you.')
+    : area === 'bills'
+      ? t('No bills yet. Add rent, electricity, water, internet... to keep them all in one place.')
+      : t('No delivery in the last 3 months. Cooking at home is the best choice for your wallet and your score.');
 
 /**
- * A focused view of one kind of spending (subscriptions, utility bills or delivery): what it costs, what it says about the
- * person's own numbers and the items themselves, with a way to add more. Everything here is also in the generic list.
+ * A focused view of one kind of spending (subscriptions, utility bills or delivery): what it costs and the items themselves,
+ * with a way to add more. Insights about it are not here: they live in the dialog about what affects the score. Everything here is also in the generic list.
  */
 export function AreaSheet({ area, visible, onClose, onAdd, onEdit }: { area: AreaKey; visible: boolean; onClose: () => void; onAdd: (preset: FormPreset) => void; onEdit: (tx: Transaction, month?: string) => void }) {
   const c = useColors();
@@ -89,14 +66,7 @@ export function AreaSheet({ area, visible, onClose, onAdd, onEdit }: { area: Are
             ))}
           </View>
 
-          <View style={{ gap: spacing.sm }}>
-            {insightsOf(area, s).map((i, k) => (
-              <View key={k} style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' }}>
-                <Feather name={i.icon} size={20} color={i.tone === 'bad' ? c.expense : i.tone === 'good' ? c.income : c.textMuted} style={{ marginTop: 2 }} />
-                <Text style={[type.body, { color: c.text, flex: 1 }]}>{i.text}</Text>
-              </View>
-            ))}
-          </View>
+          {s.items.length === 0 ? <Text style={[type.body, { color: c.textMuted }]}>{emptyText(area)}</Text> : null}
 
           {s.items.length > 0 ? (
             <View style={{ gap: spacing.xs }}>
