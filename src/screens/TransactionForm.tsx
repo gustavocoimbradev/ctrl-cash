@@ -28,6 +28,8 @@ export interface FormPreset {
   description?: string;
   category?: string;
   confirmed?: boolean;
+  /** start as a fixed (monthly) transaction */
+  fixed?: boolean;
   /** called once the new transaction is saved */
   onSaved?: () => void;
 }
@@ -95,7 +97,7 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
     setDay(eff?.day ?? 1);
     setScopeOpen(false);
     setDate(transaction?.date ?? todayISO());
-    setMode(transaction ? (transaction.fixed ? 'fixed' : transaction.installment ? 'installments' : 'single') : 'single');
+    setMode(transaction ? (transaction.fixed ? 'fixed' : transaction.installment ? 'installments' : 'single') : preset?.fixed ? 'fixed' : 'single');
     setInstallments(2);
     setConfirmed(transaction?.confirmed ?? preset?.confirmed ?? true);
     setTried(false);

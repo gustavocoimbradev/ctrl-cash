@@ -8,6 +8,8 @@ import { LoginScreen, Splash } from './src/screens/AuthScreens';
 import { CardsSheet } from './src/screens/CardsSheet';
 import { CategoriesSheet } from './src/screens/CategoriesSheet';
 import { ShoppingSheet } from './src/screens/ShoppingSheet';
+import { AreaSheet } from './src/screens/AreaSheet';
+import type { AreaKey } from './src/domain/areas';
 import { Dashboard } from './src/screens/Dashboard';
 import { AccountSheet } from './src/screens/AccountSheet';
 import { Onboarding, markOnboardingSeen, onboardingSeen, resetOnboardingSeen } from './src/screens/Onboarding';
@@ -49,6 +51,9 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   const [tab, setTab] = useState<MobileTab>('summary');
   const [cardsOpen, setCardsOpen] = useState(false);
   const [shoppingOpen, setShoppingOpen] = useState(false);
+  const [area, setArea] = useState<AreaKey | null>(null);
+  const lastArea = useRef<AreaKey>('subscriptions');
+  if (area) lastArea.current = area;
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | undefined>();
@@ -70,6 +75,9 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
   /** the places beside Cards and Categories, in the phone menu and in the strip above the projection */
   const places = [
     { key: 'shopping', icon: 'shopping-cart' as const, label: t('Shopping lists'), onPress: () => setShoppingOpen(true) },
+    { key: 'subscriptions', icon: 'repeat' as const, label: t('Subscriptions'), onPress: () => setArea('subscriptions') },
+    { key: 'bills', icon: 'file-text' as const, label: t('Utility bills'), onPress: () => setArea('bills') },
+    { key: 'delivery', icon: 'package' as const, label: t('Delivery'), onPress: () => setArea('delivery') },
   ];
 
   // the address follows the page (a profile is /profile/<its code>) and the browser's Back and Forward follow the address
@@ -259,6 +267,22 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
       />
       <CardsSheet visible={cardsOpen} onClose={() => setCardsOpen(false)} />
       <CategoriesSheet visible={categoriesOpen} onClose={() => setCategoriesOpen(false)} />
+      <AreaSheet
+        area={lastArea.current}
+        visible={area !== null}
+        onClose={() => setArea(null)}
+        onAdd={(p) => {
+          setEditing(undefined);
+          setPreset(p);
+          setFormOpen(true);
+        }}
+        onEdit={(tx, m) => {
+          setPreset(undefined);
+          setEditing(tx);
+          setEditingMonth(m);
+          setFormOpen(true);
+        }}
+      />
       <ShoppingSheet
         visible={shoppingOpen}
         onClose={() => setShoppingOpen(false)}

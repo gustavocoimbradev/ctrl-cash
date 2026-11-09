@@ -2,6 +2,7 @@ import type { Dict } from '../index';
 
 export const dict: Dict = {
   pt: {
+    'Delivery': 'Delivery',
     'Unknown': 'Desconhecido',
     'Direct payment': 'Pagamento à vista',
     'Credit cards': 'Cartão de crédito',
@@ -141,6 +142,7 @@ export const dict: Dict = {
     '{name} (archived)': '{name} (arquivado)',
   },
   es: {
+    'Delivery': 'Delivery',
     'Unknown': 'Desconocido',
     'Direct payment': 'Pago al contado',
     'Credit cards': 'Tarjeta de crédito',
@@ -280,6 +282,7 @@ export const dict: Dict = {
     '{name} (archived)': '{name} (archivado)',
   },
   de: {
+    'Delivery': 'Lieferdienst',
     'Unknown': 'Unbekannt',
     'Direct payment': 'Barzahlung',
     'Credit cards': 'Kreditkarte',
@@ -419,6 +422,7 @@ export const dict: Dict = {
     '{name} (archived)': '{name} (archiviert)',
   },
   fr: {
+    'Delivery': 'Livraison',
     'Unknown': 'Inconnu',
     'Direct payment': 'Paiement comptant',
     'Credit cards': 'Carte de crédit',
@@ -558,6 +562,7 @@ export const dict: Dict = {
     '{name} (archived)': '{name} (archivé)',
   },
   it: {
+    'Delivery': 'Consegna a domicilio',
     'Unknown': 'Sconosciuto',
     'Direct payment': 'Pagamento in contanti',
     'Credit cards': 'Carta di credito',

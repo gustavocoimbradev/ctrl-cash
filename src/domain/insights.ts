@@ -137,6 +137,31 @@ export function buildScoreFactors(i: InsightInput): ScoreFactor[] {
     }
   }
 
+  // the areas we keep an eye on, by their share of what was spent in the last 3 months
+  if (total > 0) {
+    const shareOf = (slug: string) => i.spends.filter((s) => s.category === slug).reduce((a, s) => a + s.amount, 0) / total;
+    const delivery = shareOf('delivery');
+    if (delivery >= 0.08) {
+      neg({
+        id: 'delivery',
+        icon: 'package',
+        impact: delivery >= 0.15 ? 'high' : 'medium',
+        title: t('You order delivery a lot'),
+        text: t('Delivery is {share}% of what you spent in the last 3 months. Cooking at home usually costs about a third of it.', { share: Math.round(delivery * 100) }),
+      });
+    } else if (delivery < 0.03) {
+      pos({ id: 'no-delivery', icon: 'home', impact: 'low', title: t('You rarely order delivery'), text: t('Eating at home keeps your spending light and your score higher.') });
+    }
+    const subscriptions = shareOf('subscriptions');
+    if (subscriptions >= 0.1) {
+      neg({ id: 'subscriptions', icon: 'repeat', impact: subscriptions >= 0.2 ? 'medium' : 'low', title: t('Subscriptions weigh on your budget'), text: t('Subscriptions are {share}% of what you spent in the last 3 months. Cancel the ones you barely use.', { share: Math.round(subscriptions * 100) }) });
+    }
+    const bills = shareOf('bills');
+    if (bills >= 0.4) {
+      neg({ id: 'bills', icon: 'file-text', impact: 'low', title: t('Your utility bills take a big part of your spending'), text: t('Bills are {share}% of what you spent in the last 3 months. Check which ones can come down.', { share: Math.round(bills * 100) }) });
+    }
+  }
+
   // card limit use
   if (i.cardLimit > 0 && i.cardUsed / i.cardLimit > 0.5) {
     neg({ id: 'limit', icon: 'percent', impact: 'low', title: t('You use a big part of your card limit'), text: t('{share}% of your total limit is in use.', { share: Math.round((i.cardUsed / i.cardLimit) * 100) }) });

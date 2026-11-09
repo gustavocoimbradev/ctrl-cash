@@ -40,6 +40,7 @@ const EXPENSE: Base[] = [
   { slug: 'pets', label: 'Pets', weight: 0.45 },
   { slug: 'personal_care', label: 'Personal care', weight: 0.5 },
   { slug: 'subscriptions', label: 'Subscriptions', weight: 0.55 },
+  { slug: 'delivery', label: 'Delivery', weight: 0.8 },
   { slug: 'debts', label: 'Debts', weight: 0.6 },
   { slug: 'gifts', label: 'Gifts', weight: 0.7 },
   { slug: 'leisure', label: 'Leisure', weight: 1 },
@@ -90,6 +91,7 @@ function tBuiltin(label: string): string {
     case 'Pets': return t('Pets');
     case 'Personal care': return t('Personal care');
     case 'Subscriptions': return t('Subscriptions');
+    case 'Delivery': return t('Delivery');
     case 'Debts': return t('Debts');
     case 'Gifts': return t('Gifts');
     case 'Leisure': return t('Leisure');
@@ -175,6 +177,7 @@ const TONES: Record<string, Tone> = {
   pets: 'comfort',
   personal_care: 'comfort',
   subscriptions: 'luxury',
+  delivery: 'unhealthy',
   gifts: 'luxury',
   leisure: 'luxury',
   debts: 'unhealthy',
@@ -224,6 +227,7 @@ const SLUG_COLORS: Record<string, string> = {
   pets: '#B98A5E',
   personal_care: '#F0B429',
   subscriptions: '#C25BD6',
+  delivery: '#F97316',
   gifts: '#F28BA3',
   leisure: '#8B5CF6',
   debts: '#DC2626',
