@@ -6,12 +6,13 @@ import { AnimatedBar } from '../components/Motion';
 import { Sheet } from '../components/Sheet';
 import { buildSummary } from '../domain/summary';
 import { useStore } from '../store';
-import { desktopBreakpoint, maxContentWidth, spacing, type, useColors } from '../theme';
+import { desktopBreakpoint, maxContentWidth, radius, spacing, type, useColors } from '../theme';
 import { Person, PersonDetail, SHARE_REQUEST, Summary, socialApi } from './api';
 import { CodeInput, FoundPerson, useCodeLookup } from './code';
 import { ProfileForm } from './ProfileForm';
 import { useSocial } from './SocialProvider';
 import { SummaryView } from './SummaryView';
+import { fakeSummary } from './fakeSummary';
 import { Avatar, Empty, Pill, PersonRow } from './parts';
 import { t } from '../i18n';
 
@@ -62,6 +63,24 @@ function CodeChip({ code }: { code: string }) {
   );
 }
 
+/**
+ * Drawn but unreadable: what a person who has not shared would show, made of invented numbers (never theirs). It cannot be
+ * reached by the keyboard or read by a screen reader, and on the web it is blurred.
+ */
+function Blurred({ children, style }: { children: React.ReactNode; style?: object }) {
+  return (
+    <View
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      {...(Platform.OS === 'web' ? ({ 'aria-hidden': true, inert: '' } as object) : {})}
+      style={[Platform.OS === 'web' ? ({ filter: 'blur(9px)', userSelect: 'none' } as object) : { opacity: 0.35 }, style]}
+    >
+      {children}
+    </View>
+  );
+}
+
 /** The financial health score as the header shows it: the number big, and how good it is under it. */
 type Score = NonNullable<Summary['health']>;
 const scoreColors = (score: number, c: ReturnType<typeof useColors>) => (score < 250 ? c.expense : score < 500 ? c.warning : c.primary);
@@ -105,20 +124,8 @@ function ScoreBadge({ health, wide }: { health: Score; wide: boolean }) {
   );
 }
 
-/** Where the score will be, while the person's app has not published it yet (it does so the next time it is open). */
-function PendingScore({ wide }: { wide: boolean }) {
-  const c = useColors();
-  return (
-    <View style={[s.score, { alignItems: 'center', gap: spacing.xs }, wide && { paddingLeft: spacing.xl, borderLeftWidth: 1, borderLeftColor: c.border, maxWidth: 260 }]}>
-      <Text style={[type.body, { color: c.textMuted }]}>{t('Financial health')}</Text>
-      <Text style={[type.hero, { color: c.textMuted, fontSize: 40, lineHeight: 46 }]}>--</Text>
-      <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>{t('Shows up as soon as their app publishes it.')}</Text>
-    </View>
-  );
-}
-
 /** The top card of a profile: who it is, the code, the numbers and, under them, the actions; the score sits on the right. */
-function Header({ name, code, color, photo, counters, actions, health, scorePending }: { name: string; code: string; color: string | null; photo?: string | null; counters?: { n: number; label: string; onPress: () => void }[]; actions?: React.ReactNode; health?: Score; /** the data is shared but has no score yet (their app has not published it) */ scorePending?: boolean }) {
+function Header({ name, code, color, photo, counters, actions, health, scoreBlurred }: { name: string; code: string; color: string | null; photo?: string | null; counters?: { n: number; label: string; onPress: () => void }[]; actions?: React.ReactNode; health?: Score; /** made-up score, drawn blurred (nothing shared yet) */ scoreBlurred?: boolean }) {
   const c = useColors();
   const { width } = useWindowDimensions();
   const wide = width >= desktopBreakpoint;
@@ -135,12 +142,10 @@ function Header({ name, code, color, photo, counters, actions, health, scorePend
             {counters.map((x) => <Count key={x.label} n={x.n} label={x.label} onPress={x.onPress} />)}
           </View>
         ) : null}
-        {!wide && health ? <ScoreBadge health={health} wide={false} /> : null}
-        {!wide && !health && scorePending ? <PendingScore wide={false} /> : null}
+        {!wide && health ? (scoreBlurred ? <Blurred><ScoreBadge health={health} wide={false} /></Blurred> : <ScoreBadge health={health} wide={false} />) : null}
         {actions ? <View style={[s.actions, !wide && { alignSelf: 'stretch' }]}>{actions}</View> : null}
       </View>
-      {wide && health ? <ScoreBadge health={health} wide /> : null}
-      {wide && !health && scorePending ? <PendingScore wide /> : null}
+      {wide && health ? (scoreBlurred ? <Blurred><ScoreBadge health={health} wide /></Blurred> : <ScoreBadge health={health} wide />) : null}
     </Card>
   );
 }
@@ -303,8 +308,8 @@ function OtherProfile({ code }: { code: string }) {
         code={person.code}
         color={person.color}
         photo={person.photo}
-        health={summary?.summary?.health}
-        scorePending={!!person.summaryAccess}
+        health={summary?.summary?.health ?? fakeSummary().health}
+        scoreBlurred={!summary?.summary?.health}
         actions={
           <>
             <Pill label={t('Message')} icon="heart" primary grow={narrow} onPress={() => openChat(code)} />
@@ -318,34 +323,42 @@ function OtherProfile({ code }: { code: string }) {
           <SummaryView summary={summary.summary} updatedAt={summary.updatedAt} />
         </Card>
       ) : (
-        <Card>
-          <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>
-            {person.summaryAccess ? t('{name} shared the summary, but it has not been published yet.', { name: first }) : t('{name} has not shared a summary with you.', { name: first })}
-          </Text>
-          {!person.summaryAccess ? (
-            <View style={{ alignItems: 'center', gap: spacing.sm }}>
-              {requested === 'sent' ? (
-                <Text style={[type.body, { color: c.income, textAlign: 'center' }]}>{t('Request sent. {name} will see a button to share.', { name: first })}</Text>
-              ) : (
-                <Pill
-                  label={t('Request data sharing')}
-                  icon="send"
-                  primary
-                  disabled={requested === 'sending'}
-                  onPress={async () => {
-                    setRequested('sending');
-                    try {
-                      await socialApi.send(code, SHARE_REQUEST);
-                      setRequested('sent');
-                    } catch {
-                      setRequested('failed');
-                    }
-                  }}
-                />
-              )}
+        // nothing real to show: the page is drawn whole with invented numbers, blurred, with the way to ask for the real ones on top
+        <Card style={{ overflow: 'hidden' }}>
+          <Text style={[type.title, { color: c.text }]}>{t("{name}'s summary", { name: first })}</Text>
+          <Blurred>
+            <SummaryView summary={fakeSummary()} />
+          </Blurred>
+          <View style={s.veil}>
+            <View style={[s.veilCard, { backgroundColor: c.card, borderColor: c.border }]}>
+              <Feather name="lock" size={24} color={c.textMuted} />
+              <Text style={[type.body, { color: c.text, textAlign: 'center' }]}>
+                {person.summaryAccess ? t('{name} shared the summary, but it has not been published yet.', { name: first }) : t('{name} has not shared a summary with you.', { name: first })}
+              </Text>
+              {!person.summaryAccess ? (
+                requested === 'sent' ? (
+                  <Text style={[type.body, { color: c.income, textAlign: 'center' }]}>{t('Request sent. {name} will see a button to share.', { name: first })}</Text>
+                ) : (
+                  <Pill
+                    label={t('Request data sharing')}
+                    icon="send"
+                    primary
+                    disabled={requested === 'sending'}
+                    onPress={async () => {
+                      setRequested('sending');
+                      try {
+                        await socialApi.send(code, SHARE_REQUEST);
+                        setRequested('sent');
+                      } catch {
+                        setRequested('failed');
+                      }
+                    }}
+                  />
+                )
+              ) : null}
               {requested === 'failed' ? <Text style={[type.body, { color: c.expense, textAlign: 'center' }]}>{t('The request was not sent. Try again.')}</Text> : null}
             </View>
-          ) : null}
+          </View>
         </Card>
       )}
     </View>
@@ -371,5 +384,8 @@ const s = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   nameRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: spacing.md },
   score: { minWidth: 150 },
+  /** over the blurred page: the message and the button, in the middle */
+  veil: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
+  veilCard: { maxWidth: 380, borderRadius: radius.card, borderWidth: 1, padding: spacing.xl, gap: spacing.md, alignItems: 'center' },
   chip: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
 });
