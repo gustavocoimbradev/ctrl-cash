@@ -4,7 +4,6 @@ export const dict: Dict = {
   pt: {
     'Direct payment': 'Pagamento à vista',
     'Credit cards': 'Cartões de crédito',
-    'Credit card: {name}': 'Cartão de crédito: {name}',
     '"{description}" will be archived.': '"{description}" será arquivada.',
     '"{name}" stops being offered for new transactions. Everything already recorded keeps it, and you can restore it any time.': '"{name}" deixa de ser oferecida em novas transações. Tudo o que já foi registrado continua com ela, e você pode restaurá-la quando quiser.',
     'A card is debt, not extra income. Add your cards to track what you owe and pay off the invoices.': 'Cartão é dívida, não renda extra. Adicione seus cartões para acompanhar o que você deve e quitar as faturas.',
@@ -143,7 +142,6 @@ export const dict: Dict = {
   es: {
     'Direct payment': 'Pago al contado',
     'Credit cards': 'Tarjetas de crédito',
-    'Credit card: {name}': 'Tarjeta de crédito: {name}',
     '"{description}" will be archived.': '"{description}" se archivará.',
     '"{name}" stops being offered for new transactions. Everything already recorded keeps it, and you can restore it any time.': '"{name}" dejará de ofrecerse en nuevas transacciones. Todo lo ya registrado la conserva y puedes restaurarla cuando quieras.',
     'A card is debt, not extra income. Add your cards to track what you owe and pay off the invoices.': 'La tarjeta es deuda, no un ingreso extra. Añade tus tarjetas para controlar lo que debes y pagar los resúmenes.',
@@ -282,7 +280,6 @@ export const dict: Dict = {
   de: {
     'Direct payment': 'Barzahlung',
     'Credit cards': 'Kreditkarten',
-    'Credit card: {name}': 'Kreditkarte: {name}',
     '"{description}" will be archived.': '„{description}“ wird archiviert.',
     '"{name}" stops being offered for new transactions. Everything already recorded keeps it, and you can restore it any time.': '„{name}“ wird für neue Transaktionen nicht mehr angeboten. Alles bereits Erfasste behält sie, und du kannst sie jederzeit wiederherstellen.',
     'A card is debt, not extra income. Add your cards to track what you owe and pay off the invoices.': 'Eine Karte ist Schuld, kein Zusatzeinkommen. Füge deine Karten hinzu, um zu sehen, was du schuldest, und die Abrechnungen zu begleichen.',
@@ -421,7 +418,6 @@ export const dict: Dict = {
   fr: {
     'Direct payment': 'Paiement comptant',
     'Credit cards': 'Cartes de crédit',
-    'Credit card: {name}': 'Carte de crédit : {name}',
     '"{description}" will be archived.': '« {description} » sera archivé.',
     '"{name}" stops being offered for new transactions. Everything already recorded keeps it, and you can restore it any time.': '« {name} » n\'est plus proposée pour les nouvelles transactions. Tout ce qui est déjà enregistré la conserve, et vous pouvez la restaurer à tout moment.',
     'A card is debt, not extra income. Add your cards to track what you owe and pay off the invoices.': 'La carte, c\'est de la dette, pas un revenu en plus. Ajoutez vos cartes pour suivre ce que vous devez et régler les relevés.',
@@ -560,7 +556,6 @@ export const dict: Dict = {
   it: {
     'Direct payment': 'Pagamento in contanti',
     'Credit cards': 'Carte di credito',
-    'Credit card: {name}': 'Carta di credito: {name}',
     '"{description}" will be archived.': '"{description}" verrà archiviata.',
     '"{name}" stops being offered for new transactions. Everything already recorded keeps it, and you can restore it any time.': '"{name}" non sarà più proposta per le nuove transazioni. Tutto ciò che è già registrato la mantiene e puoi ripristinarla quando vuoi.',
     'A card is debt, not extra income. Add your cards to track what you owe and pay off the invoices.': 'La carta è un debito, non un\'entrata extra. Aggiungi le tue carte per tenere traccia di ciò che devi e saldare gli estratti conto.',
