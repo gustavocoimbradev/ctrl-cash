@@ -91,7 +91,7 @@ export function TransactionForm({ visible, transaction, occurrenceMonth, preset,
     setDate(transaction?.date ?? todayISO());
     setMode(transaction ? (transaction.fixed ? 'fixed' : transaction.installment ? 'installments' : 'single') : 'single');
     setInstallments(2);
-    setConfirmed(transaction?.confirmed ?? false);
+    setConfirmed(transaction?.confirmed ?? true);
     setTried(false);
     setConfirmDelete(false);
     setKind(transaction?.type ?? (preset?.kind === 'refund' ? 'income' : preset?.kind) ?? 'expense');
