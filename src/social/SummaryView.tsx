@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import Svg, { Path, Rect, Text as SvgText } from 'react-native-svg';
+import Svg, { Path, Text as SvgText } from 'react-native-svg';
 import { ChartLegend, ProjectionChart } from '../components/Charts';
 import { PillToggle } from '../components/Controls';
 import { addMonthsToKey, currentMonthKey, formatMonth, shortDate } from '../domain/dates';
@@ -22,7 +22,7 @@ const RING_FULL = 40;
 const RING_COMPACT = 30;
 const MARGIN_X_FULL = 124;
 const MARGIN_X_COMPACT = 78;
-const MARGIN_Y = 64;
+const MARGIN_Y = 44;
 
 const pct = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(1)}%`;
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -109,25 +109,11 @@ function Pie({ slices, selected, onSelect, size, compact, center }: { slices: { 
           const x = p2.x + side * 5;
           // above the percentage when the slice is in the top half (the ring is below it), below it otherwise
           const up = p2.y < cy;
-          const yName = up ? (chosen.tone ? p2.y - 30 : p2.y - 12) : p2.y + 24;
-          const yTone = up ? p2.y - 12 : p2.y + 42;
+          const yName = up ? p2.y - 12 : p2.y + 24;
           return (
             <>
               <SvgText x={x} y={p2.y + 6} fontSize={compact ? 16 : 17} fontWeight="700" fontFamily={fontFamily} fill={chosen.color} fillOpacity={lead} textAnchor={anchor}>{pct(r1(((target ?? chosen).value / pieTotalOf(slices)) * 100))}</SvgText>
               {chosen.name ? <SvgText x={x} y={yName} fontSize={16} fontFamily={fontFamily} fill={c.text} fillOpacity={lead} textAnchor={anchor}>{cut(chosen.name)}</SvgText> : null}
-              {chosen.tone ? (
-                // a badge, like the one in the legend: a soft pill in the tone's color with the name inside
-                (() => {
-                  const bw = chosen.tone.label.length * 8.4 + 18;
-                  const bx = side > 0 ? x : x - bw;
-                  return (
-                    <>
-                      <Rect x={bx} y={yTone - 17} width={bw} height={24} rx={12} fill={chosen.tone.color} fillOpacity={0.14 * lead} />
-                      <SvgText x={bx + bw / 2} y={yTone} fontSize={16} fontFamily={fontFamily} fill={chosen.tone.color} fillOpacity={lead} textAnchor="middle">{chosen.tone.label}</SvgText>
-                    </>
-                  );
-                })()
-              ) : null}
             </>
           );
         })()}
