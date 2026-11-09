@@ -2,6 +2,7 @@ import type { Dict } from '../index';
 
 export const dict: Dict = {
   pt: {
+    'This month': 'Este mês',
     "Chat with people you follow": "Converse com quem você segue",
     "Create your profile to follow people and send messages. Nothing about your money is shown unless you share it.": "Crie seu perfil para seguir pessoas e enviar mensagens. Nada sobre o seu dinheiro é mostrado, a menos que você compartilhe.",
     "Create profile": "Criar perfil",
@@ -80,6 +81,7 @@ export const dict: Dict = {
     "This is your own code.": "Este é o seu próprio código.",
   },
   es: {
+    'This month': 'Este mes',
     "Chat with people you follow": "Chatea con las personas que sigues",
     "Create your profile to follow people and send messages. Nothing about your money is shown unless you share it.": "Crea tu perfil para seguir a otras personas y enviar mensajes. No se muestra nada de tu dinero a menos que lo compartas.",
     "Create profile": "Crear perfil",
@@ -158,6 +160,7 @@ export const dict: Dict = {
     "This is your own code.": "Este es tu propio código.",
   },
   de: {
+    'This month': 'Dieser Monat',
     "Chat with people you follow": "Chatte mit Leuten, denen du folgst",
     "Create your profile to follow people and send messages. Nothing about your money is shown unless you share it.": "Erstelle dein Profil, um Leuten zu folgen und Nachrichten zu senden. Nichts über dein Geld wird angezeigt, außer du teilst es.",
     "Create profile": "Profil erstellen",
@@ -236,6 +239,7 @@ export const dict: Dict = {
     "This is your own code.": "Das ist dein eigener Code.",
   },
   fr: {
+    'This month': 'Ce mois-ci',
     "Chat with people you follow": "Discutez avec les personnes que vous suivez",
     "Create your profile to follow people and send messages. Nothing about your money is shown unless you share it.": "Créez votre profil pour suivre des personnes et envoyer des messages. Rien sur votre argent n'est affiché sauf si vous le partagez.",
     "Create profile": "Créer le profil",
@@ -314,6 +318,7 @@ export const dict: Dict = {
     "This is your own code.": "Voici votre propre code.",
   },
   it: {
+    'This month': 'Questo mese',
     "Chat with people you follow": "Chatta con le persone che segui",
     "Create your profile to follow people and send messages. Nothing about your money is shown unless you share it.": "Crea il tuo profilo per seguire le persone e inviare messaggi. Nulla sui tuoi soldi viene mostrato, a meno che tu non lo condivida.",
     "Create profile": "Crea profilo",

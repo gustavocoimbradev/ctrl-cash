@@ -10,7 +10,7 @@ import { CategoryShare, Summary } from './api';
 import { sharedCategoryLabel } from '../domain/categories';
 import { t, usePrefsVersion } from '../i18n';
 
-const HORIZONS = [6, 12, 24] as const;
+const HORIZONS = ['month', 6, 12, 24] as const;
 type Horizon = (typeof HORIZONS)[number];
 /** category colors: the app's palette without the brand blue, which means "saved" */
 const PALETTE = ['#E0446A', '#D9831F', '#8B5CF6', '#0EA5E9', '#1FA86A', '#F28BA3', '#B98A5E'];
@@ -164,7 +164,9 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
 
   // the months of the range, half behind and half ahead of now; a month the summary does not have is an empty one
   const current = currentMonthKey();
-  const half = horizon / 2;
+  // "this month" narrows the percentages to the current month; the line chart keeps a 6 month window around it
+  const span = horizon === 'month' ? 6 : horizon;
+  const half = span / 2;
   const months: Month[] = useMemo(() => {
     const byKey = new Map(summary.months.map((m) => [m.key, m]));
     const w = (m: Month) => (m.incomeRel === undefined ? (m.spent > 0 || m.saved !== 0 ? 100 : 0) : m.incomeRel);
@@ -184,25 +186,26 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
         categories: [...shares].map(([slug, v]) => ({ slug, label: v.label, pct: v.pct })).sort((x, y) => y.pct - x.pct),
       };
     }
-    return Array.from({ length: horizon }, (_, i) => {
+    return Array.from({ length: span }, (_, i) => {
       const k = addMonthsToKey(current, i - half);
       const own = byKey.get(k);
       if (own && w(own) > 0) return own;
       if (typical && k > current) return { ...typical, key: k };
       return own ?? { key: k, spent: 0, saved: 0, incomeRel: 0, categories: [] };
     });
-  }, [summary, horizon, half, current]);
+  }, [summary, span, half, current]);
   const weight = (m: Month) => (m.incomeRel === undefined ? (m.spent > 0 || m.saved !== 0 ? 100 : 0) : m.incomeRel);
 
   // where the spending goes in the range: each month's category shares weighted by that month's income
   const lang = usePrefsVersion();
   const { categories, spentOfIncome } = useMemo(() => {
-    const totalWeight = months.reduce((a, m) => a + weight(m), 0);
+    const scope = horizon === 'month' ? months.filter((m) => m.key === current) : months;
+    const totalWeight = scope.reduce((a, m) => a + weight(m), 0);
     const agg = new Map<string, { label: string; w: number }>();
-    for (const m of months) for (const x of m.categories) agg.set(x.slug, { label: sharedCategoryLabel(x.slug, x.label), w: (agg.get(x.slug)?.w ?? 0) + x.pct * weight(m) });
+    for (const m of scope) for (const x of m.categories) agg.set(x.slug, { label: sharedCategoryLabel(x.slug, x.label), w: (agg.get(x.slug)?.w ?? 0) + x.pct * weight(m) });
     const list: CategoryShare[] = totalWeight > 0 ? [...agg].map(([slug, v]) => ({ slug, label: v.label, pct: v.w / totalWeight })).filter((x) => x.pct > 0).sort((a, b) => b.pct - a.pct) : [];
     return { categories: list, spentOfIncome: list.reduce((a, x) => a + x.pct, 0) };
-  }, [months, lang]);
+  }, [months, horizon, current, lang]);
 
   const shownSpent = useTween(spentOfIncome, motion.slow);
   const hasData = months.some((m) => weight(m) > 0);
@@ -329,7 +332,7 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
     <View style={{ gap: spacing.lg }}>
       <View style={s.head}>
         {wide ? <Text style={[type.label, { color: c.text }]}>{t('Month by month')}</Text> : null}
-        <PillToggle stretch={!wide} value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: t('{n} months', { n: h }) }))} />
+        <PillToggle stretch={!wide} value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ value: h, label: h === 'month' ? t('This month') : t('{n} months', { n: h }) }))} />
       </View>
       <View style={[{ gap: spacing.xl }, wide && { flexDirection: 'row', alignItems: 'flex-start' }]}>
         {chart}
