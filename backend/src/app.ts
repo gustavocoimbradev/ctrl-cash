@@ -4,6 +4,7 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import type { Verifier } from './auth.js';
 import { readAll, upsertDocs, withTransaction, type Docs, type Pool } from './db.js';
+import { registerSettings } from './settings.js';
 import { registerSocial } from './social.js';
 import { COLLECTIONS, validate, type Doc } from './validate.js';
 
@@ -85,6 +86,8 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
 
   // profiles, messages and the shared summary; code lookups and messages get a stricter limit (unless a test sets its own)
   registerSocial(app, { pool: opts.pool, strictMax: opts.rateLimitMax }, authenticate);
+
+  registerSettings(app, opts.pool, authenticate);
 
   app.route({
     method: 'GET',
