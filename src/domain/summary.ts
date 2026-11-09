@@ -85,6 +85,7 @@ export function buildSummary(data: AppData, now = Date.now()): Summary {
     : [];
   const spent = totalIncome > 0 ? round1((totalSpent / totalIncome) * 100) : 0;
   const hp = currentHealth(data);
-  const health = hp ? { score: hp.health.score, label: hp.health.label, wealth: round1((hp.health.saved / 40) * 100), debt: round1((hp.health.debt / 30) * 100), habits: round1((hp.health.habits / 30) * 100), month: round1(hp.health.month * 100) } : undefined;
-  return { version: 2, generatedAt: now, spent, saved: totalIncome > 0 ? round1(100 - (totalSpent / totalIncome) * 100) : 0, months, categories, ...(health ? { health } : {}) };
+  // without data to judge yet, the score starts at its best, as it does on the dashboard
+  const health = hp ? { score: hp.health.score, label: hp.health.label, wealth: round1((hp.health.saved / 40) * 100), debt: round1((hp.health.debt / 30) * 100), habits: round1((hp.health.habits / 30) * 100), month: round1(hp.health.month * 100) } : { score: 1000, label: 'Excellent' as const, wealth: 100, debt: 100, habits: 100, month: 100 };
+  return { version: 2, generatedAt: now, spent, saved: totalIncome > 0 ? round1(100 - (totalSpent / totalIncome) * 100) : 0, months, categories, health };
 }
