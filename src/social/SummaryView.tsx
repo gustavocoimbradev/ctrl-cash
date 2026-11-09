@@ -208,7 +208,8 @@ export function SummaryView({ summary, updatedAt, real }: { summary: Summary; up
   const hasData = months.some((m) => weight(m) > 0);
   // the line chart starts where the history starts: months before the first one with income are left out (never past today)
   const firstWithData = months.findIndex((m) => weight(m) > 0);
-  const start = firstWithData > 0 ? firstWithData : 0;
+  // ... but never fewer than three months, so a single month of history still draws a line, with the data at the end
+  const start = firstWithData > 0 ? Math.max(0, Math.min(firstWithData, span - 3)) : 0;
   const chartMonths = months.slice(start);
   if (!hasData) return <Text style={[type.body, { color: c.textMuted }]}>{t('Nothing to show yet: add some income and expenses.')}</Text>;
 
