@@ -3,6 +3,7 @@ import type { Dict } from '../index';
 /** Quick setup, account settings, the language/currency fields and the app shell. */
 export const dict: Dict = {
   pt: {
+    "Financial health: {score}, {label}": "Saúde financeira: {score}, {label}",
     "Wishlist": "Lista de desejos",
     "New wish": "Novo desejo",
     "Edit wish": "Editar desejo",
@@ -213,6 +214,7 @@ export const dict: Dict = {
     "Cloud storage": "Armazenamento na nuvem",
   },
   es: {
+    "Financial health: {score}, {label}": "Salud financiera: {score}, {label}",
     "Wishlist": "Lista de deseos",
     "New wish": "Nuevo deseo",
     "Edit wish": "Editar deseo",
@@ -423,6 +425,7 @@ export const dict: Dict = {
     "Cloud storage": "Almacenamiento en la nube",
   },
   de: {
+    "Financial health: {score}, {label}": "Finanzielle Gesundheit: {score}, {label}",
     "Wishlist": "Wunschliste",
     "New wish": "Neuer Wunsch",
     "Edit wish": "Wunsch bearbeiten",
@@ -633,6 +636,7 @@ export const dict: Dict = {
     "Cloud storage": "Cloud-Speicher",
   },
   fr: {
+    "Financial health: {score}, {label}": "Santé financière : {score}, {label}",
     "Wishlist": "Liste de souhaits",
     "New wish": "Nouveau souhait",
     "Edit wish": "Modifier le souhait",
@@ -843,6 +847,7 @@ export const dict: Dict = {
     "Cloud storage": "Stockage cloud",
   },
   it: {
+    "Financial health: {score}, {label}": "Salute finanziaria: {score}, {label}",
     "Wishlist": "Lista dei desideri",
     "New wish": "Nuovo desiderio",
     "Edit wish": "Modifica desiderio",

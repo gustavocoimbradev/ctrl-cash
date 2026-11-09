@@ -61,15 +61,38 @@ function CodeChip({ code }: { code: string }) {
   );
 }
 
-/** The top card of a profile: who it is, the code, the numbers and the actions. */
-function Header({ name, code, color, photo, counters, actions }: { name: string; code: string; color: string | null; photo?: string | null; counters?: { n: number; label: string; onPress: () => void }[]; actions?: React.ReactNode }) {
+/** The financial health score as the header shows it: the number big, and how good it is under it. */
+type Score = NonNullable<Summary['health']>;
+const scoreColors = (score: number, c: ReturnType<typeof useColors>) => (score < 250 ? c.expense : score < 500 ? c.warning : c.primary);
+const scoreName = (l: Score['label']) => (l === 'Critical' ? t('Critical') : l === 'Warning' ? t('Warning') : l === 'Good' ? t('Good') : t('Excellent'));
+
+function ScoreBadge({ health, wide }: { health: Score; wide: boolean }) {
+  const c = useColors();
+  const color = scoreColors(health.score, c);
+  return (
+    <View
+      accessible
+      accessibilityLabel={t('Financial health: {score}, {label}', { score: health.score, label: scoreName(health.label) })}
+      style={[s.score, wide ? { alignItems: 'center', paddingLeft: spacing.xl, borderLeftWidth: 1, borderLeftColor: c.border } : { alignItems: 'center' }]}
+    >
+      <Text style={[type.body, { color: c.textMuted }]}>{t('Financial health')}</Text>
+      <Text style={[type.hero, { color, fontSize: wide ? 48 : 40, lineHeight: wide ? 54 : 46 }]}>{health.score}</Text>
+      <View style={{ backgroundColor: `${color}1F`, borderRadius: 12, paddingHorizontal: spacing.md, paddingVertical: 2 }}>
+        <Text style={[type.label, { color }]}>{scoreName(health.label)}</Text>
+      </View>
+    </View>
+  );
+}
+
+/** The top card of a profile: who it is, the code, the numbers and, under them, the actions; the score sits on the right. */
+function Header({ name, code, color, photo, counters, actions, health }: { name: string; code: string; color: string | null; photo?: string | null; counters?: { n: number; label: string; onPress: () => void }[]; actions?: React.ReactNode; health?: Score }) {
   const c = useColors();
   const { width } = useWindowDimensions();
   const wide = width >= desktopBreakpoint;
   return (
     <Card style={[s.head, wide && s.headWide]}>
       <Avatar name={name} id={code} color={color} photo={photo} size={wide ? 104 : 88} />
-      <View style={[s.headInfo, !wide && { alignItems: 'center' }]}>
+      <View style={[s.headInfo, !wide && { alignItems: 'center', alignSelf: 'stretch' }]}>
         <View style={[s.nameRow, !wide && { justifyContent: 'center' }]}>
           <Text style={[type.hero, { color: c.text, fontSize: 28, flexShrink: 1 }, !wide && { textAlign: 'center' }]} numberOfLines={2}>{name}</Text>
           <CodeChip code={code} />
@@ -79,8 +102,10 @@ function Header({ name, code, color, photo, counters, actions }: { name: string;
             {counters.map((x) => <Count key={x.label} n={x.n} label={x.label} onPress={x.onPress} />)}
           </View>
         ) : null}
+        {!wide && health ? <ScoreBadge health={health} wide={false} /> : null}
+        {actions ? <View style={[s.actions, !wide && { alignSelf: 'stretch' }]}>{actions}</View> : null}
       </View>
-      {actions ? <View style={[s.actions, !wide && { alignSelf: 'stretch' }]}>{actions}</View> : null}
+      {wide && health ? <ScoreBadge health={health} wide /> : null}
     </Card>
   );
 }
@@ -157,6 +182,7 @@ function OwnProfile({ onOpen, onEditAccount, email }: { onOpen: (code: string) =
         code={profile.code}
         color={profile.color}
         photo={profile.photo}
+        health={summary.health}
         counters={[
           { n: given.length, label: t('Sharing with'), onPress: () => setDialog('share') },
           { n: received.length, label: t('Shared with me'), onPress: () => setDialog('received') },
@@ -237,6 +263,7 @@ function OtherProfile({ code }: { code: string }) {
         code={person.code}
         color={person.color}
         photo={person.photo}
+        health={summary?.summary?.health}
         actions={
           <>
             <Pill label={t('Message')} icon="heart" primary grow={narrow} onPress={() => openChat(code)} />
@@ -278,5 +305,6 @@ const s = StyleSheet.create({
   headInfo: { flex: 1, minWidth: 0, gap: spacing.md },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   nameRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: spacing.md },
+  score: { gap: spacing.xs, minWidth: 150 },
   chip: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
 });
