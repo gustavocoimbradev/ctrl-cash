@@ -124,8 +124,20 @@ function ScoreBadge({ health, wide }: { health: Score; wide: boolean }) {
   );
 }
 
+/** Where the score will be, while the person's app has not published it yet (it does so the next time it is open). */
+function PendingScore({ wide }: { wide: boolean }) {
+  const c = useColors();
+  return (
+    <View style={[s.score, { alignItems: 'center', gap: spacing.xs }, wide && { paddingLeft: spacing.xl, borderLeftWidth: 1, borderLeftColor: c.border, maxWidth: 260 }]}>
+      <Text style={[type.body, { color: c.textMuted }]}>{t('Financial health')}</Text>
+      <Text style={[type.hero, { color: c.textMuted, fontSize: 40, lineHeight: 46 }]}>--</Text>
+      <Text style={[type.body, { color: c.textMuted, textAlign: 'center' }]}>{t('Shows up as soon as their app publishes it.')}</Text>
+    </View>
+  );
+}
+
 /** The top card of a profile: who it is, the code, the numbers and, under them, the actions; the score sits on the right. */
-function Header({ name, code, color, photo, counters, actions, health, scoreBlurred }: { name: string; code: string; color: string | null; photo?: string | null; counters?: { n: number; label: string; onPress: () => void }[]; actions?: React.ReactNode; health?: Score; /** made-up score, drawn blurred (nothing shared yet) */ scoreBlurred?: boolean }) {
+function Header({ name, code, color, photo, counters, actions, health, scoreBlurred, scorePending }: { name: string; code: string; color: string | null; photo?: string | null; counters?: { n: number; label: string; onPress: () => void }[]; actions?: React.ReactNode; health?: Score; /** made-up score, drawn blurred (nothing shared yet) */ scoreBlurred?: boolean; /** shared, but their app has not published the score yet */ scorePending?: boolean }) {
   const c = useColors();
   const { width } = useWindowDimensions();
   const wide = width >= desktopBreakpoint;
@@ -142,9 +154,11 @@ function Header({ name, code, color, photo, counters, actions, health, scoreBlur
             {counters.map((x) => <Count key={x.label} n={x.n} label={x.label} onPress={x.onPress} />)}
           </View>
         ) : null}
+        {!wide && !health && scorePending ? <PendingScore wide={false} /> : null}
         {!wide && health ? (scoreBlurred ? <Blurred><ScoreBadge health={health} wide={false} /></Blurred> : <ScoreBadge health={health} wide={false} />) : null}
         {actions ? <View style={[s.actions, !wide && { alignSelf: 'stretch' }]}>{actions}</View> : null}
       </View>
+      {wide && !health && scorePending ? <PendingScore wide /> : null}
       {wide && health ? (scoreBlurred ? <Blurred><ScoreBadge health={health} wide /></Blurred> : <ScoreBadge health={health} wide />) : null}
     </Card>
   );
@@ -308,8 +322,10 @@ function OtherProfile({ code }: { code: string }) {
         code={person.code}
         color={person.color}
         photo={person.photo}
-        health={summary?.summary?.health ?? fakeSummary().health}
-        scoreBlurred={!summary?.summary?.health}
+        // shared: their real score (or, until their app publishes it, a plain "--"); not shared: invented numbers, blurred
+        health={person.summaryAccess ? summary?.summary?.health : fakeSummary().health}
+        scoreBlurred={!person.summaryAccess}
+        scorePending={person.summaryAccess && !summary?.summary?.health}
         actions={
           <>
             <Pill label={t('Message')} icon="heart" primary grow={narrow} onPress={() => openChat(code)} />
