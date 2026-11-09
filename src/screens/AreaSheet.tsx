@@ -40,10 +40,7 @@ function insightsOf(area: AreaKey, s: AreaSummary): Insight[] {
     if (s.biggest && s.items.length > 1) say('neutral', 'arrow-up-right', t('{name} is the biggest one: {amount} a month.', { name: s.biggest.description, amount: money(s.biggest.amount) }));
   } else if (area === 'bills') {
     if (s.items.length === 0) return [{ tone: 'neutral', icon: 'info', text: t('No bills yet. Add rent, electricity, water, internet... to keep them all in one place.') }];
-    say('neutral', 'file-text', t('Your bills add up to {amount} a month: {year} a year.', { amount: money(s.monthly), year: money(s.yearly) }));
-    if (s.share > 0) say(s.share >= 0.5 ? 'bad' : 'neutral', 'percent', s.share >= 0.5 ? t('Bills take {share} of your income, which leaves little room to save.', { share: pct(s.share) }) : t('That is {share} of your income.', { share: pct(s.share) }));
-    say(s.paidThisMonth >= s.monthly ? 'good' : 'neutral', 'check-circle', t('Paid this month: {paid} of {total}.', { paid: money(s.paidThisMonth), total: money(s.monthly) }));
-    if (s.next) say('neutral', 'clock', t('{name} is next, on day {day}.', { name: s.next.description, day: s.next.day }));
+    // the totals sit in the tiles above: no sentences repeating them
   } else {
     if (s.items.length === 0) return [{ tone: 'good', icon: 'home', text: t('No delivery in the last 3 months. Cooking at home is the best choice for your wallet and your score.') }];
     say('bad', 'package', t('You spend {amount} a month on delivery: {year} a year.', { amount: money(s.monthly), year: money(s.yearly) }));
