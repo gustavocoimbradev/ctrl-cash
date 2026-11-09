@@ -224,9 +224,9 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
   };
   // every category with a value is shown (one that rounds to 0% has nothing to show); none is folded into "everything else"
   const pieRows = categories.filter((x) => r1(x.pct) > 0).map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug) }));
-  // 3 columns when the legend has room for them, else 2 (a narrow phone: 1)
+  // two columns (a very narrow phone: one)
   const legendW = wide ? Math.max(0, rowW - Math.min(PIE_MAX + MARGIN_X_FULL * 2, Math.max(360, rowW * 0.55)) - spacing.lg) : rowW;
-  const legendCols = legendW >= 600 ? 3 : legendW >= 300 || !legendW ? 2 : 1;
+  const legendCols = legendW >= 300 || !legendW ? 2 : 1;
   const pieTotal = pieRows.reduce((a, x) => a + x.value, 0) || 1;
 
   const chart = (
@@ -331,9 +331,13 @@ export function SummaryView({ summary, updatedAt }: { summary: Summary; updatedA
                 style={({ hovered }: any) => [s.legendRow, { width: `${100 / legendCols - 2}%` as `${number}%` }, { backgroundColor: hovered || slice === x.key ? c.surface : 'transparent' }, Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '180ms' } as object)]}
               >
                 <View style={[s.swatch, { backgroundColor: x.color }]} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[type.body, { color: c.text }]} numberOfLines={1}>{x.label}</Text>
-                  {categoryTone(x.key) ? <Text style={[type.body, { color: TONE_COLORS[categoryTone(x.key)!], fontWeight: '600' }]} numberOfLines={1}>{toneLabel(categoryTone(x.key)!)}</Text> : null}
+                <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                  <Text style={[type.body, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{x.label}</Text>
+                  {categoryTone(x.key) ? (
+                    <View style={{ backgroundColor: `${TONE_COLORS[categoryTone(x.key)!]}1F`, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 1 }}>
+                      <Text style={[type.body, { color: TONE_COLORS[categoryTone(x.key)!], fontSize: 16 }]} numberOfLines={1}>{toneLabel(categoryTone(x.key)!)}</Text>
+                    </View>
+                  ) : null}
                 </View>
                 <Text style={[type.label, { color: c.text }]}>{pct(r1((x.value / pieTotal) * 100))}</Text>
               </Pressable>
