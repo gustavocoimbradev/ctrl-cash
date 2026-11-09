@@ -385,7 +385,7 @@ const s = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: spacing.md },
   score: { minWidth: 150 },
   /** over the blurred page: the message and the button, in the middle */
-  veil: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
-  veilCard: { maxWidth: 380, borderRadius: radius.card, borderWidth: 1, padding: spacing.xl, gap: spacing.md, alignItems: 'center' },
+  veil: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: 'rgba(15,27,51,0.50)' },
+  veilCard: { maxWidth: 380, borderRadius: radius.card, borderWidth: 1, padding: spacing.xl, gap: spacing.md, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 24, shadowOffset: { width: 0, height: 8 }, ...(Platform.OS === 'web' ? ({ boxShadow: '0 12px 40px rgba(15,27,51,0.35)' } as object) : null) },
   chip: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
 });
