@@ -19,7 +19,7 @@ export const dict: Dict = {
     'Archive transaction': 'Arquivar transação',
     'Archive': 'Arquivar',
     'Archived cards keep their history; restore one from its edit screen.': 'Cartões arquivados mantêm o histórico; restaure um pela tela de edição.',
-    'Bank account': 'Conta bancária',
+    'Bank account': 'PIX',
     'Bills': 'Contas',
     'Blue': 'Azul',
     'Built in': 'Padrão',
