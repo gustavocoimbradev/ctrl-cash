@@ -53,7 +53,7 @@ export function runwayMonths(worth: number, avgMonthlyExpense: number): number |
 /** "12 days", "3 months", "1 year": whole numbers, always rounded DOWN (never promise more peace of mind than there is). */
 export function formatRunway(months: number): string {
   if (months < 1) {
-    const days = Math.floor(months * 30);
+    const days = Math.floor(months * 30 + 1e-9);
     return days === 1 ? t('{n} day', { n: days }) : t('{n} days', { n: days });
   }
   if (months < 12) {

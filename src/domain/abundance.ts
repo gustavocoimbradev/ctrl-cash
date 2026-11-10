@@ -48,14 +48,14 @@ export interface CoverGoal {
   goal: number;
 }
 
-/** The goals, in months: 1, 3, 6, 12, 18, 24 and then one year at a time (3 years, 4 years...). Reaching one moves to the next. */
-const GOALS = [1, 3, 6, 12, 18, 24];
+/** The goals, in months: a week, two weeks, then 1, 3, 6, 12, 18, 24 and one year at a time. Reaching one moves to the next. */
+const GOALS = [7 / 30, 15 / 30, 1, 3, 6, 12, 18, 24];
 
 /** Without spending to measure there is nothing to compare. */
 export function coverGoal(leftovers: number, avgExpense: number): CoverGoal | null {
   if (avgExpense <= 0) return null;
   const months = Math.max(leftovers, 0) / avgExpense;
-  return { months, goal: GOALS.find((g) => months < g) ?? (Math.floor(months / 12) + 1) * 12 };
+  return { months, goal: GOALS.find((g) => months + 1e-9 < g) ?? (Math.floor(months / 12) + 1) * 12 };
 }
 
 /** An exact whole amount, for the goals: "1 month", "6 months", "2 years" (from 24 months on). */
@@ -68,10 +68,10 @@ export function coverLabel(months: number): string {
 
 /**
  * What the pile covers, said the way a person would: "Almost 5 months", "4 and a half months", "A bit more than 4 months".
- * Never rounds up: 4.8 is "almost 5", not "5". Under a month it counts days (or "Almost 1 month" from 0.65).
+ * Never rounds up: 4.8 is "almost 5", not "5". Under a month it counts days (or "Almost 1 month" from 0.85).
  */
 export function coverHuman(months: number): string {
-  if (months < 1) return months >= 0.65 ? t('Almost 1 month') : formatRunway(months);
+  if (months < 1) return months >= 0.85 ? t('Almost 1 month') : formatRunway(months);
   const years = months >= 24;
   const v = years ? months / 12 : months;
   const n = Math.floor(v + 1e-9);
