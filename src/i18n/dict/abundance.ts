@@ -3,6 +3,7 @@ import type { Dict } from '../index';
 /** The abundance view: leftovers, streaks, milestones and the growth-minded wording of the score. */
 export const dict: Dict = {
   pt: {
+    "1 month": "1 mês",
     "Month {n} in a row saving": "{n}º mês consecutivo guardando",
     "To grow": "A crescer",
     "Your wealth is growing": "Seu patrimônio está crescendo",
@@ -46,6 +47,7 @@ export const dict: Dict = {
     "You could live {time} without income. Every month you leave something over, it grows.": "Você viveria {time} sem renda. A cada mês que sobra algo, ele cresce.",
   },
   es: {
+    "1 month": "1 mes",
     "Month {n} in a row saving": "{n}.º mes consecutivo guardando",
     "To grow": "A crecer",
     "Your wealth is growing": "Tu patrimonio está creciendo",
@@ -89,6 +91,7 @@ export const dict: Dict = {
     "You could live {time} without income. Every month you leave something over, it grows.": "Podrías vivir {time} sin ingresos. Cada mes que te sobra algo, crece.",
   },
   de: {
+    "1 month": "1 Monat",
     "Month {n} in a row saving": "{n}. Monat in Folge gespart",
     "To grow": "Zum Wachsen",
     "Your wealth is growing": "Dein Vermögen wächst",
@@ -132,6 +135,7 @@ export const dict: Dict = {
     "You could live {time} without income. Every month you leave something over, it grows.": "Du könntest {time} ohne Einkommen leben. Jeden Monat, in dem etwas übrig bleibt, wächst es.",
   },
   fr: {
+    "1 month": "1 mois",
     "Month {n} in a row saving": "{n}ᵉ mois consécutif à garder",
     "To grow": "À faire grandir",
     "Your wealth is growing": "Votre patrimoine grandit",
@@ -175,6 +179,7 @@ export const dict: Dict = {
     "You could live {time} without income. Every month you leave something over, it grows.": "Vous pourriez vivre {time} sans revenu. Chaque mois où il reste quelque chose, il grandit.",
   },
   it: {
+    "1 month": "1 mese",
     "Month {n} in a row saving": "{n}º mese consecutivo mettendo da parte",
     "To grow": "Da far crescere",
     "Your wealth is growing": "Il tuo patrimonio sta crescendo",

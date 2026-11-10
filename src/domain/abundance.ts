@@ -1,4 +1,5 @@
 import { t } from '../i18n';
+import { formatRunway } from './wealth';
 
 /**
  * The abundance view: what is LEFT OVER (the balance that stays in the account) is the star. Everything here only
@@ -72,4 +73,12 @@ export function coverGoal(leftovers: number, avgExpense: number): CoverGoal | nu
   if (avgExpense <= 0) return null;
   const months = Math.max(leftovers, 0) / avgExpense;
   return { months, goal: Math.max(months * 2, 7 / 30) };
+}
+
+/** Whole numbers only: days under a month, then "1 month", "5 months", and years from two years on ("3 years"). */
+export function coverLabel(months: number): string {
+  if (months < 1) return formatRunway(months);
+  if (months >= 24) return t('{n} years', { n: Math.round(months / 12) });
+  const n = Math.round(months);
+  return n === 1 ? t('1 month') : t('{n} months', { n });
 }

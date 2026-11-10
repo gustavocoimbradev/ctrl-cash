@@ -3,9 +3,8 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '../components/Card';
 import { Money } from '../components/Motion';
-import { CoverGoal, MonthResult, dailyIntention, isRecordMonth } from '../domain/abundance';
+import { CoverGoal, MonthResult, coverLabel, dailyIntention, isRecordMonth } from '../domain/abundance';
 import { formatMoney } from '../domain/money';
-import { formatRunway } from '../domain/wealth';
 import { colors as c, radius, spacing, type } from '../theme';
 import { t } from '../i18n';
 
@@ -75,8 +74,8 @@ export function LeftoversHero({ leftovers, monthLeft, streak, cover, results }: 
  * covered, so the bar always sits at half and the goal moves up as the pile grows.
  */
 function CoverBar({ cover }: { cover: CoverGoal }) {
-  const covered = formatRunway(cover.months);
-  const goal = formatRunway(cover.goal);
+  const covered = coverLabel(cover.months);
+  const goal = coverLabel(cover.goal);
   return (
     <View style={s.track} accessible accessibilityLabel={`${covered} → ${goal}`}>
       <View style={s.fill}>
