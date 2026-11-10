@@ -14,7 +14,7 @@ import { Fade } from '../components/Fade';
 import { MonthNav } from '../components/MonthNav';
 import { addMonthsToKey, currentMonthKey, daysInMonth, endOfMonth, formatMonth, monthKey, monthLabel, parseISO, toISO, todayISO } from '../domain/dates';
 import { buildScoreFactors } from '../domain/insights';
-import { MonthResult, leftoverStreak, levelProgress } from '../domain/abundance';
+import { MonthResult, leftoverStreak, coverGoal } from '../domain/abundance';
 import { LeftoversHero } from './Leftovers';
 import { ScoreFactorsCard } from './TipsCard';
 import { HelpTip } from '../components/HelpTip';
@@ -572,7 +572,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       monthLeft={thisMonth.income - thisMonth.expense}
       monthIncome={thisMonth.income}
       streak={leftoverStreak(calc.results)}
-      level={levelProgress(balanceNow, avgExpense)}
+      cover={coverGoal(balanceNow, avgExpense)}
       results={calc.results}
     />
   );

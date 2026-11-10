@@ -3,8 +3,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '../components/Card';
 import { Money } from '../components/Motion';
-import { motion, useTween } from '../theme/motion';
-import { LevelProgress, MonthResult, dailyIntention, isRecordMonth, levelLabel } from '../domain/abundance';
+import { CoverGoal, MonthResult, dailyIntention, isRecordMonth } from '../domain/abundance';
 import { formatMoney } from '../domain/money';
 import { formatRunway } from '../domain/wealth';
 import { colors as c, radius, spacing, type } from '../theme';
@@ -18,14 +17,14 @@ interface Props {
   monthIncome: number;
   /** months in a row with something left over, and whether the current month has not got there yet */
   streak: { months: number; open: boolean };
-  /** where the pile stands between two levels of months of spending covered */
-  level: LevelProgress | null;
+  /** months of spending the pile covers and the goal (double) */
+  cover: CoverGoal | null;
   /** the last months, newest first (index 0 = current), for records and the best streak */
   results: MonthResult[];
 }
 
 /** The first thing on the screen: the pile of leftovers, this month's gain, the streak and the next milestone. Mostly visual. */
-export function LeftoversHero({ leftovers, monthLeft, streak, level, results }: Props) {
+export function LeftoversHero({ leftovers, monthLeft, streak, cover, results }: Props) {
   const gain = monthLeft > 0;
   const record = isRecordMonth(results);
   const day = Math.floor(Date.now() / 86400000);
@@ -61,7 +60,7 @@ export function LeftoversHero({ leftovers, monthLeft, streak, level, results }: 
         </View>
       )}
 
-      {level && <LevelBar level={level} />}
+      {cover && <CoverBar cover={cover} />}
 
       <View style={[s.intention, { backgroundColor: c.surface }]}>
         <Feather name="wind" size={20} color={c.primary} />
@@ -72,31 +71,28 @@ export function LeftoversHero({ leftovers, monthLeft, streak, level, results }: 
 }
 
 /**
- * The progress to the next level: what the pile covers now (left), the next goal (right) and a bar between the last level
- * reached and that goal, with the percentage inside. The goal is always close, and moves up when it is reached.
+ * What the pile covers, in the blue half of the bar, and the goal in the other half. The goal is always double what is
+ * covered, so the bar always sits at half and the goal moves up as the pile grows.
  */
-function LevelBar({ level }: { level: LevelProgress }) {
-  const fill = useTween(level.ratio * 100, motion.slow);
-  const pct = Math.round(level.ratio * 100);
+function CoverBar({ cover }: { cover: CoverGoal }) {
+  const covered = formatRunway(cover.months);
+  const goal = formatRunway(cover.goal);
   return (
-    <View style={{ gap: spacing.sm }} accessible accessibilityLabel={`${formatRunway(level.months)} → ${levelLabel(level.to)}, ${pct}%`}>
-      <View style={s.ends}>
-        <Text style={[type.title, { color: c.primary }]}>{formatRunway(level.months)}</Text>
-        <Text style={[type.title, { color: c.text }]}>{levelLabel(level.to)}</Text>
+    <View style={s.track} accessible accessibilityLabel={`${covered} → ${goal}`}>
+      <View style={s.fill}>
+        <Text style={[type.title, { color: c.onPrimary }]} numberOfLines={1}>{covered}</Text>
       </View>
-      <View style={s.track}>
-        <View style={[s.fill, { width: `${Math.max(fill, 6)}%` }]}>
-          {pct >= 15 && <Text style={[type.label, { color: c.onPrimary }]}>{pct}%</Text>}
-        </View>
+      <View style={s.rest}>
+        <Text style={[type.title, { color: c.text }]} numberOfLines={1}>{goal}</Text>
       </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  track: { height: 28, borderRadius: 14, overflow: 'hidden', backgroundColor: c.surfaceAlt },
-  fill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: c.primary, borderRadius: 14, alignItems: 'flex-end', justifyContent: 'center', paddingRight: spacing.md },
-  ends: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.md },
+  track: { flexDirection: 'row', height: 44, borderRadius: 22, overflow: 'hidden', backgroundColor: c.surfaceAlt },
+  fill: { flex: 1, backgroundColor: c.primary, borderRadius: 22, justifyContent: 'center', paddingHorizontal: spacing.lg },
+  rest: { flex: 1, justifyContent: 'center', alignItems: 'flex-end', paddingHorizontal: spacing.lg },
   card: { gap: spacing.md },
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

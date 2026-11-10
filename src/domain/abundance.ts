@@ -1,9 +1,8 @@
 import { t } from '../i18n';
-import { formatRunway } from './wealth';
 
 /**
  * The abundance view: what is LEFT OVER (the balance that stays in the account) is the star. Everything here only
- * looks at leftovers growing: how much was kept, for how many months in a row, and how close the next level is.
+ * looks at leftovers growing: how much was kept, for how many months in a row, and how far the goal is.
  */
 
 /** Income and expenses of one month (cards netted as in `monthTotals`), cents. */
@@ -62,43 +61,15 @@ export function dailyIntention(dayNumber: number): string {
   return t(AFFIRMATIONS[i]);
 }
 
-/**
- * Levels, in months of average spending the leftovers cover: 1 week, half a month, then a month at a time up to 6, then
- * 9, 12, 18, 24, 36, 48, 60 and a year at a time after that. The bar always runs from the level just reached to the next
- * one, so there is always a close goal to chase.
- */
-const LEVELS = [7 / 30, 0.5, 1, 2, 3, 4, 5, 6, 9, 12, 18, 24, 36, 48, 60];
-
-export interface LevelProgress {
-  /** months of spending the pile covers now */
+/** What the pile covers, in months of average spending, and the goal: always double, so the bar always sits at half and the goal keeps moving up. */
+export interface CoverGoal {
   months: number;
-  /** the level just reached (0 before the first) and the next one, in months */
-  from: number;
-  to: number;
-  /** how far along from `from` to `to`, 0 to 1 */
-  ratio: number;
+  goal: number;
 }
 
-/** Where the pile stands between two levels. Without spending to measure there is nothing to compare. */
-export function levelProgress(leftovers: number, avgExpense: number): LevelProgress | null {
+/** One week is the smallest goal (an empty pile still has something to reach). Without spending there is nothing to compare. */
+export function coverGoal(leftovers: number, avgExpense: number): CoverGoal | null {
   if (avgExpense <= 0) return null;
   const months = Math.max(leftovers, 0) / avgExpense;
-  let from = 0;
-  let to: number;
-  const reached = LEVELS.filter((l) => months >= l).length;
-  if (months < LEVELS[LEVELS.length - 1]!) {
-    to = LEVELS[reached]!;
-    from = reached ? LEVELS[reached - 1]! : 0;
-  } else {
-    from = Math.floor(months / 12) * 12;
-    to = from + 12;
-  }
-  return { months, from, to, ratio: (months - from) / (to - from) };
-}
-
-/** "7 days", "1 month", "5 months", "3 years": a level written for people. */
-export function levelLabel(months: number): string {
-  if (months < 1) return formatRunway(months);
-  if (months >= 12 && months % 12 === 0) return months === 12 ? t('1 year') : t('{n} years', { n: months / 12 });
-  return months === 1 ? t('1 month') : t('{n} months', { n: months });
+  return { months, goal: Math.max(months * 2, 7 / 30) };
 }
