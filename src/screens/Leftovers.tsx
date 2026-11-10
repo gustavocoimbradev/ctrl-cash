@@ -6,6 +6,7 @@ import { Money } from '../components/Motion';
 import { motion, useTween } from '../theme/motion';
 import { MilestoneProgress, MonthResult, WealthScale, dailyIntention, isRecordMonth, milestoneName, scaleEnd, scaleTick } from '../domain/abundance';
 import { formatMoney } from '../domain/money';
+import { formatRunway } from '../domain/wealth';
 import { colors as c, radius, spacing, type } from '../theme';
 import { t } from '../i18n';
 
@@ -129,7 +130,10 @@ function Ruler({ scale }: { scale: WealthScale }) {
   const parts = Array.from({ length: scale.count }, (_, i) => i);
   return (
     <View style={{ gap: spacing.sm }}>
-      <Text style={[type.body, { color: c.textMuted }]}>{scale.unit === 'months' ? t('Months of spending covered by your wealth') : t('Years of spending covered by your wealth')}</Text>
+      <View style={s.ends}>
+        <Text style={[type.title, { color: c.primary }]}>{formatRunway(scale.months)}</Text>
+        <Text style={[type.title, { color: c.text }]}>{scaleEnd(scale)}</Text>
+      </View>
       <View style={s.track}>
         <View style={[s.fill, { width: `${fill}%` }]} />
         <View style={s.lines}>
@@ -149,7 +153,6 @@ function Ruler({ scale }: { scale: WealthScale }) {
           <Text key={i} style={[type.label, { color: c.textMuted, flex: 1, textAlign: 'right' }]}>{scaleTick(scale, i + 1)}</Text>
         ))}
       </View>
-      <Text style={[type.body, { color: c.textMuted }]}>{t('{amount} to reach {time}', { amount: formatMoney(scale.missing), time: scaleEnd(scale) })}</Text>
     </View>
   );
 }
@@ -162,6 +165,7 @@ const s = StyleSheet.create({
   dots: { position: 'absolute', right: -1, top: 0, bottom: 0, justifyContent: 'space-evenly' },
   dot: { width: 2, height: 2, borderRadius: 1, backgroundColor: c.card },
   labels: { flexDirection: 'row' },
+  ends: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.md },
   card: { gap: spacing.md },
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

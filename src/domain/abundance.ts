@@ -121,6 +121,8 @@ export interface WealthScale {
   /** how many parts the scale is split into */
   count: number;
   unit: 'months' | 'years';
+  /** months of spending the pile covers now */
+  months: number;
   /** how much of the scale is filled, 0 to 1 */
   ratio: number;
   /** cents still missing for the end of the scale */
@@ -134,7 +136,7 @@ export function wealthScale(leftovers: number, avgExpense: number): WealthScale 
   const months = pile / avgExpense;
   const target = [6, 12, 24, 60].find((x) => months < x) ?? (Math.floor(months / 60) + 1) * 60;
   const step = target <= 6 ? 1 : target <= 12 ? 3 : target <= 24 ? 6 : target <= 60 ? 12 : target / 5;
-  return { target, step, count: Math.round(target / step), unit: target <= 24 ? 'months' : 'years', ratio: Math.min(months / target, 1), missing: Math.max(Math.round(target * avgExpense - pile), 0) };
+  return { target, step, count: Math.round(target / step), unit: target <= 24 ? 'months' : 'years', months, ratio: Math.min(months / target, 1), missing: Math.max(Math.round(target * avgExpense - pile), 0) };
 }
 
 /** The number written under the `i`-th dotted line (1-based): months, or years once the scale is that long. */
