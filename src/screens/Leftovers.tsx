@@ -127,7 +127,9 @@ export function LeftoversHero({ leftovers, monthLeft, streak, milestones, scale,
 /** One bar split by dotted lines (a month each at first); its end moves up as the pile grows. Numbers only, the unit is the title. */
 function Ruler({ scale }: { scale: WealthScale }) {
   const fill = useTween(scale.ratio * 100, motion.slow);
-  const parts = Array.from({ length: scale.count }, (_, i) => i);
+  // only what is still ahead: the lines (and numbers) the pile has not reached yet; the end is the right edge
+  const ahead = Array.from({ length: scale.count - 1 }, (_, i) => i + 1).filter((i) => scale.step * i > scale.months);
+  const pos = (i: number) => `${((scale.step * i) / scale.target) * 100}%` as `${number}%`;
   return (
     <View style={{ gap: spacing.sm }}>
       <View style={s.ends}>
@@ -136,21 +138,17 @@ function Ruler({ scale }: { scale: WealthScale }) {
       </View>
       <View style={s.track}>
         <View style={[s.fill, { width: `${fill}%` }]} />
-        <View style={s.lines}>
-          {parts.map((i) => (
-            <View key={i} style={s.part}>
-              {i < scale.count - 1 && (
-                <View style={s.dots}>
-                  {[0, 1, 2, 3].map((d) => <View key={d} style={s.dot} />)}
-                </View>
-              )}
-            </View>
-          ))}
-        </View>
+        {ahead.map((i) => (
+          <View key={i} style={[s.mark, { left: pos(i) }]}>
+            {[0, 1, 2, 3].map((d) => <View key={d} style={s.dot} />)}
+          </View>
+        ))}
       </View>
       <View style={s.labels}>
-        {parts.map((i) => (
-          <Text key={i} style={[type.label, { color: c.textMuted, flex: 1, textAlign: 'right' }]}>{scaleTick(scale, i + 1)}</Text>
+        {ahead.map((i) => (
+          <View key={i} style={[s.at, { left: pos(i) }]}>
+            <Text style={[type.label, { color: c.textMuted, width: 56, textAlign: 'center' }]}>{scaleTick(scale, i)}</Text>
+          </View>
         ))}
       </View>
     </View>
@@ -160,11 +158,10 @@ function Ruler({ scale }: { scale: WealthScale }) {
 const s = StyleSheet.create({
   track: { height: 16, borderRadius: 8, overflow: 'hidden', backgroundColor: c.surfaceAlt },
   fill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: c.primary },
-  lines: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, flexDirection: 'row' },
-  part: { flex: 1, alignItems: 'flex-end' },
-  dots: { position: 'absolute', right: -1, top: 0, bottom: 0, justifyContent: 'space-evenly' },
+  mark: { position: 'absolute', top: 0, bottom: 0, width: 2, marginLeft: -1, justifyContent: 'space-evenly', alignItems: 'center' },
+  at: { position: 'absolute', top: 0, width: 0, alignItems: 'center' },
   dot: { width: 2, height: 2, borderRadius: 1, backgroundColor: c.card },
-  labels: { flexDirection: 'row' },
+  labels: { height: 24 },
   ends: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.md },
   card: { gap: spacing.md },
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

@@ -134,7 +134,8 @@ export function wealthScale(leftovers: number, avgExpense: number): WealthScale 
   if (avgExpense <= 0) return null;
   const pile = Math.max(leftovers, 0);
   const months = pile / avgExpense;
-  const target = [6, 12, 24, 60].find((x) => months < x) ?? (Math.floor(months / 60) + 1) * 60;
+  // the end always leaves room ahead: the bar never gets stuck at its last bit (the scale moves up at 75%)
+  const target = [6, 12, 24, 60].find((x) => months < x * 0.75) ?? (Math.floor(months / 45) + 1) * 60;
   const step = target <= 6 ? 1 : target <= 12 ? 3 : target <= 24 ? 6 : target <= 60 ? 12 : target / 5;
   return { target, step, count: Math.round(target / step), unit: target <= 24 ? 'months' : 'years', months, ratio: Math.min(months / target, 1), missing: Math.max(Math.round(target * avgExpense - pile), 0) };
 }
