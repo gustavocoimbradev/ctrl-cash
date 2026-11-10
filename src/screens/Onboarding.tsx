@@ -522,7 +522,7 @@ export function Onboarding({ visible, onClose, onDone }: { visible: boolean; onC
                   </View>
                 )}
                 <View style={[s.sumRow, s.sumTotal, { borderTopColor: c.border }]}>
-                  <Text style={[type.label, { color: c.text }]}>{left >= 0 ? t('Left over') : t('Short')}</Text>
+                  <Text style={[type.label, { color: c.text }]}>{left >= 0 ? t('Left over') : t('To grow')}</Text>
                   <Text style={[type.title, { color: left >= 0 ? c.primary : c.expense }]}>{formatMoney(Math.abs(left))}</Text>
                 </View>
               </View>

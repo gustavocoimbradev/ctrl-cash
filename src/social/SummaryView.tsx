@@ -42,6 +42,9 @@ const arc = (cx: number, cy: number, r: number, a0: number, a1: number) => {
  * A donut: one slice per category. Hovering (or tapping) a slice makes it stand out and puts its percentage outside the
  * ring, at the end of a thin line from the slice. `onSelect` is told which slice the pointer is on.
  */
+/** spending is plain data, not an alarm: a quiet gray next to the green income and the blue leftovers */
+const MUTED = '#8A94A8';
+
 function Pie({ slices, outer, selected, onSelect, size, compact, center, valueText }: { slices: { key: string; value: number; color: string; /** shown beside the percentage of the chosen slice */ name?: string; tone?: { label: string; color: string } | null }[]; selected: string | null; onSelect: (key: string | null) => void; size: number; /** phones: a thinner ring and less room around it */ compact: boolean; center: React.ReactNode; /** an outer, thin ring (what came in), split by category, drawn around the donut; its keys must not clash with the slices' */ outer?: { key: string; value: number; color: string; name?: string }[]; /** how the chosen slice's value is written beside it (default: its share of the pie) */ valueText?: (v: number) => string }) {
   const c = useColors();
   const RING = compact ? RING_COMPACT : RING_FULL;
@@ -238,7 +241,6 @@ export function SummaryView({ summary, updatedAt, real, realCurrency }: { summar
     return { categories: list, spentOfIncome: list.reduce((a, x) => a + x.pct, 0) };
   }, [months, horizon, current, lang]);
 
-  const shownSpent = useTween(spentOfIncome, motion.slow);
   // the chart is always drawn, with the whole range selected (empty months included); only the pie says when there is nothing to show
   const chartMonths = months;
 
@@ -267,7 +269,7 @@ export function SummaryView({ summary, updatedAt, real, realCurrency }: { summar
     const tn = x.tone ?? defaultTone(x.slug);
     return tn ? { label: toneLabel(tn), color: TONE_COLORS[tn] } : null;
   };
-  const pieRows = realCats
+  const spendRows = realCats
     ? realCats.map((x) => ({ key: x.slug, label: x.label, value: x.amount, color: colorOf(x.slug), name: x.label, tone: toneOf({ slug: x.slug, label: x.label, pct: 0, tone: x.tone }) }))
     : categories.filter((x) => r1(x.pct) > 0).map((x) => ({ key: x.slug, label: x.label, value: x.pct, color: colorOf(x.slug), name: x.label, tone: toneOf(x) }));
   /** how a slice's value is written: money on my own profile, a share of the pie otherwise */
@@ -298,26 +300,26 @@ export function SummaryView({ summary, updatedAt, real, realCurrency }: { summar
       <ProjectionChart
         series={real && dayMode
           ? [
-              { values: realDays.income, color: c.income, area: true, label: t('Received') },
-              { values: realDays.spent, color: c.expense, dashed: true, label: t('Spent') },
-              { values: realDays.income.map((v, i) => v - realDays.spent[i]!), color: c.primary, label: t('Saved') },
+              { values: realDays.income, color: c.income, label: t('Received') },
+              { values: realDays.spent, color: MUTED, dashed: true, label: t('Spent') },
+              { values: realDays.income.map((v, i) => v - realDays.spent[i]!), color: c.primary, area: true, label: t('Saved') },
             ]
           : real
           ? [
-              { values: chartMonths.map((m) => real.months[m.key]?.income ?? 0), color: c.income, area: true, label: t('Received') },
-              { values: chartMonths.map((m) => real.months[m.key]?.expense ?? 0), color: c.expense, dashed: true, label: t('Spent') },
-              { values: chartMonths.map((m) => (real.months[m.key]?.income ?? 0) - (real.months[m.key]?.expense ?? 0)), color: c.primary, label: t('Saved') },
+              { values: chartMonths.map((m) => real.months[m.key]?.income ?? 0), color: c.income, label: t('Received') },
+              { values: chartMonths.map((m) => real.months[m.key]?.expense ?? 0), color: MUTED, dashed: true, label: t('Spent') },
+              { values: chartMonths.map((m) => (real.months[m.key]?.income ?? 0) - (real.months[m.key]?.expense ?? 0)), color: c.primary, area: true, label: t('Saved') },
             ]
           : dayMode
           ? [
-              { values: dayIncome, color: c.income, area: true, label: t('Received') },
-              { values: daySpent, color: c.expense, dashed: true, label: t('Spent') },
-              { values: dayIncome.map((v, i) => v - daySpent[i]!), color: c.primary, label: t('Saved') },
+              { values: dayIncome, color: c.income, label: t('Received') },
+              { values: daySpent, color: MUTED, dashed: true, label: t('Spent') },
+              { values: dayIncome.map((v, i) => v - daySpent[i]!), color: c.primary, area: true, label: t('Saved') },
             ]
           : [
-              { values: chartMonths.map((m) => (m.incomeRel === undefined ? 100 : m.incomeRel)), color: c.income, area: true, label: t('Received') },
-              { values: chartMonths.map((m) => (weight(m) * m.spent) / 100), color: c.expense, dashed: true, label: t('Spent') },
-              { values: chartMonths.map((m) => (weight(m) * m.saved) / 100), color: c.primary, label: t('Saved') },
+              { values: chartMonths.map((m) => (m.incomeRel === undefined ? 100 : m.incomeRel)), color: c.income, label: t('Received') },
+              { values: chartMonths.map((m) => (weight(m) * m.spent) / 100), color: MUTED, dashed: true, label: t('Spent') },
+              { values: chartMonths.map((m) => (weight(m) * m.saved) / 100), color: c.primary, area: true, label: t('Saved') },
             ]}
         areaColor={c.income}
         height={wide ? 260 : 230}
@@ -341,7 +343,7 @@ export function SummaryView({ summary, updatedAt, real, realCurrency }: { summar
               <View style={s.tipLines}>
                 <View style={[s.tipPill, { backgroundColor: `${c.expense}1A` }]}>
                   <Text style={[type.body, { color: c.textMuted }]}>{t('Spent')}</Text>
-                  <Text style={[type.label, { color: c.expense }]}>{pct(r1(f * m.spent))}</Text>
+                  <Text style={[type.label, { color: MUTED }]}>{pct(r1(f * m.spent))}</Text>
                 </View>
                 <View style={[s.tipPill, { backgroundColor: `${c.primary}1A` }]}>
                   <Text style={[type.body, { color: c.textMuted }]}>{t('Saved')}</Text>
@@ -373,7 +375,7 @@ export function SummaryView({ summary, updatedAt, real, realCurrency }: { summar
       <ChartLegend
         items={[
           { label: t('Received'), color: c.income, line: true, on: true, onPress: () => {} },
-          { label: t('Spent'), color: c.expense, line: true, dashed: true, on: true, onPress: () => {} },
+          { label: t('Spent'), color: MUTED, line: true, dashed: true, on: true, onPress: () => {} },
           { label: t('Saved'), color: c.primary, line: true, on: true, onPress: () => {} },
         ]}
       />
@@ -390,6 +392,11 @@ export function SummaryView({ summary, updatedAt, real, realCurrency }: { summar
     : [];
   const incomeRows = incomeCats.map((x, i) => ({ key: `in:${x.slug}`, label: x.label, value: x.amount, color: INCOME_COLORS[i % INCOME_COLORS.length]!, name: x.label, tone: null as { label: string; color: string } | null }));
   const incomeTotal = incomeRows.reduce((a, x) => a + x.value, 0);
+
+  // the donut is what came in: what was spent by category and, first, what was LEFT OVER (the slice that grows)
+  const leftoverValue = realCats ? (incomeTotal > 0 ? Math.max(incomeTotal - realTotal, 0) : 0) : spendRows.length > 0 ? Math.max(100 - spentOfIncome, 0) : 0;
+  const leftoverRow = leftoverValue > 0 ? { key: 'leftover', label: t('Left over'), value: leftoverValue, color: c.primary, name: t('Left over'), tone: null as { label: string; color: string } | null } : null;
+  const pieRows = leftoverRow ? [leftoverRow, ...spendRows] : spendRows;
 
   const legendRow = (x: { key: string; label: string; value: number; color: string; tone: { label: string; color: string } | null }) => (
     <Pressable
@@ -421,7 +428,7 @@ export function SummaryView({ summary, updatedAt, real, realCurrency }: { summar
 
   const pie = (
     <View onLayout={(e) => setRowW(e.nativeEvent.layout.width)} style={[{ gap: spacing.lg }, wide && { flexDirection: 'row', alignItems: 'center' }]}>
-      {pieRows.length === 0 && incomeRows.length === 0 ? (
+      {spendRows.length === 0 && incomeRows.length === 0 ? (
         <Text style={[type.body, { color: c.textMuted }]}>{t('No expenses in this period.')}</Text>
       ) : (
         <>
@@ -437,8 +444,8 @@ export function SummaryView({ summary, updatedAt, real, realCurrency }: { summar
             size={Math.max(170, Math.min(PIE_MAX, (pieBox.w || PIE_MAX + MARGIN_X_FULL * 2) - (wide ? MARGIN_X_FULL : MARGIN_X_COMPACT) * 2))}
             center={
               <>
-                <Text style={[type.title, { color: c.expense, fontSize: wide ? 20 : 22 }]}>{realCats ? money(realTotal) : pct(r1(shownSpent))}</Text>
-                <Text style={[type.body, { color: c.textMuted }]}>{wide && !realCats && pieBox.w - MARGIN_X_FULL * 2 >= 240 ? t('of income spent') : t('spent')}</Text>
+                <Text style={[type.title, { color: leftoverRow ? c.primary : c.text, fontSize: wide ? 20 : 22 }]}>{realCats ? money(leftoverValue) : pct(r1(leftoverValue))}</Text>
+                <Text style={[type.body, { color: c.textMuted }]}>{t('Left over')}</Text>
               </>
             }
           />
@@ -451,9 +458,10 @@ export function SummaryView({ summary, updatedAt, real, realCurrency }: { summar
                 <View style={s.legendGrid}>{incomeRows.map(legendRow)}</View>
               </View>
             ) : null}
+            {leftoverRow ? <View style={s.legendGrid}>{legendRow(leftoverRow)}</View> : null}
             <View style={{ gap: 2 }}>
-              {incomeRows.length > 0 ? listHead(t('Spent'), realTotal, c.expense) : null}
-              <View style={s.legendGrid}>{pieRows.map(legendRow)}</View>
+              {incomeRows.length > 0 ? listHead(t('Spent'), realTotal, MUTED) : null}
+              <View style={s.legendGrid}>{spendRows.map(legendRow)}</View>
             </View>
           </View>
         </>

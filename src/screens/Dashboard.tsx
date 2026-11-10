@@ -14,6 +14,8 @@ import { Fade } from '../components/Fade';
 import { MonthNav } from '../components/MonthNav';
 import { addMonthsToKey, currentMonthKey, daysInMonth, endOfMonth, formatMonth, monthKey, monthLabel, parseISO, toISO, todayISO } from '../domain/dates';
 import { buildScoreFactors } from '../domain/insights';
+import { MonthResult, leftoverStreak, milestoneProgress } from '../domain/abundance';
+import { LeftoversHero } from './Leftovers';
 import { ScoreFactorsCard } from './TipsCard';
 import { HelpTip } from '../components/HelpTip';
 import { Invoice, buildInvoices, cardUsed, isPending, loanOf, remaining } from '../domain/invoices';
@@ -174,11 +176,17 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       income: { total: totals.income, confirmed: Math.min(confirmedIncome, totals.income), pending: Math.max(totals.income - confirmedIncome, 0) },
       expense: { total: totals.expense, confirmed: Math.min(confirmedExpense, totals.expense), pending: Math.max(totals.expense - confirmedExpense, 0) },
       left: totals.income - totals.expense,
-      leftNow: Math.min(confirmedIncome, totals.income) - Math.min(confirmedExpense, totals.expense),
     };
+    // the last 12 months (newest first, the current one first): what came in and went out, for the leftovers streak
+    const results: MonthResult[] = Array.from({ length: 12 }, (_, k) => {
+      const key = addMonthsToKey(currentMonthKey(), -k);
+      const m = monthTotals(monthOccurrences(occ, key).filter((o) => !o.cardId), invoices.filter((i) => monthKey(i.dueDate) === key));
+      return { key, income: m.income, expense: m.expense };
+    });
     return {
       entries,
       invoices,
+      results,
       summary,
       spends,
       final: finalBalance(occ, invoices, end),
@@ -481,36 +489,36 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
           </View>
           {/* the result: what is left over right now, and what it will be once everything pending happens */}
           <View style={[s.resultRow, { backgroundColor: c.card, borderTopColor: c.border }]}>
-            <Text style={[type.title, { color: c.text }]}>{t('Left over')}</Text>
+            <Text style={[type.title, { color: c.text }]}>{t('Current balance')}</Text>
             <View style={s.resultValue}>
               <View style={s.resultAmount}>
                 <Pressable
-                  onPress={() => { setAdjustTo(summary.leftNow); setAdjustOpen(true); }}
+                  onPress={() => { setAdjustTo(balanceNow); setAdjustOpen(true); }}
                   accessibilityRole="button"
-                  accessibilityLabel={t('Adjust left over')}
+                  accessibilityLabel={t('Adjust current balance')}
                   hitSlop={8}
                   style={({ hovered, pressed }: { hovered?: boolean; pressed: boolean }) => [s.adjustButton, { opacity: pressed ? 0.5 : hovered ? 0.8 : 0.45 }]}
                 >
                   <Feather name="edit-2" size={16} color={c.textMuted} />
                 </Pressable>
-                <Text style={[type.title, { color: summary.leftNow < 0 ? c.expense : c.primary, fontSize: 22 }]} numberOfLines={1}>{formatMoney(summary.leftNow)}</Text>
+                <Text style={[type.title, { color: balanceNow < 0 ? c.text : c.primary, fontSize: 22 }]} numberOfLines={1}>{formatMoney(balanceNow)}</Text>
               </View>
-              <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('{amount} when everything is paid', { amount: formatMoney(summary.left) })}</Text>
+              <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('{amount} when everything is paid', { amount: formatMoney(final) })}</Text>
             </View>
           </View>
         </View>
       )}
-      <Sheet visible={adjustOpen} title={t('Adjust left over')} onClose={() => setAdjustOpen(false)}>
+      <Sheet visible={adjustOpen} title={t('Adjust current balance')} onClose={() => setAdjustOpen(false)}>
         <Text style={[type.body, { color: c.text }]}>
-          {t('Type what you really have left over now. The difference is recorded as a corrective transaction, so nothing already registered changes.')}
+          {t('Type the balance you really have now. The difference is recorded as a corrective transaction, so nothing already registered changes.')}
         </Text>
-        <MoneyField label={t('Left over now')} cents={adjustTo} onChange={setAdjustTo} />
+        <MoneyField label={t('Current balance')} cents={adjustTo} onChange={setAdjustTo} />
         <Text style={[type.body, { color: c.textMuted }]}>
-          {adjustTo === summary.leftNow
-            ? t('Already {amount}: nothing to adjust.', { amount: formatMoney(summary.leftNow) })
-            : adjustTo > summary.leftNow
-              ? t('Now {now}. An income of {diff} named "Left over adjustment" will be added.', { now: formatMoney(summary.leftNow), diff: formatMoney(Math.abs(adjustTo - summary.leftNow)) })
-              : t('Now {now}. An expense of {diff} named "Left over adjustment" will be added.', { now: formatMoney(summary.leftNow), diff: formatMoney(Math.abs(adjustTo - summary.leftNow)) })}
+          {adjustTo === balanceNow
+            ? t('Already {amount}: nothing to adjust.', { amount: formatMoney(balanceNow) })
+            : adjustTo > balanceNow
+              ? t('Now {now}. An income of {diff} named "Balance adjustment" will be added.', { now: formatMoney(balanceNow), diff: formatMoney(Math.abs(adjustTo - balanceNow)) })
+              : t('Now {now}. An expense of {diff} named "Balance adjustment" will be added.', { now: formatMoney(balanceNow), diff: formatMoney(Math.abs(adjustTo - balanceNow)) })}
         </Text>
         <View style={{ flexDirection: 'row', gap: spacing.md }}>
           <Button label={t('Cancel')} variant="secondary" flex onPress={() => setAdjustOpen(false)} />
@@ -518,13 +526,13 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
             label={t('Adjust')}
             flex
             icon="check"
-            disabled={adjustTo === summary.leftNow}
+            disabled={adjustTo === balanceNow}
             onPress={() => {
-              const diff = adjustTo - summary.leftNow;
+              const diff = adjustTo - balanceNow;
               if (diff === 0) return;
               // dated today while looking at the current month, otherwise on the last day of the month on screen
               const date = monthKey(today) === month ? today : endOfMonth(month);
-              addTransaction({ type: diff > 0 ? 'income' : 'expense', description: t('Left over adjustment'), amount: Math.abs(diff), date, confirmed: true, fixed: false, category: 'adjustment', installments: 1 });
+              addTransaction({ type: diff > 0 ? 'income' : 'expense', description: t('Balance adjustment'), amount: Math.abs(diff), date, confirmed: true, fixed: false, category: 'adjustment', installments: 1 });
               setAdjustOpen(false);
             }}
           />
@@ -556,6 +564,18 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
     cardLimit: activeCards.reduce((sum, x) => sum + x.limit, 0),
     cardUsed: activeCards.reduce((sum, x) => sum + (usedByCard[cards.indexOf(x)] ?? 0), 0),
   });
+
+  const thisMonth = calc.results[0];
+  const leftoversHero = (
+    <LeftoversHero
+      leftovers={balanceNow}
+      monthLeft={thisMonth.income - thisMonth.expense}
+      monthIncome={thisMonth.income}
+      streak={leftoverStreak(calc.results)}
+      milestones={milestoneProgress(balanceNow, avgExpense)}
+      results={calc.results}
+    />
+  );
 
   const healthCard = (
     <Card key="health">
@@ -591,12 +611,12 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
     <Card>
       <Pressable accessibilityRole="button" accessibilityLabel={t('View statement: {name}', { name: t('Card debt') })} onPress={() => setDetail('debt')} style={{ gap: spacing.md }}>
         <View style={s.statHead}>
-          <View style={[s.statTile, { backgroundColor: 'rgba(224,68,107,0.12)' }]}>
-            <Feather name="credit-card" size={22} color={c.expense} />
+          <View style={[s.statTile, { backgroundColor: c.surface }]}>
+            <Feather name="credit-card" size={22} color={c.textMuted} />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('Card debt')}</Text>
-            <Money cents={debtTotal} style={[type.title, { color: debtTotal > 0 ? c.expense : c.text, fontSize: 24 }]} numberOfLines={1} />
+            <Money cents={debtTotal} style={[type.title, { color: c.text, fontSize: 24 }]} numberOfLines={1} />
           </View>
           <Feather name="chevron-right" size={20} color={c.textMuted} />
         </View>
@@ -604,16 +624,16 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
     </Card>
   );
   // pending account commitments (excluding the card, which has its own card): accumulated - debt - commitments = net
-  const commitmentsCard = <StatCard icon="clock" label={t('Pending commitments')} cents={commitments} onPress={() => setDetail('commitments')} accent={c.warning} valueColor={commitments > 0 ? c.warning : c.text} />;
+  const commitmentsCard = <StatCard icon="clock" label={t('Pending commitments')} cents={commitments} onPress={() => setDetail('commitments')} accent={c.textMuted} valueColor={c.text} />;
   const figureEls = [
-    <StatCard key="s1" icon="trending-up" label={t('Accumulated wealth')} cents={balanceNow} onPress={() => setDetail('accumulated')} accent={c.primary} valueColor={balanceNow < 0 ? c.expense : c.primary} />,
+    <StatCard key="s1" icon="trending-up" label={t('Accumulated wealth')} cents={balanceNow} onPress={() => setDetail('accumulated')} accent={c.primary} valueColor={balanceNow < 0 ? c.text : c.primary} />,
     debtCard,
     commitmentsCard,
-    <StatCard key="s2" icon="award" label={t('Net worth')} cents={worth} onPress={() => setDetail('net')} accent={c.violet} valueColor={worth < 0 ? c.expense : c.violet} />,
-    <StatCard key="s0" icon="sun" label={t('Financial freedom')} value={runwayText ?? '—'} onPress={() => setDetail('freedom')} accent={runway !== null && runway < 3 ? c.expense : c.sky} valueColor={runway === null ? c.text : runway < 3 ? c.expense : c.sky} />,
+    <StatCard key="s2" icon="award" label={t('Net worth')} cents={worth} onPress={() => setDetail('net')} accent={c.violet} valueColor={worth < 0 ? c.text : c.violet} />,
+    <StatCard key="s0" icon="sun" label={t('Financial freedom')} value={runwayText ?? '—'} onPress={() => setDetail('freedom')} accent={c.sky} valueColor={runway === null ? c.text : c.sky} />,
   ];
   // phone (Summary tab): health, its tips, then the figures; desktop splits them (see below)
-  const items = [healthCard, tipsCard, ...figureEls];
+  const items = [leftoversHero, healthCard, tipsCard, ...figureEls];
   const stats = items.map((el, i) => (
     <Reveal key={i} index={i + 1}>
       {el}
@@ -659,7 +679,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       <ProjectionChart
         series={[
           { values: projection.planned, color: c.primary, area: true, label: t('Planned') },
-          { values: projection.habit, color: c.expense, dashed: true, label: t('Historical') },
+          { values: projection.habit, color: c.textMuted, dashed: true, label: t('Historical') },
         ].filter((_, i) => !hiddenSeries.includes(i))}
         labels={chartLabels}
         selected={chartSel === null ? null : Math.min(chartSel, projection.keys.length - 1)}
@@ -668,7 +688,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       <ChartLegend
         items={[
           { label: t('Planned'), color: c.primary, line: true, on: !hiddenSeries.includes(0), onPress: () => toggleSeries(0) },
-          { label: t('Historical'), color: c.expense, line: true, dashed: true, on: !hiddenSeries.includes(1), onPress: () => toggleSeries(1) },
+          { label: t('Historical'), color: c.textMuted, line: true, dashed: true, on: !hiddenSeries.includes(1), onPress: () => toggleSeries(1) },
         ]}
       />
     </Card>
@@ -722,6 +742,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       ) : wide ? (
         <View style={s.cols}>
           <View style={{ flex: 1, minWidth: 0, gap: spacing.lg }}>
+            <Reveal index={1}>{leftoversHero}</Reveal>
             <Reveal index={1}>{chartCard}</Reveal>
             {figureGrid}
             <Reveal index={3}>{table}</Reveal>
@@ -736,9 +757,10 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       ) : (
         <View style={{ gap: spacing.lg }}>
           <Reveal index={1}>{menu}</Reveal>
+          <Reveal index={1}>{leftoversHero}</Reveal>
           <Reveal index={1}>{chartCard}</Reveal>
           <Reveal index={2}>{table}</Reveal>
-          <View style={{ gap: spacing.md }}>{stats}</View>
+          <View style={{ gap: spacing.md }}>{stats.slice(1)}</View>
         </View>
       )}
       <StatementSheet kind={detail} ctx={statementCtx} onClose={() => setDetail(null)} />
@@ -746,7 +768,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
   );
 }
 
-const healthLabel = (l: 'Critical' | 'Warning' | 'Good' | 'Excellent') => (l === 'Critical' ? t('Critical') : l === 'Warning' ? t('Warning') : l === 'Good' ? t('Good') : t('Excellent'));
+const healthLabel = (l: 'Critical' | 'Warning' | 'Good' | 'Excellent') => (l === 'Critical' ? t('Starting out') : l === 'Warning' ? t('Building') : l === 'Good' ? t('Growing') : t('Thriving'));
 
 /** Recurrence tags (Fixed, 1/2, Reserve...) as discreet pills. */
 function MetaPills({ meta, end }: { meta: string; end?: boolean }) {

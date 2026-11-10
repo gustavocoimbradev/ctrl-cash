@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { dict as abundance } from './dict/abundance';
 import { dict as auth } from './dict/auth';
 import { dict as dashboard } from './dict/dashboard';
 import { dict as forms } from './dict/forms';
@@ -15,7 +16,7 @@ export { LANGUAGES, SHIPPED, type Lang } from './languages';
  */
 export type Dict = Record<Exclude<Lang, 'en'>, Record<string, string>>;
 const merged: Record<string, Record<string, string>> = {};
-for (const area of [auth, dashboard, forms, setup, social] as Dict[]) {
+for (const area of [abundance, auth, dashboard, forms, setup, social] as Dict[]) {
   for (const lang of Object.keys(area) as (keyof Dict)[]) Object.assign((merged[lang] ??= {}), area[lang]);
 }
 

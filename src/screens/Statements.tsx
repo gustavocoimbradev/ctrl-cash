@@ -42,7 +42,7 @@ const TITLES: Record<StatementKind, string> = {
 
 /** One or two short sentences under the dialog title: what the figure represents. */
 const DESCRIPTIONS: Record<StatementKind, string> = {
-  accumulated: "Everything you have set aside: each month's leftovers added up.",
+  accumulated: "Everything you have accumulated: each month's amount added up.",
   debt: 'What you still owe on your credit cards. A card is debt, not extra income.',
   commitments: 'Bills and installments already registered that you have not paid yet (cards aside).',
   net: 'Accumulated wealth minus card debt and pending commitments: what is really yours.',
@@ -118,7 +118,7 @@ function Leftovers({ ctx }: { ctx: StatementContext }) {
     <View style={s.table}>
       <View style={[s.line, s.head]}>
         <Text style={[type.body, { color: c.textMuted, flex: 1.2 }]}>{t('Month')}</Text>
-        <Text style={[type.body, { color: c.textMuted, flex: 1, textAlign: 'right' }]}>{t('Leftover')}</Text>
+        <Text style={[type.body, { color: c.textMuted, flex: 1, textAlign: 'right' }]}>{t('Left over')}</Text>
         <Text style={[type.body, { color: c.textMuted, flex: 1.2, textAlign: 'right' }]}>{t('Accumulated')}</Text>
       </View>
       {months.map((m) => (

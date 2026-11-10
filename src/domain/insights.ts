@@ -63,9 +63,9 @@ export function buildScoreFactors(i: InsightInput): ScoreFactor[] {
 
   // spending versus income, this month
   if (i.monthLeft < 0) {
-    neg({ id: 'overspend', icon: 'trending-down', impact: 'high', title: t('You spend more than you earn'), text: t('This month your expenses are {amount} above your income.', { amount: formatMoney(-i.monthLeft) }) });
+    neg({ id: 'overspend', icon: 'trending-down', impact: 'high', title: t('Your expenses are ahead of your income'), text: t('Closing the {amount} gap this month is the quickest way to grow your wealth.', { amount: formatMoney(-i.monthLeft) }) });
   } else if (i.monthLeft > 0) {
-    pos({ id: 'leftover', icon: 'trending-up', impact: 'medium', title: t('You spend less than you earn'), text: t('{amount} is left over this month, about {months} months of expenses.', { amount: formatMoney(i.monthLeft), months: (i.monthLeft / i.avgExpense).toFixed(1) }) });
+    pos({ id: 'leftover', icon: 'trending-up', impact: 'medium', title: t('Your wealth is growing'), text: t('{amount} added to your wealth this month, about {months} months of expenses.', { amount: formatMoney(i.monthLeft), months: (i.monthLeft / i.avgExpense).toFixed(1) }) });
   }
 
   // card debt (30 points of the score)
@@ -79,7 +79,7 @@ export function buildScoreFactors(i: InsightInput): ScoreFactor[] {
       text: t('You owe {amount} on cards, about {months} months of your expenses.', { amount: formatMoney(i.debt), months: months.toFixed(1) }),
     });
     if (i.debt > wealth) {
-      neg({ id: 'debt-vs-wealth', icon: 'alert-triangle', impact: 'high', title: t('Your debts are bigger than your wealth can cover'), text: t('{debt} owed against {wealth} accumulated.', { debt: formatMoney(i.debt), wealth: formatMoney(wealth) }) });
+      neg({ id: 'debt-vs-wealth', icon: 'alert-triangle', impact: 'high', title: t('Your debts are ahead of your wealth'), text: t('{debt} owed against {wealth} accumulated.', { debt: formatMoney(i.debt), wealth: formatMoney(wealth) }) });
     }
   } else {
     pos({ id: 'no-debt', icon: 'shield', impact: 'high', title: t('You have no card debt'), text: t('Your cards are paid, so the Debt-free part of your score is complete.') });
@@ -88,7 +88,7 @@ export function buildScoreFactors(i: InsightInput): ScoreFactor[] {
   // pending commitments versus wealth
   if (i.commitments > 0) {
     if (i.commitments > wealth) {
-      neg({ id: 'commitments', icon: 'clock', impact: 'medium', title: t('Your pending bills are bigger than what you have'), text: t('{bills} still to pay against {wealth} accumulated.', { bills: formatMoney(i.commitments), wealth: formatMoney(wealth) }) });
+      neg({ id: 'commitments', icon: 'clock', impact: 'medium', title: t('Your pending bills are ahead of your wealth'), text: t('{bills} still to pay against {wealth} accumulated.', { bills: formatMoney(i.commitments), wealth: formatMoney(wealth) }) });
     } else {
       pos({ id: 'commitments-covered', icon: 'clock', impact: 'low', title: t('Your pending bills are covered'), text: t('What you have accumulated ({wealth}) is enough for the {bills} still to pay.', { wealth: formatMoney(wealth), bills: formatMoney(i.commitments) }) });
     }
@@ -97,7 +97,7 @@ export function buildScoreFactors(i: InsightInput): ScoreFactor[] {
   // cushion (40 points of the score, complete at 12 months)
   if (i.runway !== null) {
     if (i.runway < 3) {
-      neg({ id: 'cushion-short', icon: 'battery-charging', impact: i.runway < 1 ? 'high' : 'medium', title: t('Your cushion is short'), text: t('You could live {time} without income; 12 months is the healthy mark.', { time: formatRunway(i.runway) }) });
+      neg({ id: 'cushion-short', icon: 'battery-charging', impact: i.runway < 1 ? 'high' : 'medium', title: t('Your cushion is just starting'), text: t('You could live {time} without income. Every month you leave something over, it grows.', { time: formatRunway(i.runway) }) });
     } else if (i.runway < 12) {
       neg({ id: 'cushion-partial', icon: 'battery-charging', impact: 'low', title: t('Your cushion is still growing'), text: t('You could live {time} without income, short of the 12 months that complete this part of the score.', { time: formatRunway(i.runway) }) });
     } else {
@@ -122,8 +122,8 @@ export function buildScoreFactors(i: InsightInput): ScoreFactor[] {
           id: 'category',
           icon: 'pie-chart',
           impact: quality < 0.5 ? 'high' : 'medium',
-          title: t('A lot of your spending goes to {category}', { category: categoryLabel(top) }),
-          text: t('{category} is {share}% of what you spent in the last 3 months and weighs the most against your score.', { category: categoryLabel(top), share }),
+          title: t('Most of your flow goes to {category}', { category: categoryLabel(top) }),
+          text: t('{category} is {share}% of what you spent in the last 3 months and is where your score has the most room to grow.', { category: categoryLabel(top), share }),
         });
       }
     } else {
@@ -131,7 +131,7 @@ export function buildScoreFactors(i: InsightInput): ScoreFactor[] {
     }
     const planned = i.spends.filter((s) => s.planned).reduce((a, s) => a + s.amount, 0) / total;
     if (planned < 0.4 && quality < 0.85) {
-      neg({ id: 'unplanned', icon: 'shuffle', impact: 'low', title: t('Most of your spending is one-off'), text: t('Only {share}% was planned as fixed items or installments, and unplanned spending counts more against you.', { share: Math.round(planned * 100) }) });
+      neg({ id: 'unplanned', icon: 'shuffle', impact: 'low', title: t('Most of your spending is one-off'), text: t('Only {share}% was planned as fixed items or installments, and planning more would lift your score.', { share: Math.round(planned * 100) }) });
     } else if (planned >= 0.6) {
       pos({ id: 'planned', icon: 'calendar', impact: 'low', title: t('Most of your spending is planned'), text: t('{share}% of it is fixed items or installments, which count less against your score.', { share: Math.round(planned * 100) }) });
     }
@@ -146,19 +146,19 @@ export function buildScoreFactors(i: InsightInput): ScoreFactor[] {
         id: 'delivery',
         icon: 'package',
         impact: delivery >= 0.15 ? 'high' : 'medium',
-        title: t('You order delivery a lot'),
-        text: t('Delivery is {share}% of what you spent in the last 3 months. Cooking at home usually costs about a third of it.', { share: Math.round(delivery * 100) }),
+        title: t('Delivery is a place to free up more'),
+        text: t('Delivery is {share}% of your last 3 months. Cooking at home usually costs about a third, and the difference stays with you.', { share: Math.round(delivery * 100) }),
       });
     } else if (delivery < 0.03) {
-      pos({ id: 'no-delivery', icon: 'home', impact: 'low', title: t('You rarely order delivery'), text: t('Eating at home keeps your spending light and your score higher.') });
+      pos({ id: 'no-delivery', icon: 'home', impact: 'low', title: t('You rarely order delivery'), text: t('Eating at home leaves more with you and lifts your score.') });
     }
     const subscriptions = shareOf('subscriptions');
     if (subscriptions >= 0.1) {
-      neg({ id: 'subscriptions', icon: 'repeat', impact: subscriptions >= 0.2 ? 'medium' : 'low', title: t('Subscriptions weigh on your budget'), text: t('Subscriptions are {share}% of what you spent in the last 3 months. Cancel the ones you barely use.', { share: Math.round(subscriptions * 100) }) });
+      neg({ id: 'subscriptions', icon: 'repeat', impact: subscriptions >= 0.2 ? 'medium' : 'low', title: t('Subscriptions are a chance to keep more'), text: t('Subscriptions are {share}% of your last 3 months. The ones you barely use are money that could stay with you.', { share: Math.round(subscriptions * 100) }) });
     }
     const bills = shareOf('bills');
     if (bills >= 0.4) {
-      neg({ id: 'bills', icon: 'file-text', impact: 'low', title: t('Your utility bills take a big part of your spending'), text: t('Bills are {share}% of what you spent in the last 3 months. Check which ones can come down.', { share: Math.round(bills * 100) }) });
+      neg({ id: 'bills', icon: 'file-text', impact: 'low', title: t('Your bills are a big slice of your flow'), text: t('Bills are {share}% of your last 3 months. Any that come down stay with you.', { share: Math.round(bills * 100) }) });
     }
   }
 

@@ -9,7 +9,7 @@ import { colors as c, radius, spacing, type } from '../theme';
 import { t } from '../i18n';
 
 const TONE = {
-  negative: { color: c.expense, tint: 'rgba(224,68,107,0.12)' },
+  negative: { color: c.warning, tint: 'rgba(217,131,31,0.12)' },
   positive: { color: c.income, tint: 'rgba(31,168,106,0.12)' },
 } as const;
 
@@ -18,8 +18,8 @@ const IMPACT: Record<Impact, string> = { high: 'High impact', medium: 'Medium im
 /** The two groups (pulling the score down / pushing it up), each factor with its impact. */
 function FactorGroups({ factors }: { factors: ScoreFactor[] }) {
   const groups = [
-    { key: 'negative' as const, label: t('Pulling your score down'), list: factors.filter((x) => x.tone === 'negative') },
-    { key: 'positive' as const, label: t('Pushing your score up'), list: factors.filter((x) => x.tone === 'positive') },
+    { key: 'positive' as const, label: t('Working for you'), list: factors.filter((x) => x.tone === 'positive') },
+    { key: 'negative' as const, label: t('Room to grow'), list: factors.filter((x) => x.tone === 'negative') },
   ].filter((g) => g.list.length > 0);
   return (
     <>
@@ -49,7 +49,7 @@ function FactorGroups({ factors }: { factors: ScoreFactor[] }) {
   );
 }
 
-const HELP = 'What is pushing your financial health score up or down right now, and how much each factor weighs.';
+const HELP = 'What is helping your financial health score grow right now, where there is room to grow, and how much each factor weighs.';
 
 /**
  * "Score factors": plain statements about what pulls the financial health score down
@@ -74,7 +74,7 @@ export function ScoreFactorsCard({ factors, scroll, collapsed }: { factors: Scor
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={[type.title, { color: c.text }]} numberOfLines={1}>{t('Score factors')}</Text>
               <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>
-                {[down ? t('{n} pulling down', { n: down }) : null, up ? t('{n} pushing up', { n: up }) : null].filter(Boolean).join(' · ')}
+                {[up ? t('{n} working for you', { n: up }) : null, down ? t('{n} to improve', { n: down }) : null].filter(Boolean).join(' · ')}
               </Text>
             </View>
             <Feather name="chevron-right" size={20} color={c.textMuted} />

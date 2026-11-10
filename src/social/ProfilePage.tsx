@@ -85,7 +85,7 @@ function Blurred({ children, style }: { children: React.ReactNode; style?: objec
 /** The financial health score as the header shows it: the number big, and how good it is under it. */
 type Score = NonNullable<Summary['health']>;
 const scoreColors = (score: number, c: ReturnType<typeof useColors>) => (score < 250 ? c.expense : score < 500 ? c.warning : c.primary);
-const scoreName = (l: Score['label']) => (l === 'Critical' ? t('Critical') : l === 'Warning' ? t('Warning') : l === 'Good' ? t('Good') : t('Excellent'));
+const scoreName = (l: Score['label']) => (l === 'Critical' ? t('Starting out') : l === 'Warning' ? t('Building') : l === 'Good' ? t('Growing') : t('Thriving'));
 
 function ScoreBadge({ health, wide }: { health: Score; wide: boolean }) {
   const c = useColors();
