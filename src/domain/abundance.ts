@@ -77,8 +77,6 @@ export interface LevelProgress {
   to: number;
   /** how far along from `from` to `to`, 0 to 1 */
   ratio: number;
-  /** how many levels have been reached (to celebrate a new one) */
-  reached: number;
 }
 
 /** Where the pile stands between two levels. Without spending to measure there is nothing to compare. */
@@ -87,16 +85,15 @@ export function levelProgress(leftovers: number, avgExpense: number): LevelProgr
   const months = Math.max(leftovers, 0) / avgExpense;
   let from = 0;
   let to: number;
-  let reached = LEVELS.filter((l) => months >= l).length;
+  const reached = LEVELS.filter((l) => months >= l).length;
   if (months < LEVELS[LEVELS.length - 1]!) {
     to = LEVELS[reached]!;
     from = reached ? LEVELS[reached - 1]! : 0;
   } else {
     from = Math.floor(months / 12) * 12;
     to = from + 12;
-    reached = LEVELS.length + (from - 60) / 12;
   }
-  return { months, from, to, ratio: (months - from) / (to - from), reached };
+  return { months, from, to, ratio: (months - from) / (to - from) };
 }
 
 /** "7 days", "1 month", "5 months", "3 years": a level written for people. */
@@ -104,9 +101,4 @@ export function levelLabel(months: number): string {
   if (months < 1) return formatRunway(months);
   if (months >= 12 && months % 12 === 0) return months === 12 ? t('1 year') : t('{n} years', { n: months / 12 });
   return months === 1 ? t('1 month') : t('{n} months', { n: months });
-}
-
-/** "5 months of spending": the level a new celebration names. */
-export function levelName(months: number): string {
-  return t('{time} of spending', { time: levelLabel(months) });
 }

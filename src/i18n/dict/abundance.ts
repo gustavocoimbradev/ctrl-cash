@@ -27,7 +27,6 @@ export const dict: Dict = {
     "Most of your flow goes to {category}": "A maior parte do seu fluxo vai para {category}",
     "{category} is {share}% of what you spent in the last 3 months and is where your score has the most room to grow.": "{category} é {share}% do que você gastou nos últimos 3 meses e é onde sua pontuação mais tem espaço para crescer.",
     "Only {share}% was planned as fixed items or installments, and planning more would lift your score.": "Só {share}% foi planejado como fixas ou parcelas, e planejar mais elevaria sua pontuação.",
-    "Dismiss": "Dispensar",
     "You are already on the line of life where abundance grows.": "Você já está na linha da vida onde a abundância cresce.",
     "Let money arrive and stay: what you keep today shapes your tomorrow.": "Deixe o dinheiro chegar e ficar: o que você guarda hoje molda o seu amanhã.",
     "Focus on what grows, and more of it finds you.": "Foque no que cresce, e mais disso encontra você.",
@@ -47,7 +46,6 @@ export const dict: Dict = {
     "Your expenses are ahead of your income": "Suas despesas estão acima da sua renda",
     "Your cushion is just starting": "Sua reserva de segurança está começando",
     "You could live {time} without income. Every month you leave something over, it grows.": "Você viveria {time} sem renda. A cada mês que sobra algo, ele cresce.",
-    "{time} of spending": "{time} de gastos",
   },
   es: {
     "1 month": "1 mes",
@@ -74,7 +72,6 @@ export const dict: Dict = {
     "Most of your flow goes to {category}": "La mayor parte de tu flujo va a {category}",
     "{category} is {share}% of what you spent in the last 3 months and is where your score has the most room to grow.": "{category} es el {share}% de lo que gastaste en los últimos 3 meses y es donde tu puntuación tiene más espacio para crecer.",
     "Only {share}% was planned as fixed items or installments, and planning more would lift your score.": "Solo el {share}% fue planificado como fijos o cuotas, y planificar más subiría tu puntuación.",
-    "Dismiss": "Descartar",
     "You are already on the line of life where abundance grows.": "Ya estás en la línea de vida donde crece la abundancia.",
     "Let money arrive and stay: what you keep today shapes your tomorrow.": "Deja que el dinero llegue y se quede: lo que guardas hoy moldea tu mañana.",
     "Focus on what grows, and more of it finds you.": "Enfócate en lo que crece, y más de eso te encuentra.",
@@ -94,7 +91,6 @@ export const dict: Dict = {
     "Your expenses are ahead of your income": "Tus gastos están por encima de tus ingresos",
     "Your cushion is just starting": "Tu colchón está empezando",
     "You could live {time} without income. Every month you leave something over, it grows.": "Podrías vivir {time} sin ingresos. Cada mes que te sobra algo, crece.",
-    "{time} of spending": "{time} de gastos",
   },
   de: {
     "1 month": "1 Monat",
@@ -121,7 +117,6 @@ export const dict: Dict = {
     "Most of your flow goes to {category}": "Der größte Teil deines Flusses geht an {category}",
     "{category} is {share}% of what you spent in the last 3 months and is where your score has the most room to grow.": "{category} macht {share}% deiner Ausgaben der letzten 3 Monate aus und ist dort, wo dein Score am meisten wachsen kann.",
     "Only {share}% was planned as fixed items or installments, and planning more would lift your score.": "Nur {share}% waren als Fixposten oder Raten geplant; mehr Planung würde deinen Score heben.",
-    "Dismiss": "Schließen",
     "You are already on the line of life where abundance grows.": "Du bist schon auf der Lebenslinie, auf der Fülle wächst.",
     "Let money arrive and stay: what you keep today shapes your tomorrow.": "Lass Geld kommen und bleiben: Was du heute behältst, formt dein Morgen.",
     "Focus on what grows, and more of it finds you.": "Richte den Blick auf das, was wächst, und mehr davon findet dich.",
@@ -141,7 +136,6 @@ export const dict: Dict = {
     "Your expenses are ahead of your income": "Deine Ausgaben liegen über deinen Einnahmen",
     "Your cushion is just starting": "Dein Polster fängt gerade an",
     "You could live {time} without income. Every month you leave something over, it grows.": "Du könntest {time} ohne Einkommen leben. Jeden Monat, in dem etwas übrig bleibt, wächst es.",
-    "{time} of spending": "{time} Ausgaben",
   },
   fr: {
     "1 month": "1 mois",
@@ -168,7 +162,6 @@ export const dict: Dict = {
     "Most of your flow goes to {category}": "L'essentiel de votre flux va à {category}",
     "{category} is {share}% of what you spent in the last 3 months and is where your score has the most room to grow.": "{category} représente {share}% de vos dépenses des 3 derniers mois et c'est là que votre score a le plus de marge.",
     "Only {share}% was planned as fixed items or installments, and planning more would lift your score.": "Seuls {share}% étaient prévus en fixes ou échéances, et prévoir plus ferait monter votre score.",
-    "Dismiss": "Fermer",
     "You are already on the line of life where abundance grows.": "Vous êtes déjà sur la ligne de vie où l'abondance grandit.",
     "Let money arrive and stay: what you keep today shapes your tomorrow.": "Laissez l'argent arriver et rester : ce que vous gardez aujourd'hui façonne demain.",
     "Focus on what grows, and more of it finds you.": "Concentrez-vous sur ce qui grandit, et davantage vous trouve.",
@@ -188,7 +181,6 @@ export const dict: Dict = {
     "Your expenses are ahead of your income": "Vos dépenses dépassent vos revenus",
     "Your cushion is just starting": "Votre coussin commence tout juste",
     "You could live {time} without income. Every month you leave something over, it grows.": "Vous pourriez vivre {time} sans revenu. Chaque mois où il reste quelque chose, il grandit.",
-    "{time} of spending": "{time} de dépenses",
   },
   it: {
     "1 month": "1 mese",
@@ -215,7 +207,6 @@ export const dict: Dict = {
     "Most of your flow goes to {category}": "La maggior parte del tuo flusso va a {category}",
     "{category} is {share}% of what you spent in the last 3 months and is where your score has the most room to grow.": "{category} è il {share}% di ciò che hai speso negli ultimi 3 mesi ed è dove il tuo punteggio ha più spazio per crescere.",
     "Only {share}% was planned as fixed items or installments, and planning more would lift your score.": "Solo il {share}% era pianificato come fisse o rate; pianificare di più alzerebbe il tuo punteggio.",
-    "Dismiss": "Chiudi",
     "You are already on the line of life where abundance grows.": "Sei già sulla linea di vita dove l'abbondanza cresce.",
     "Let money arrive and stay: what you keep today shapes your tomorrow.": "Lascia che il denaro arrivi e resti: ciò che tieni oggi plasma il tuo domani.",
     "Focus on what grows, and more of it finds you.": "Concentrati su ciò che cresce e ne arriverà di più.",
@@ -235,6 +226,5 @@ export const dict: Dict = {
     "Your expenses are ahead of your income": "Le tue spese superano le tue entrate",
     "Your cushion is just starting": "Il tuo cuscinetto sta iniziando",
     "You could live {time} without income. Every month you leave something over, it grows.": "Potresti vivere {time} senza reddito. Ogni mese in cui ti avanza qualcosa, cresce.",
-    "{time} of spending": "{time} di spese",
   },
 };
