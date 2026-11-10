@@ -42,26 +42,6 @@ export function isRecordMonth(results: MonthResult[]): boolean {
   return left > 0 && results.length > 1 && results.slice(1).some((r) => r.income > 0) && left > bestPastMonth(results);
 }
 
-/** Short intentions, one a day, in the spirit of Transurfing: attention goes to the flow that grows, not to what is missing. */
-const AFFIRMATIONS = [
-  'You are already on the line of life where abundance grows.',
-  'Let money arrive and stay: what you keep today shapes your tomorrow.',
-  'Abundance is the natural state. Your wealth is the proof.',
-  'Focus on what grows, and more of it finds you.',
-  'Everything you accumulate is a vote for the life you are choosing.',
-  'Picture your pile a year from now, and step into that picture.',
-  'Gratitude for what came in opens space for more.',
-  'You do not need to fight for money. Let it flow, and keep your share.',
-  'Small amounts added, steady flow: a river is made of drops.',
-  'Today is a good day to let a little more stay with you.',
-];
-
-/** The intention of the day (same all day, a new one tomorrow). `dayNumber` = days since any fixed date. */
-export function dailyIntention(dayNumber: number): string {
-  const i = ((dayNumber % AFFIRMATIONS.length) + AFFIRMATIONS.length) % AFFIRMATIONS.length;
-  return t(AFFIRMATIONS[i]);
-}
-
 /** What the pile covers, in months of average spending, and the next goal on the way up. */
 export interface CoverGoal {
   months: number;
@@ -109,8 +89,8 @@ export function coverTicks(goal: number): CoverTick[] {
   return out;
 }
 
-/** The small subtle value under a dotted line: days with "d" for a one-month goal, otherwise the plain number (months, or years for long goals). */
+/** The small subtle value under a dotted line, and at the goal: always a plain number, in the unit the covered label uses (days for a one-month goal, months, or years for long goals). */
 export function tickText(months: number, goal: number): string {
-  if (goal <= 1) return t('{n}d', { n: Math.round(months * 30) });
+  if (goal <= 1) return String(Math.round(months * 30));
   return String(goal > 24 ? Math.round(months / 12) : Math.round(months));
 }

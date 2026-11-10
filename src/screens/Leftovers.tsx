@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '../components/Card';
 import { Money } from '../components/Motion';
-import { CoverGoal, MonthResult, coverLabel, coverTicks, dailyIntention, tickText, isRecordMonth } from '../domain/abundance';
+import { CoverGoal, MonthResult, coverLabel, coverTicks, tickText, isRecordMonth } from '../domain/abundance';
 import { formatMoney } from '../domain/money';
 import { colors as c, radius, spacing, type } from '../theme';
 import { t } from '../i18n';
@@ -26,7 +26,6 @@ interface Props {
 export function LeftoversHero({ leftovers, monthLeft, streak, cover, results }: Props) {
   const gain = monthLeft > 0;
   const record = isRecordMonth(results);
-  const day = Math.floor(Date.now() / 86400000);
   return (
     <Card style={s.card}>
       <View style={s.top}>
@@ -61,10 +60,12 @@ export function LeftoversHero({ leftovers, monthLeft, streak, cover, results }: 
 
       {cover && <CoverBar cover={cover} />}
 
-      <View style={[s.intention, { backgroundColor: c.surface }]}>
-        <Feather name="wind" size={20} color={c.primary} />
-        <Text style={[type.body, { color: c.text, flexShrink: 1, fontStyle: 'italic' }]}>{dailyIntention(day)}</Text>
-      </View>
+      {cover && (
+        <View style={[s.intention, { backgroundColor: c.surface }]}>
+          <Feather name="info" size={20} color={c.primary} />
+          <Text style={[type.body, { color: c.text, flexShrink: 1 }]}>{t('Your wealth already covers {covered} of your spending. Next goal: {goal}.', { covered: coverLabel(cover.months), goal: coverLabel(cover.goal) })}</Text>
+        </View>
+      )}
     </Card>
   );
 }
@@ -112,7 +113,7 @@ function CoverBar({ cover }: { cover: CoverGoal }) {
             <Text style={[type.body, s.tickText]}>{tickText(tk.months, cover.goal)}</Text>
           </View>
         ))}
-        <Text style={[type.body, s.tickText, { position: 'absolute', right: 0, top: 0, textAlign: 'right', width: 120 }]} numberOfLines={1}>{goal}</Text>
+        <Text style={[type.body, s.tickText, { position: 'absolute', right: 0, top: 0, textAlign: 'right' }]} numberOfLines={1}>{tickText(cover.goal, cover.goal)}</Text>
       </View>
     </View>
   );
