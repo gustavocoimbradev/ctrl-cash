@@ -45,10 +45,10 @@ function CardsList({ onEdit }: { onEdit: (card: CreditCard) => void }) {
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={[type.label, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{card.archivedAt ? t('{name}  ·  archived', { name: card.name }) : card.name}</Text>
+                <Text style={[type.label, { color: c.text, flexShrink: 1 }]}>{card.archivedAt ? t('{name}  ·  archived', { name: card.name }) : card.name}</Text>
                 {card.source === 'claude' ? <ByClaude /> : null}
               </View>
-              <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('Limit {limit} · due day {day}', { limit: formatMoney(card.limit), day: card.dueDay })}</Text>
+              <Text style={[type.body, { color: c.textMuted }]}>{t('Limit {limit} · due day {day}', { limit: formatMoney(card.limit), day: card.dueDay })}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={[type.label, { color: debt > 0 ? c.expense : c.text }]}>{formatMoney(debt)}</Text>

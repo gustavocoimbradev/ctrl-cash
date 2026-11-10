@@ -334,17 +334,20 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       // the hover covers the WHOLE row (content, checkbox and delete button), not just the clickable part
       <Pressable key={r.key} accessible={false} focusable={false} style={({ hovered }: any) => [s.txRow, !wide && s.txRowMobile, border && { borderTopWidth: 1, borderColor: c.border }, hoverBg(hovered), dim && { opacity: 0.6 }]}>
         <Pressable accessibilityRole="button" accessibilityLabel={t('Open {title}', { title: r.title })} onPress={r.onPress} style={({ pressed }: any) => [s.txMain, !wide && s.txMainMobile, { opacity: pressed ? 0.6 : 1 }]}>
-          <View style={{ flex: 3, flexDirection: 'row', alignItems: 'center', gap: spacing.md, minWidth: 0 }}>
-            <View style={[s.tile, { backgroundColor: `${r.color}1A` }]}>
-              <Feather name={r.icon} size={18} color={r.color} />
-            </View>
-            <View style={{ flex: 1 }}>
+          <View style={{ flex: wide ? 3 : 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md, minWidth: 0 }}>
+            {wide && (
+              <View style={[s.tile, { backgroundColor: `${r.color}1A` }]}>
+                <Feather name={r.icon} size={18} color={r.color} />
+              </View>
+            )}
+            <View style={{ flex: 1, minWidth: 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={[type.label, { color: c.text, flexShrink: 1 }]} numberOfLines={wide ? 1 : undefined}>{r.title}</Text>
                 {r.byClaude ? <ByClaude /> : null}
               </View>
               {!wide && <Text style={[type.body, { color: c.textMuted, marginTop: 2 }]}>{[shortDate(r.date), r.category].join(' · ')}</Text>}
-              {wide && <MetaPills meta={r.meta} />}
+              {/* phone: the badges (Fixed, 2/6...) sit under the date, so the amount column stays narrow and the title keeps its room */}
+              <MetaPills meta={r.meta} />
             </View>
           </View>
           {wide && <Text style={[type.body, { color: c.text, flex: 1.2 }]}>{shortDate(r.date)}</Text>}
@@ -359,10 +362,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
             </Text>
           ) : (
             // phone: two balanced columns: title and date on the left, amount and badge on the right
-            <View style={{ alignItems: 'flex-end', gap: spacing.xs, flexShrink: 0 }}>
-              <Text style={[type.label, { color: r.sign === '+' ? c.income : c.text, textAlign: 'right' }]}>{r.sign} {formatMoney(r.amount)}</Text>
-              <MetaPills meta={r.meta} end />
-            </View>
+            <Text style={[type.label, { color: r.sign === '+' ? c.income : c.text, textAlign: 'right', flexShrink: 0 }]}>{r.sign} {formatMoney(r.amount)}</Text>
           )}
         </Pressable>
         {r.onRemove ? (
@@ -470,14 +470,18 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
               const ratio = x.total > 0 ? Math.min(1, Math.max(0, x.confirmed / x.total)) : 0;
               return (
                 <View key={x.label} style={s.summaryCol}>
-                  <View style={s.titleRow}>
-                    <Text style={[type.body, { color: c.textMuted, flexShrink: 1 }]} numberOfLines={1}>{x.label}</Text>
+                  <View style={[s.titleRow, mobile && { justifyContent: 'space-between' }]}>
+                    <Text style={[type.body, { color: c.textMuted, flexShrink: 1 }]}>{x.label}</Text>
+                    {/* phone: the pending amount rides on the label line, so the amount below always has the whole width */}
+                    {mobile && <Text style={[type.body, { color: c.textMuted, flexShrink: 1, textAlign: 'right' }]}>{t('Pending {amount}', { amount: formatMoney(x.pending) })}</Text>}
                   </View>
                   <View style={s.valueRow}>
-                    <Text style={[type.label, { color: x.color, fontSize: 20, flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{formatMoney(x.confirmed)}</Text>
-                    <View style={s.splitItem}>
-                      <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('Pending {amount}', { amount: formatMoney(x.pending) })}</Text>
-                    </View>
+                    <Text style={[type.label, { color: x.color, fontSize: 20, flexShrink: 1 }]} numberOfLines={mobile ? undefined : 1} adjustsFontSizeToFit={!mobile} minimumFontScale={0.8}>{formatMoney(x.confirmed)}</Text>
+                    {!mobile && (
+                      <View style={s.splitItem}>
+                        <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('Pending {amount}', { amount: formatMoney(x.pending) })}</Text>
+                      </View>
+                    )}
                   </View>
                   <View style={s.splitBar}>
                     <View style={{ flex: ratio, backgroundColor: x.color }} />
@@ -488,8 +492,8 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
             })}
           </View>
           {/* the result: what is left over right now, and what it will be once everything pending happens */}
-          <View style={[s.resultRow, { backgroundColor: c.card, borderTopColor: c.border }]}>
-            <Text style={[type.title, { color: c.text }]}>{t('Current balance')}</Text>
+          <View style={[s.resultRow, mobile && { paddingBottom: spacing.xs }, { backgroundColor: c.card, borderTopColor: c.border }]}>
+            <Text style={[type.title, { color: c.text, fontSize: mobile ? 18 : undefined }]}>{t('Current balance')}</Text>
             <View style={s.resultValue}>
               <View style={s.resultAmount}>
                 <Pressable
@@ -501,11 +505,13 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
                 >
                   <Feather name="edit-2" size={16} color={c.textMuted} />
                 </Pressable>
-                <Text style={[type.title, { color: balanceNow < 0 ? c.text : c.primary, fontSize: 22 }]} numberOfLines={1}>{formatMoney(balanceNow)}</Text>
+                <Text style={[type.title, { color: balanceNow < 0 ? c.text : c.primary, fontSize: mobile ? 20 : 22 }]} numberOfLines={1}>{formatMoney(balanceNow)}</Text>
               </View>
-              <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('{amount} when everything is paid', { amount: formatMoney(final) })}</Text>
+              {!mobile && <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('{amount} when everything is paid', { amount: formatMoney(final) })}</Text>}
             </View>
           </View>
+          {/* phone: the second figure gets its own full line instead of being cut */}
+          {mobile && <Text style={[type.body, { color: c.textMuted, textAlign: 'right', paddingHorizontal: spacing.xl - 4, paddingBottom: spacing.md }]}>{t('{amount} when everything is paid', { amount: formatMoney(final) })}</Text>}
         </View>
       )}
       <Sheet visible={adjustOpen} title={t('Adjust current balance')} onClose={() => setAdjustOpen(false)}>
@@ -574,6 +580,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
       streak={leftoverStreak(calc.results)}
       cover={coverGoal(balanceNow, avgExpense)}
       results={calc.results}
+      onOpen={() => setDetail('accumulated')}
     />
   );
 
@@ -584,7 +591,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
           <Feather name="heart" size={22} color={c.primary} />
         </View>
         <View style={[s.titleRow, { flex: 1 }]}>
-          <Text style={[type.title, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{t('Financial health')}</Text>
+          <Text style={[type.title, { color: c.text, flexShrink: 1 }]}>{t('Financial health')}</Text>
           <HelpTip title={t('Financial health')} text={t(HEALTH_HELP)} />
         </View>
       </View>
@@ -615,7 +622,7 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
             <Feather name="credit-card" size={22} color={c.textMuted} />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('Card debt')}</Text>
+            <Text style={[type.body, { color: c.textMuted }]}>{t('Card debt')}</Text>
             <Money cents={debtTotal} style={[type.title, { color: c.text, fontSize: 24 }]} numberOfLines={1} />
           </View>
           <Feather name="chevron-right" size={20} color={c.textMuted} />
@@ -626,13 +633,13 @@ export function Dashboard({ mobile, mobileTab = 'summary', month, onMonthChange,
   // pending account commitments (excluding the card, which has its own card): accumulated - debt - commitments = net
   const commitmentsCard = <StatCard icon="clock" label={t('Pending commitments')} cents={commitments} onPress={() => setDetail('commitments')} accent={c.textMuted} valueColor={c.text} />;
   const figureEls = [
-    <StatCard key="s1" icon="trending-up" label={t('Accumulated wealth')} cents={balanceNow} onPress={() => setDetail('accumulated')} accent={c.primary} valueColor={balanceNow < 0 ? c.text : c.primary} />,
     debtCard,
     commitmentsCard,
     <StatCard key="s2" icon="award" label={t('Net worth')} cents={worth} onPress={() => setDetail('net')} accent={c.violet} valueColor={worth < 0 ? c.text : c.violet} />,
     <StatCard key="s0" icon="sun" label={t('Financial freedom')} value={runwayText ?? '—'} onPress={() => setDetail('freedom')} accent={c.sky} valueColor={runway === null ? c.text : c.sky} />,
   ];
   // phone (Summary tab): health, its tips, then the figures; desktop splits them (see below)
+  // the first card (`leftoversHero`) already is the accumulated wealth and opens its statement: no second card with the same figure
   const items = [leftoversHero, healthCard, tipsCard, ...figureEls];
   const stats = items.map((el, i) => (
     <Reveal key={i} index={i + 1}>
@@ -795,17 +802,19 @@ function CategoryPill({ label }: { label: string }) {
 
 /** Indicator card: icon in a square, label and value. Fixed structure, same size, no extra text. */
 function StatCard({ icon, label, value, cents, valueColor, accent, onPress }: { icon: keyof typeof Feather.glyphMap; label: string; value?: string; /** value in cents that counts up to the new value */ cents?: number; valueColor?: string; /** icon and icon square color */ accent?: string; /** opens the value's statement */ onPress?: () => void }) {
+  // very narrow phones (320): a smaller tile and figure, so the value is not cut
+  const tight = useWindowDimensions().width < 360;
   const body = (
       <View style={s.statHead}>
-        <View style={[s.statTile, { backgroundColor: accent ? `${accent}1F` : c.surface }]}>
+        <View style={[s.statTile, tight && { width: 44, height: 44, borderRadius: 22 }, { backgroundColor: accent ? `${accent}1F` : c.surface }]}>
           <Feather name={icon} size={22} color={accent ?? c.primary} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{label}</Text>
+          <Text style={[type.body, { color: c.textMuted }]}>{label}</Text>
           {cents !== undefined ? (
-            <Money cents={cents} style={[type.title, { color: valueColor ?? c.text, fontSize: 24 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} />
+            <Money cents={cents} style={[type.title, { color: valueColor ?? c.text, fontSize: tight ? 21 : 24 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} />
           ) : (
-            <Text style={[type.title, { color: valueColor ?? c.text, fontSize: 24 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
+            <Text style={[type.title, { color: valueColor ?? c.text, fontSize: tight ? 21 : 24 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
           )}
         </View>
         {onPress && <Feather name="chevron-right" size={20} color={c.textMuted} />}
@@ -878,7 +887,7 @@ const s = StyleSheet.create({
   txMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 68 },
   /** phone: more air (taller row, wider gaps, a bit more room before the checkbox) */
   txRowMobile: { paddingVertical: spacing.xs, paddingRight: spacing.md },
-  txMainMobile: { minHeight: 80, gap: spacing.lg },
+  txMainMobile: { minHeight: 72, gap: spacing.md, paddingVertical: spacing.sm },
   addBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   trash: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   empty: { alignItems: 'center', gap: spacing.md, padding: spacing.xxl },

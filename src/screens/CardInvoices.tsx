@@ -64,8 +64,8 @@ export function CardInvoices({ card }: { card: CreditCard }) {
         return (
           <View key={inv.key} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 56, backgroundColor: c.surface, borderRadius: radius.control, paddingLeft: spacing.lg, paddingRight: spacing.xs }}>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{monthLabel(inv.key)}</Text>
-              <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>
+              <Text style={[type.label, { color: c.text }]}>{monthLabel(inv.key)}</Text>
+              <Text style={[type.body, { color: c.textMuted }]}>
                 {inv.key === open ? t('Open now') : t('Due {date}', { date: formatDate(dueDateFor(card, inv.key)) })}
                 {paid ? ` · ${t('Paid')}` : ''}
               </Text>

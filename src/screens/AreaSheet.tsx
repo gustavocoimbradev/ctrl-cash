@@ -57,10 +57,10 @@ export function AreaSheet({ area, visible, onClose, onAdd, onEdit }: { area: Are
     >
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text style={[type.label, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{i.description}</Text>
+          <Text style={[type.label, { color: c.text, flexShrink: 1 }]}>{i.description}</Text>
           {i.transaction.source === 'claude' ? <ByClaude /> : null}
         </View>
-        <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>
+        <Text style={[type.body, { color: c.textMuted }]}>
           {[area === 'delivery' ? shortDate(new Date(`${i.date}T12:00:00`).getTime(), true) : t('Day {day}', { day: i.day }), cardName(i.cardId)].filter(Boolean).join(' · ')}
           {area !== 'delivery' && i.paid ? ` · ${t('Paid')}` : ''}
         </Text>
@@ -85,11 +85,11 @@ export function AreaSheet({ area, visible, onClose, onAdd, onEdit }: { area: Are
     >
       {s ? (
         <>
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {tiles.map((x) => (
-              <View key={x.label} style={{ flex: 1, minWidth: 0, backgroundColor: c.surface, borderRadius: radius.control, padding: spacing.md, gap: 2 }}>
-                <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{x.label}</Text>
-                <Text style={[type.label, { color: cfg.color }]} numberOfLines={1}>{x.value}</Text>
+              <View key={x.label} style={{ flexGrow: 1, flexBasis: 140, backgroundColor: c.surface, borderRadius: radius.control, padding: spacing.md, gap: 2 }}>
+                <Text style={[type.body, { color: c.textMuted }]}>{x.label}</Text>
+                <Text style={[type.label, { color: cfg.color }]}>{x.value}</Text>
               </View>
             ))}
           </View>

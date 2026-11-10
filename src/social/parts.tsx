@@ -36,8 +36,8 @@ export function PersonRow({ person, onPress, right, subtitle }: { person: Pick<P
       >
         <Avatar name={person.displayName} id={person.code} color={person.color} photo={person.photo} />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{person.displayName}</Text>
-          {subtitle ? <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{subtitle}</Text> : null}
+          <Text style={[type.label, { color: c.text }]}>{person.displayName}</Text>
+          {subtitle ? <Text style={[type.body, { color: c.textMuted }]}>{subtitle}</Text> : null}
         </View>
       </Pressable>
       {right}
@@ -58,13 +58,13 @@ export function Pill({ label, icon, onPress, primary, danger, disabled, block, g
       style={({ pressed, hovered }: any) => [
         s.pill,
         block && { width: '100%' },
-        grow && { flexGrow: 1, flexBasis: 0, minWidth: 0 },
+        grow && { flexGrow: 1, flexBasis: 0, minWidth: 0, paddingHorizontal: spacing.sm, gap: 6 },
         { backgroundColor: primary ? c.primary : hovered ? c.surfaceAlt : c.surface, opacity: disabled ? 0.4 : pressed ? 0.8 : 1 },
         Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '150ms' } as object),
       ]}
     >
       {icon ? <Feather name={icon} size={18} color={fg} /> : null}
-      <Text style={[type.label, { color: fg }]}>{label}</Text>
+      <Text style={[type.label, { color: fg, flexShrink: 1, textAlign: 'center' }]}>{label}</Text>
     </Pressable>
   );
 }

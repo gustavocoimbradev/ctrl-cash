@@ -89,7 +89,7 @@ export function FoundPerson({ lookup, actions }: { lookup: Lookup; actions: (per
       <View style={s.who}>
         <Avatar name={p.displayName} id={p.code} color={p.color} photo={p.photo} size={48} />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{p.displayName}</Text>
+          <Text style={[type.label, { color: c.text }]}>{p.displayName}</Text>
           <Text style={[type.body, { color: c.textMuted, letterSpacing: 2 }]}>{p.code}</Text>
         </View>
       </View>

@@ -60,10 +60,10 @@ function CategoriesList({ kind, onKind, onEdit }: { kind: Kind; onKind: (k: Kind
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={[type.label, { color: c.text, flexShrink: 1 }]} numberOfLines={1}>{cat.archived ? t('{name}  ·  archived', { name: cat.label }) : cat.label}</Text>
+              <Text style={[type.label, { color: c.text, flexShrink: 1 }]}>{cat.archived ? t('{name}  ·  archived', { name: cat.label }) : cat.label}</Text>
               {cat.source === 'claude' ? <ByClaude /> : null}
             </View>
-            <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>
+            <Text style={[type.body, { color: c.textMuted }]}>
               {[cat.kind === 'expense' ? impactText(nearestImpact(cat.weight).value) : null, cat.custom ? t('Yours') : t('Built in')].filter(Boolean).join(' · ')}
             </Text>
           </View>

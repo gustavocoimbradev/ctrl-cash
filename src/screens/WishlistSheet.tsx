@@ -90,8 +90,8 @@ export function WishlistSheet({ visible, onClose, onBought }: { visible: boolean
         style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 64, backgroundColor: c.surface, borderRadius: radius.control, paddingHorizontal: spacing.lg, opacity: pressed ? 0.7 : 1 })}
       >
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{i.name}</Text>
-          <Text style={[type.body, { color: v && a ? colorOf(v.tone) : c.textMuted }]} numberOfLines={1}>
+          <Text style={[type.label, { color: c.text }]}>{i.name}</Text>
+          <Text style={[type.body, { color: v && a ? colorOf(v.tone) : c.textMuted }]}>
             {i.boughtAt ? t('Bought {date}', { date: shortDate(i.boughtAt, true) }) : a ? a.headline : t('No price yet')}
           </Text>
         </View>

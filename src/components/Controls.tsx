@@ -73,7 +73,7 @@ export function Segmented<T extends string>({ value, options, onChange, tint }: 
             onPress={() => onChange(o.value)}
             style={({ pressed }) => [s.seg, { opacity: pressed ? 0.7 : 1 }]}
           >
-            <Animated.Text style={[type.label, { color: textColor }]}>{o.label}</Animated.Text>
+            <Animated.Text style={[type.label, { color: textColor, textAlign: 'center' }]}>{o.label}</Animated.Text>
           </Pressable>
         );
       })}
@@ -112,7 +112,7 @@ export function PillToggle<T extends string | number>({ value, options, onChange
         const textColor = pos.interpolate({ inputRange: [i - 1, i, i + 1], outputRange: [colors.textMuted, '#FFFFFF', colors.textMuted], extrapolate: 'clamp' });
         return (
           <Pressable key={String(o.value)} accessibilityRole="button" accessibilityState={{ selected: o.value === value }} onPress={() => onChange(o.value)} style={[s.pillItem, stretch && { width: undefined, flex: 1 }]}>
-            <Animated.Text style={[type.label, { color: textColor }]}>{o.label}</Animated.Text>
+            <Animated.Text style={[type.label, { color: textColor, textAlign: 'center' }]}>{o.label}</Animated.Text>
           </Pressable>
         );
       })}

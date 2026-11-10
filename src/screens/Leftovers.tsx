@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Card } from '../components/Card';
 import { Money } from '../components/Motion';
 import { CoverGoal, MonthResult, coverHuman, coverLabel, coverTicks, tickText, isRecordMonth } from '../domain/abundance';
@@ -20,19 +20,24 @@ interface Props {
   cover: CoverGoal | null;
   /** the last months, newest first (index 0 = current), for records and the best streak */
   results: MonthResult[];
+  /** opens the statement of the accumulated wealth */
+  onOpen?: () => void;
 }
 
 /** The first thing on the screen: the pile of leftovers, this month's gain, the streak and the next milestone. Mostly visual. */
-export function LeftoversHero({ leftovers, monthLeft, streak, cover, results }: Props) {
+export function LeftoversHero({ leftovers, monthLeft, streak, cover, results, onOpen }: Props) {
   const gain = monthLeft > 0;
+  // very narrow phones (320): a slightly smaller figure so it always fits
+  const tight = useWindowDimensions().width < 360;
   const record = isRecordMonth(results);
   return (
     <Card style={s.card}>
       <View style={s.top}>
-        <View style={{ flex: 1, minWidth: 0, gap: spacing.xs }}>
-          <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('Accumulated wealth')}</Text>
-          <Money cents={leftovers} style={[type.hero, { color: leftovers < 0 ? c.text : c.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} />
-        </View>
+        <Pressable disabled={!onOpen} accessibilityRole={onOpen ? 'button' : undefined} accessibilityLabel={t('View statement: {name}', { name: t('Accumulated wealth') })} onPress={onOpen} style={({ pressed }) => ({ flex: 1, minWidth: 0, gap: spacing.xs, opacity: pressed ? 0.7 : 1 })}>
+          <Text style={[type.body, { color: c.textMuted }]}>{t('Accumulated wealth')}</Text>
+          <Money cents={leftovers} style={[type.hero, tight && { fontSize: 30, lineHeight: 36 }, { color: leftovers < 0 ? c.text : c.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} />
+        </Pressable>
+        {onOpen && <Feather name="chevron-right" size={20} color={c.textMuted} />}
       </View>
 
       {(gain || streak.months > 0 || record) && (
@@ -40,19 +45,19 @@ export function LeftoversHero({ leftovers, monthLeft, streak, cover, results }: 
           {gain && (
             <View style={[s.gain, { backgroundColor: 'rgba(31,168,106,0.12)' }]}>
               <Feather name="trending-up" size={20} color={c.income} />
-              <Text style={[type.label, { color: c.income }]}>{t('+{amount} this month', { amount: formatMoney(monthLeft) })}</Text>
+              <Text style={[type.label, { color: c.income, flexShrink: 1 }]}>{t('+{amount} this month', { amount: formatMoney(monthLeft) })}</Text>
             </View>
           )}
           {record && (
             <View style={[s.gain, { backgroundColor: 'rgba(45,85,217,0.1)' }]}>
               <Feather name="award" size={20} color={c.primary} />
-              <Text style={[type.label, { color: c.primary }]}>{t('Record month')}</Text>
+              <Text style={[type.label, { color: c.primary, flexShrink: 1 }]}>{t('Record month')}</Text>
             </View>
           )}
           {streak.months > 0 && (
             <View style={[s.gain, { backgroundColor: 'rgba(217,131,31,0.12)' }]}>
               <Feather name="zap" size={20} color={c.warning} />
-              <Text style={[type.label, { color: c.warning }]}>{t('Month {n} in a row saving', { n: streak.months })}</Text>
+              <Text style={[type.label, { color: c.warning, flexShrink: 1 }]}>{t('Month {n} in a row saving', { n: streak.months })}</Text>
             </View>
           )}
         </View>
@@ -133,6 +138,6 @@ const s = StyleSheet.create({
   card: { gap: spacing.md },
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  gain: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, minHeight: 44, borderRadius: radius.pill },
+  gain: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, minHeight: 44, borderRadius: radius.pill, maxWidth: '100%', flexShrink: 1 },
   intention: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderRadius: radius.control },
 });

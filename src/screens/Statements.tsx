@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import React, { useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { BarChart, ChartLegend } from '../components/Charts';
 import { Segmented } from '../components/Controls';
 import { t, usePrefsVersion } from '../i18n';
@@ -113,19 +113,40 @@ const Empty = ({ children }: { children: string }) => <Text style={[type.body, {
 /** The leftovers of every month that make up the wealth, from newest to oldest. */
 function Leftovers({ ctx }: { ctx: StatementContext }) {
   const months = useMemo(() => monthlyLeftovers(ctx.occ, ctx.payments, endOfMonth(currentMonthKey())).reverse(), [ctx.occ, ctx.payments]);
+  // phone: three columns of money do not fit, so each month is two lines (month and total, then its own part below)
+  const narrow = useWindowDimensions().width < 480;
   if (months.length === 0) return <Empty>{t('No confirmed amounts yet.')}</Empty>;
+  const netText = (n: number) => `${n > 0 ? '+\u00A0' : n < 0 ? '-\u00A0' : ''}${formatMoney(Math.abs(n))}`;
+  if (narrow) {
+    return (
+      <View style={s.table}>
+        {months.map((m) => (
+          <View key={m.key} style={[s.rowBorder, { paddingVertical: spacing.sm, gap: 2 }]}>
+            <View style={s.lineWrap}>
+              <Text style={[type.body, { color: c.text, flex: 1 }]}>{monthLabel(m.key)}</Text>
+              <Text style={[type.label, { color: tone(m.running) }]}>{formatMoney(m.running)}</Text>
+            </View>
+            <View style={s.lineWrap}>
+              <Text style={[type.body, { color: c.textMuted, flex: 1 }]}>{t('Left over')}</Text>
+              <Text style={[type.body, { color: m.net < 0 ? c.expense : m.net > 0 ? c.primary : c.textMuted }]}>{netText(m.net)}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  }
   return (
     <View style={s.table}>
       <View style={[s.line, s.head]}>
-        <Text style={[type.body, { color: c.textMuted, flex: 1.2 }]}>{t('Month')}</Text>
-        <Text style={[type.body, { color: c.textMuted, flex: 1, textAlign: 'right' }]}>{t('Left over')}</Text>
-        <Text style={[type.body, { color: c.textMuted, flex: 1.2, textAlign: 'right' }]}>{t('Accumulated')}</Text>
+        <Text style={[type.body, { color: c.textMuted, flex: 1, minWidth: 60 }]}>{t('Month')}</Text>
+        <Text style={[type.body, { color: c.textMuted, width: 116, textAlign: 'right' }]}>{t('Left over')}</Text>
+        <Text style={[type.body, { color: c.textMuted, width: 116, textAlign: 'right' }]}>{t('Accumulated')}</Text>
       </View>
       {months.map((m) => (
         <View key={m.key} style={[s.line, s.rowBorder]}>
-          <Text style={[type.body, { color: c.text, flex: 1.2 }]} numberOfLines={1}>{monthLabel(m.key)}</Text>
-          <Text style={[type.body, { color: m.net < 0 ? c.expense : m.net > 0 ? c.primary : c.textMuted, flex: 1, textAlign: 'right' }]} numberOfLines={1}>{m.net > 0 ? '+ ' : m.net < 0 ? '- ' : ''}{formatMoney(Math.abs(m.net))}</Text>
-          <Text style={[type.body, { color: tone(m.running), flex: 1.2, textAlign: 'right', fontWeight: '600' }]} numberOfLines={1}>{formatMoney(m.running)}</Text>
+          <Text style={[type.body, { color: c.text, flex: 1, minWidth: 60 }]}>{monthLabel(m.key)}</Text>
+          <Text style={[type.body, { color: m.net < 0 ? c.expense : m.net > 0 ? c.primary : c.textMuted, width: 116, textAlign: 'right' }]}>{`${m.net > 0 ? '+\u00A0' : m.net < 0 ? '-\u00A0' : ''}${formatMoney(Math.abs(m.net))}`}</Text>
+          <Text style={[type.body, { color: tone(m.running), width: 116, textAlign: 'right', fontWeight: '600' }]}>{formatMoney(m.running)}</Text>
         </View>
       ))}
     </View>
@@ -316,6 +337,7 @@ function Commitments({ ctx, visible, onClose }: SheetProps) {
 
 function Freedom({ ctx, startKey, visible, onClose }: SheetProps & { startKey: string }) {
   const plan = useMemo(() => runwayPlan(ctx.worth, ctx.avgExpense, startKey, addMonthsToKey), [ctx.worth, ctx.avgExpense, startKey]);
+  const narrow = useWindowDimensions().width < 480;
   return (
     <Sheet
       visible={visible}
@@ -333,23 +355,43 @@ function Freedom({ ctx, startKey, visible, onClose }: SheetProps & { startKey: s
       ) : (
         <>
           <View style={s.table}>
+            {narrow ? (
+              plan.map((row) => (
+                <View key={row.key} style={[s.rowBorder, { paddingTop: spacing.sm, gap: 2 }]}>
+                  <View style={s.lineWrap}>
+                    <Text style={[type.body, { color: c.text, flex: 1 }]}>{monthLabel(row.key)}</Text>
+                    <Text style={[type.label, { color: row.remaining > 0 ? c.text : c.expense }]}>{formatMoney(row.remaining)}</Text>
+                  </View>
+                  <View style={s.lineWrap}>
+                    <Text style={[type.body, { color: c.textMuted, flex: 1 }]}>{t('Spent')}</Text>
+                    <Text style={[type.body, { color: c.expense }]}>{`-\u00A0${formatMoney(row.spend)}`}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', paddingVertical: spacing.sm }}>
+                    <AnimatedBar ratio={ctx.worth > 0 ? row.remaining / ctx.worth : 0} color={c.sky} height={6} />
+                  </View>
+                </View>
+              ))
+            ) : (
+              <>
             <View style={[s.line, s.head]}>
-              <Text style={[type.body, { color: c.textMuted, flex: 1.3 }]}>{t('Month')}</Text>
+              <Text style={[type.body, { color: c.textMuted, flex: 1, minWidth: 60 }]}>{t('Month')}</Text>
               <Text style={[type.body, { color: c.textMuted, flex: 1, textAlign: 'right' }]}>{t('Spent')}</Text>
               <Text style={[type.body, { color: c.textMuted, flex: 1.2, textAlign: 'right' }]}>{t('Left')}</Text>
             </View>
             {plan.map((row) => (
               <View key={row.key} style={s.rowBorder}>
                 <View style={s.line}>
-                  <Text style={[type.body, { color: c.text, flex: 1.3 }]} numberOfLines={1}>{monthLabel(row.key)}</Text>
-                  <Text style={[type.body, { color: c.expense, flex: 1, textAlign: 'right' }]} numberOfLines={1}>- {formatMoney(row.spend)}</Text>
-                  <Text style={[type.body, { color: row.remaining > 0 ? c.text : c.expense, flex: 1.2, textAlign: 'right', fontWeight: '600' }]} numberOfLines={1}>{formatMoney(row.remaining)}</Text>
+                  <Text style={[type.body, { color: c.text, flex: 1, minWidth: 60 }]}>{monthLabel(row.key)}</Text>
+                  <Text style={[type.body, { color: c.expense, width: 116, textAlign: 'right' }]}>{`-\u00A0${formatMoney(row.spend)}`}</Text>
+                  <Text style={[type.body, { color: row.remaining > 0 ? c.text : c.expense, width: 116, textAlign: 'right', fontWeight: '600' }]}>{formatMoney(row.remaining)}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', paddingBottom: spacing.sm }}>
                   <AnimatedBar ratio={ctx.worth > 0 ? row.remaining / ctx.worth : 0} color={c.sky} height={6} />
                 </View>
               </View>
             ))}
+              </>
+            )}
           </View>
           {plan.length >= 24 ? <Note>{t('Showing the first 24 months.')}</Note> : null}
         </>
@@ -362,7 +404,8 @@ const s = StyleSheet.create({
   total: { gap: 2 },
   table: { gap: 0 },
   head: { paddingBottom: spacing.xs },
-  line: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 36 },
+  line: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 36 },
+  lineWrap: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.md },
   rowBorder: { borderTopWidth: 1, borderColor: c.border },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg, justifyContent: 'center' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },

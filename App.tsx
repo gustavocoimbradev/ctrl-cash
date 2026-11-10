@@ -238,7 +238,8 @@ function Shell({ uid, email, onSignOut }: { uid: string; email: string; onSignOu
               <Skeleton height={220} />
             </View>
           ) : null}
-          {ready && page.name === 'dashboard' ? <AssistantPromo /> : null}
+          {/* phone: only on the Summary tab and in a compact form, so the other tabs start with their own content */}
+          {ready && page.name === 'dashboard' && (desktop || tab === 'summary') ? <AssistantPromo compact={!desktop} /> : null}
           {ready && page.name === 'connect' ? (
             <ConnectPage params={page.params} onBack={() => { if (Platform.OS === 'web') window.history.replaceState(null, '', '/'); setPage({ name: 'dashboard' }); }} />
           ) : null}

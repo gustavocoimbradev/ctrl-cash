@@ -72,8 +72,8 @@ export function ScoreFactorsCard({ factors, scroll, collapsed }: { factors: Scor
               <Feather name="layers" size={22} color={c.primary} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[type.title, { color: c.text }]} numberOfLines={1}>{t('Score factors')}</Text>
-              <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>
+              <Text style={[type.title, { color: c.text }]}>{t('Score factors')}</Text>
+              <Text style={[type.body, { color: c.textMuted }]}>
                 {[up ? t('{n} working for you', { n: up }) : null, down ? t('{n} to improve', { n: down }) : null].filter(Boolean).join(' · ')}
               </Text>
             </View>

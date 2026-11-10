@@ -100,7 +100,7 @@ export function People({ onPick }: { onPick: (code: string) => void }) {
           >
             <Avatar name={p.displayName} id={p.code} color={p.color} photo={p.photo} size={44} />
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{p.displayName}</Text>
+              <Text style={[type.label, { color: c.text }]}>{p.displayName}</Text>
               <Text style={[type.body, { color: c.textMuted, letterSpacing: 2 }]}>{p.code}</Text>
             </View>
           </Pressable>

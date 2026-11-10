@@ -19,7 +19,7 @@ import { t } from '../i18n';
 
 const COUNT_PAD = 14;
 /** A number under a label. With `onPress` it is a button (the lists behind the counters open in a dialog). */
-const Count = ({ n, label, onPress }: { n: number; label: string; onPress?: () => void }) => {
+const Count = ({ n, label, onPress, grow }: { n: number; label: string; onPress?: () => void; /** phone: the counters split the row and center their text, so a long label wraps instead of being cut */ grow?: boolean }) => {
   const c = useColors();
   return (
     <Pressable
@@ -28,12 +28,13 @@ const Count = ({ n, label, onPress }: { n: number; label: string; onPress?: () =
       disabled={!onPress}
       onPress={onPress}
       style={({ pressed, hovered }: any) => [
-        { minWidth: 88, minHeight: 56, paddingHorizontal: COUNT_PAD, paddingVertical: 8, borderRadius: 16, justifyContent: 'center', opacity: pressed ? 0.7 : 1, backgroundColor: hovered && onPress ? c.surface : 'transparent' },
+        grow ? { flex: 1, minWidth: 0, alignItems: 'center' } : { minWidth: 88 },
+        { minHeight: 56, paddingHorizontal: COUNT_PAD, paddingVertical: 8, borderRadius: 16, justifyContent: 'center', opacity: pressed ? 0.7 : 1, backgroundColor: hovered && onPress ? c.surface : 'transparent' },
         Platform.OS === 'web' && ({ transitionProperty: 'background-color', transitionDuration: '150ms' } as object),
       ]}
     >
-      <Text style={[type.title, { color: c.text, lineHeight: 26 }]}>{n}</Text>
-      <Text style={[type.body, { color: c.textMuted, lineHeight: 22 }]}>{label}</Text>
+      <Text style={[type.title, { color: c.text, lineHeight: 26, textAlign: grow ? 'center' : undefined }]}>{n}</Text>
+      <Text style={[type.body, { color: c.textMuted, lineHeight: 22, textAlign: grow ? 'center' : undefined }]}>{label}</Text>
     </Pressable>
   );
 };
@@ -166,7 +167,7 @@ function Header({ name, code, color, photo, counters, actions, health, scoreBlur
         </View>
         {counters?.length ? (
           <View style={{ flexDirection: 'row', gap: spacing.xs, marginLeft: wide ? -COUNT_PAD : 0, alignSelf: wide ? 'flex-start' : 'stretch', justifyContent: 'center' }}>
-            {counters.map((x) => <Count key={x.label} n={x.n} label={x.label} onPress={x.onPress} />)}
+            {counters.map((x) => <Count key={x.label} n={x.n} label={x.label} onPress={x.onPress} grow={!wide} />)}
           </View>
         ) : null}
         {!wide && !health && scorePending ? <PendingScore wide={false} /> : null}
@@ -285,8 +286,8 @@ function OwnProfile({ onOpen, onEditAccount, email }: { onOpen: (code: string) =
         actions={
           <>
             <Pill label={t('Share data')} icon="share-2" primary block={narrow} onPress={() => setDialog('share')} />
-            <Pill label={t('Edit profile')} icon="edit-2" grow={narrow} onPress={() => setEditing(true)} />
-            <Pill label={t('Edit account')} icon="settings" grow={narrow} onPress={onEditAccount} />
+            <Pill label={t('Edit profile')} icon="edit-2" grow={narrow && width >= 420} block={width < 420} onPress={() => setEditing(true)} />
+            <Pill label={t('Edit account')} icon="settings" grow={narrow && width >= 420} block={width < 420} onPress={onEditAccount} />
           </>
         }
       />

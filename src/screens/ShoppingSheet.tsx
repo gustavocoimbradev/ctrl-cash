@@ -56,8 +56,8 @@ export function ShoppingSheet({ visible, onClose, onFinish }: { visible: boolean
     return (
       <View key={l.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface, borderRadius: radius.control, minHeight: 64 }}>
         <Pressable accessibilityRole="button" accessibilityLabel={t('Open {title}', { title: l.name })} onPress={() => setOpenId(l.id)} style={({ pressed }) => ({ flex: 1, minWidth: 0, padding: spacing.md, paddingLeft: spacing.lg, opacity: pressed ? 0.7 : 1 })}>
-          <Text style={[type.label, { color: c.text }]} numberOfLines={1}>{l.name}</Text>
-          <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>
+          <Text style={[type.label, { color: c.text }]}>{l.name}</Text>
+          <Text style={[type.body, { color: c.textMuted }]}>
             {l.finishedAt ? t('{done} of {total} items · bought {date}', { done, total: items.length, date: shortDate(l.finishedAt, true) }) : t('{done} of {total} items', { done, total: items.length })}
           </Text>
         </Pressable>

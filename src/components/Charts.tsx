@@ -315,6 +315,10 @@ export function BarChart({ groups, height = 220 }: { groups: BarGroup[]; height?
   const n = groups.length;
   const step = w / Math.max(n, 1);
   const barW = Math.min(44, step * 0.62);
+  /** narrow bars (a phone, many months): only every n-th value and month name is written, so none is cut, and the one touched always is */
+  const every = Math.max(1, Math.ceil(64 / Math.max(step, 1)));
+  const shown = (i: number) => i % every === 0 || i === sel;
+  const labelW = Math.max(step, 64);
   const barX = (i: number) => step * i + (step - barW) / 2;
   /** rectangle of the whole (stacked) bar, from zero upward (positive) or downward (negative) */
   const barRect = (i: number) => {
@@ -399,7 +403,7 @@ export function BarChart({ groups, height = 220 }: { groups: BarGroup[]; height?
           </View>
           {/* value always visible: above the bar (positive) or below it (negative) */}
           {groups.map((g, i) => {
-            if (totals[i] === 0) return null;
+            if (totals[i] === 0 || !shown(i)) return null;
             const r = barRect(i);
             return (
               <Text
@@ -408,7 +412,7 @@ export function BarChart({ groups, height = 220 }: { groups: BarGroup[]; height?
                 numberOfLines={1}
                 style={[
                   type.label,
-                  { position: 'absolute', left: step * i, width: step, textAlign: 'center', top: totals[i] > 0 ? r.y - 24 : r.y + r.h + 2, color: totals[i] < 0 ? c.expense : sel === null || sel === i ? c.text : c.textMuted, opacity: grow },
+                  { position: 'absolute', left: step * i + step / 2 - labelW / 2, width: labelW, textAlign: 'center', top: totals[i] > 0 ? r.y - 24 : r.y + r.h + 2, color: totals[i] < 0 ? c.expense : sel === null || sel === i ? c.text : c.textMuted, opacity: grow },
                 ]}
               >
                 {step < 92 ? `${totals[i] < 0 ? '-' : ''}${compactMoney(Math.abs(totals[i]))}` : formatMoney(totals[i])}
@@ -417,14 +421,15 @@ export function BarChart({ groups, height = 220 }: { groups: BarGroup[]; height?
           })}
         </View>
       )}
-      <View style={{ flexDirection: 'row', marginTop: spacing.sm }}>
-        {groups.map((g, i) => (
-          <View key={i} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-            <Text style={{ textAlign: 'center', fontFamily, fontSize: 16, color: i === sel ? c.text : c.textMuted, fontWeight: i === sel ? '700' : '400' }} numberOfLines={1}>
+      {/* the month names sit at the foot of each bar, written wide enough that none is cut (only every n-th one when the bars are narrow) */}
+      <View style={{ height: 24, marginTop: spacing.sm }}>
+        {groups.map((g, i) =>
+          shown(i) ? (
+            <Text key={i} style={{ position: 'absolute', top: 0, left: step * i + step / 2 - labelW / 2, width: labelW, textAlign: 'center', fontFamily, fontSize: 16, color: i === sel ? c.text : c.textMuted, fontWeight: i === sel ? '700' : '400' }}>
               {g.label}
             </Text>
-          </View>
-        ))}
+          ) : null,
+        )}
       </View>
     </View>
   );
