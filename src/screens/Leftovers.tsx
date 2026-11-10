@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '../components/Card';
 import { Money } from '../components/Motion';
-import { CoverGoal, MonthResult, coverLabel, coverTicks, tickText, isRecordMonth } from '../domain/abundance';
+import { CoverGoal, MonthResult, coverHuman, coverLabel, coverTicks, tickText, isRecordMonth } from '../domain/abundance';
 import { formatMoney } from '../domain/money';
 import { colors as c, radius, spacing, type } from '../theme';
 import { t } from '../i18n';
@@ -63,7 +63,7 @@ export function LeftoversHero({ leftovers, monthLeft, streak, cover, results }: 
       {cover && (
         <View style={[s.intention, { backgroundColor: c.surface }]}>
           <Feather name="info" size={20} color={c.primary} />
-          <Text style={[type.body, { color: c.text, flexShrink: 1 }]}>{t('Your wealth already covers {covered} of your spending. Next goal: {goal}.', { covered: coverLabel(cover.months), goal: coverLabel(cover.goal) })}</Text>
+          <Text style={[type.body, { color: c.text, flexShrink: 1 }]}>{t('{covered} of spending already covered by your wealth. Next goal: {goal}.', { covered: coverHuman(cover.months), goal: coverLabel(cover.goal) })}</Text>
         </View>
       )}
     </Card>
@@ -78,7 +78,7 @@ export function LeftoversHero({ leftovers, monthLeft, streak, cover, results }: 
 function CoverBar({ cover }: { cover: CoverGoal }) {
   const [w, setW] = useState(0);
   const [bw, setBw] = useState(0);
-  const covered = coverLabel(cover.months);
+  const covered = coverHuman(cover.months);
   const goal = coverLabel(cover.goal);
   const ratio = Math.min(cover.months / cover.goal, 1);
   const ticks = coverTicks(cover.goal);

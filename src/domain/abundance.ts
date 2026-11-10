@@ -58,12 +58,28 @@ export function coverGoal(leftovers: number, avgExpense: number): CoverGoal | nu
   return { months, goal: GOALS.find((g) => months < g) ?? (Math.floor(months / 12) + 1) * 12 };
 }
 
-/** Whole numbers only: days under a month, then "1 month", "5 months", and years from two years on ("3 years"). */
+/** An exact whole amount, for the goals: "1 month", "6 months", "2 years" (from 24 months on). */
 export function coverLabel(months: number): string {
   if (months < 1) return formatRunway(months);
   if (months >= 24) return t('{n} years', { n: Math.round(months / 12) });
   const n = Math.round(months);
   return n === 1 ? t('1 month') : t('{n} months', { n });
+}
+
+/**
+ * What the pile covers, said the way a person would: "Almost 5 months", "4 and a half months", "A bit more than 4 months".
+ * Never rounds up: 4.8 is "almost 5", not "5". Under a month it counts days (or "Almost 1 month" from 0.65).
+ */
+export function coverHuman(months: number): string {
+  if (months < 1) return months >= 0.65 ? t('Almost 1 month') : formatRunway(months);
+  const years = months >= 24;
+  const v = years ? months / 12 : months;
+  const n = Math.floor(v + 1e-9);
+  const f = v - n;
+  if (f < 0.15) return coverLabel(years ? n * 12 : n);
+  if (f < 0.45) return years ? t('A bit more than {n} years', { n }) : n === 1 ? t('A bit more than 1 month') : t('A bit more than {n} months', { n });
+  if (f < 0.65) return years ? t('{n} and a half years', { n }) : t('{n} and a half months', { n });
+  return years ? t('Almost {n} years', { n: n + 1 }) : t('Almost {n} months', { n: n + 1 });
 }
 
 /** Distances between two dotted lines, in months: days, months or years, depending on how far the goal is. */
