@@ -3,7 +3,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '../components/Card';
 import { Money } from '../components/Motion';
-import { CoverGoal, MonthResult, coverLabel, dailyIntention, isRecordMonth } from '../domain/abundance';
+import { CoverGoal, MonthResult, coverLabel, coverTicks, dailyIntention, isRecordMonth } from '../domain/abundance';
 import { formatMoney } from '../domain/money';
 import { colors as c, radius, spacing, type } from '../theme';
 import { t } from '../i18n';
@@ -76,22 +76,35 @@ export function LeftoversHero({ leftovers, monthLeft, streak, cover, results }: 
 function CoverBar({ cover }: { cover: CoverGoal }) {
   const covered = coverLabel(cover.months);
   const goal = coverLabel(cover.goal);
+  const ticks = coverTicks(cover.goal);
   return (
-    <View style={s.track} accessible accessibilityLabel={`${covered} → ${goal}`}>
-      <View style={s.fill}>
-        <Text style={[type.title, { color: c.onPrimary }]} numberOfLines={1}>{covered}</Text>
+    <View style={{ gap: spacing.sm }} accessible accessibilityLabel={`${covered} → ${goal}`}>
+      {/* the values sit outside the bar: what is covered where the blue ends, the goal at the end */}
+      <View style={s.values}>
+        <Text style={[type.title, { color: c.primary, flex: 1, textAlign: 'right' }]} numberOfLines={1}>{covered}</Text>
+        <Text style={[type.title, { color: c.text, flex: 1, textAlign: 'right' }]} numberOfLines={1}>{goal}</Text>
       </View>
-      <View style={s.rest}>
-        <Text style={[type.title, { color: c.text }]} numberOfLines={1}>{goal}</Text>
+      <View style={s.track}>
+        <View style={s.fill} />
+        <View style={s.rest} />
+        {/* dotted lines: each stage reached (over the blue) and each one still to reach (over the gray) */}
+        {ticks.map((f) => (
+          <View key={f} style={[s.mark, { left: `${f * 100}%` as `${number}%` }]}>
+            {[0, 1, 2].map((d) => <View key={d} style={[s.dot, { backgroundColor: f * cover.goal <= cover.months + 1e-9 ? 'rgba(255,255,255,0.9)' : 'rgba(15,27,51,0.35)' }]} />)}
+          </View>
+        ))}
       </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  track: { flexDirection: 'row', height: 44, borderRadius: 22, overflow: 'hidden', backgroundColor: c.surfaceAlt },
-  fill: { flex: 1, backgroundColor: c.primary, borderRadius: 22, justifyContent: 'center', paddingHorizontal: spacing.lg },
-  rest: { flex: 1, justifyContent: 'center', alignItems: 'flex-end', paddingHorizontal: spacing.lg },
+  values: { flexDirection: 'row' },
+  track: { flexDirection: 'row', height: 16, borderRadius: 8, overflow: 'hidden', backgroundColor: c.surfaceAlt },
+  fill: { flex: 1, backgroundColor: c.primary, overflow: 'hidden' },
+  rest: { flex: 1 },
+  mark: { position: 'absolute', top: 0, bottom: 0, width: 2, marginLeft: -1, justifyContent: 'space-evenly', alignItems: 'center' },
+  dot: { width: 2, height: 2, borderRadius: 1 },
   card: { gap: spacing.md },
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

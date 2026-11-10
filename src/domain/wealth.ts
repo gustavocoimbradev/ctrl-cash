@@ -50,14 +50,18 @@ export function runwayMonths(worth: number, avgMonthlyExpense: number): number |
   return avgMonthlyExpense > 0 ? Math.max(worth, 0) / avgMonthlyExpense : null;
 }
 
-/** "12 days", "3.5 months", "1.4 years". */
+/** "12 days", "3 months", "1 year": whole numbers, always rounded DOWN (never promise more peace of mind than there is). */
 export function formatRunway(months: number): string {
   if (months < 1) {
-    const days = Math.round(months * 30);
+    const days = Math.floor(months * 30);
     return days === 1 ? t('{n} day', { n: days }) : t('{n} days', { n: days });
   }
-  if (months < 12) return t('{n} months', { n: months.toFixed(1) });
-  return t('{n} years', { n: (months / 12).toFixed(1) });
+  if (months < 12) {
+    const n = Math.floor(months);
+    return n === 1 ? t('1 month') : t('{n} months', { n });
+  }
+  const years = Math.floor(months / 12);
+  return years === 1 ? t('1 year') : t('{n} years', { n: years });
 }
 
 export interface Health {
