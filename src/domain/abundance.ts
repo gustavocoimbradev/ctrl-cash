@@ -97,9 +97,12 @@ export function milestoneProgress(leftovers: number, avgExpense: number): Milest
   if (avgExpense <= 0) return null;
   const months = Math.max(leftovers, 0) / avgExpense;
   const reached = MILESTONES.filter((m) => months >= m.months);
-  const next = MILESTONES.find((m) => months < m.months) ?? null;
+  const last = MILESTONES[MILESTONES.length - 1]!;
+  // past the last fixed milestone the goal keeps moving: one more every 5 years of spending covered (10, 15, 20...)
+  const beyond = months >= last.months ? (Math.floor(months / 60) + 1) * 60 : 0;
+  const next = beyond ? { id: `y${beyond / 12}`, months: beyond, icon: last.icon } : (MILESTONES.find((m) => months < m.months) ?? null);
   if (!next) return { reached, next, ratio: 1, missing: 0 };
-  const from = reached.length ? reached[reached.length - 1].months : 0;
+  const from = beyond ? beyond - 60 : reached.length ? reached[reached.length - 1].months : 0;
   return { reached, next, ratio: (months - from) / (next.months - from), missing: Math.max(Math.round(next.months * avgExpense - Math.max(leftovers, 0)), 0) };
 }
 
@@ -107,4 +110,42 @@ export function milestoneProgress(leftovers: number, avgExpense: number): Milest
 export function milestoneName(m: Milestone): string {
   if (m.id === 'week') return t('1 week of spending');
   return t('{time} of spending', { time: formatRunway(m.months) });
+}
+
+/** The ruler under the pile: how many months (or years) of spending it covers, on a scale whose end moves up as it grows. */
+export interface WealthScale {
+  /** the end of the scale, in months of spending */
+  target: number;
+  /** distance between two dotted lines, in months */
+  step: number;
+  /** how many parts the scale is split into */
+  count: number;
+  unit: 'months' | 'years';
+  /** how much of the scale is filled, 0 to 1 */
+  ratio: number;
+  /** cents still missing for the end of the scale */
+  missing: number;
+}
+
+/** 6 months first (a line per month), then 12, 24, 60 and then every 5 years, so there is always a next end. */
+export function wealthScale(leftovers: number, avgExpense: number): WealthScale | null {
+  if (avgExpense <= 0) return null;
+  const pile = Math.max(leftovers, 0);
+  const months = pile / avgExpense;
+  const target = [6, 12, 24, 60].find((x) => months < x) ?? (Math.floor(months / 60) + 1) * 60;
+  const step = target <= 6 ? 1 : target <= 12 ? 3 : target <= 24 ? 6 : target <= 60 ? 12 : target / 5;
+  return { target, step, count: Math.round(target / step), unit: target <= 24 ? 'months' : 'years', ratio: Math.min(months / target, 1), missing: Math.max(Math.round(target * avgExpense - pile), 0) };
+}
+
+/** The number written under the `i`-th dotted line (1-based): months, or years once the scale is that long. */
+export function scaleTick(sc: WealthScale, i: number): number {
+  const m = sc.step * i;
+  return sc.unit === 'years' ? m / 12 : m;
+}
+
+/** "6 months", "1 year", "10 years": the end of the scale. */
+export function scaleEnd(sc: WealthScale): string {
+  if (sc.unit === 'months') return sc.target === 1 ? t('1 month') : t('{n} months', { n: sc.target });
+  const years = sc.target / 12;
+  return years === 1 ? t('1 year') : t('{n} years', { n: years });
 }

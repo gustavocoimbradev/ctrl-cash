@@ -2,8 +2,9 @@ import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../components/Card';
-import { AnimatedBar, Money } from '../components/Motion';
-import { MILESTONES, MilestoneProgress, MonthResult, dailyIntention, isRecordMonth, milestoneName } from '../domain/abundance';
+import { Money } from '../components/Motion';
+import { motion, useTween } from '../theme/motion';
+import { MilestoneProgress, MonthResult, WealthScale, dailyIntention, isRecordMonth, milestoneName, scaleEnd, scaleTick } from '../domain/abundance';
 import { formatMoney } from '../domain/money';
 import { colors as c, radius, spacing, type } from '../theme';
 import { t } from '../i18n';
@@ -16,7 +17,10 @@ interface Props {
   monthIncome: number;
   /** months in a row with something left over, and whether the current month has not got there yet */
   streak: { months: number; open: boolean };
+  /** the milestones (only to celebrate a new one) */
   milestones: MilestoneProgress | null;
+  /** the ruler under the pile */
+  scale: WealthScale | null;
   /** the last months, newest first (index 0 = current), for records and the best streak */
   results: MonthResult[];
 }
@@ -64,7 +68,7 @@ function useCelebration(reached: number): { celebrate: boolean; dismiss: () => v
 }
 
 /** The first thing on the screen: the pile of leftovers, this month's gain, the streak and the next milestone. Mostly visual. */
-export function LeftoversHero({ leftovers, monthLeft, streak, milestones, results }: Props) {
+export function LeftoversHero({ leftovers, monthLeft, streak, milestones, scale, results }: Props) {
   const gain = monthLeft > 0;
   const record = isRecordMonth(results);
   const party = useCelebration(milestones?.reached.length ?? 0);
@@ -84,47 +88,32 @@ export function LeftoversHero({ leftovers, monthLeft, streak, milestones, result
           <Text style={[type.body, { color: c.textMuted }]} numberOfLines={1}>{t('Accumulated wealth')}</Text>
           <Money cents={leftovers} style={[type.hero, { color: leftovers < 0 ? c.text : c.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} />
         </View>
-        {record && (
-          <View style={[s.chip, { backgroundColor: 'rgba(45,85,217,0.1)' }]} accessible accessibilityLabel={t('Record month')}>
-            <Feather name="award" size={20} color={c.primary} />
-          </View>
-        )}
-        {streak.months > 0 && (
-          <View style={[s.chip, { backgroundColor: 'rgba(217,131,31,0.12)' }]} accessible accessibilityLabel={streak.months === 1 ? t('{n} month in a row growing your wealth', { n: 1 }) : t('{n} months in a row growing your wealth', { n: streak.months })}>
-            <Feather name="zap" size={20} color={c.warning} />
-            <Text style={[type.label, { color: c.warning }]}>{t('{n} mo.', { n: streak.months })}</Text>
-          </View>
-        )}
       </View>
 
-      {gain && (
-        <View style={[s.gain, { backgroundColor: 'rgba(31,168,106,0.12)' }]}>
-          <Feather name="trending-up" size={20} color={c.income} />
-          <Text style={[type.label, { color: c.income }]}>{t('+{amount} this month', { amount: formatMoney(monthLeft) })}</Text>
-        </View>
-      )}
-
-      {milestones && (
-        <View style={{ gap: spacing.sm }}>
-          <View style={s.badges}>
-            {MILESTONES.map((m) => {
-              const done = milestones.reached.some((r) => r.id === m.id);
-              return (
-                <View key={m.id} style={[s.badge, { backgroundColor: done ? c.primary : c.surface }]} accessible accessibilityLabel={milestoneName(m)}>
-                  <Feather name={m.icon} size={20} color={done ? c.onPrimary : c.textMuted} style={{ opacity: done ? 1 : 0.6 }} />
-                </View>
-              );
-            })}
-          </View>
-          {milestones.next && (
-            <View style={s.progress}>
-              <AnimatedBar ratio={milestones.ratio} color={c.primary} height={10} />
-              <Feather name={milestones.next.icon} size={20} color={c.primary} />
-              <Text style={[type.label, { color: c.text }]}>{formatMoney(milestones.missing)}</Text>
+      {(gain || streak.months > 0 || record) && (
+        <View style={s.chips}>
+          {gain && (
+            <View style={[s.gain, { backgroundColor: 'rgba(31,168,106,0.12)' }]}>
+              <Feather name="trending-up" size={20} color={c.income} />
+              <Text style={[type.label, { color: c.income }]}>{t('+{amount} this month', { amount: formatMoney(monthLeft) })}</Text>
+            </View>
+          )}
+          {record && (
+            <View style={[s.gain, { backgroundColor: 'rgba(45,85,217,0.1)' }]}>
+              <Feather name="award" size={20} color={c.primary} />
+              <Text style={[type.label, { color: c.primary }]}>{t('Record month')}</Text>
+            </View>
+          )}
+          {streak.months > 0 && (
+            <View style={[s.gain, { backgroundColor: 'rgba(217,131,31,0.12)' }]}>
+              <Feather name="zap" size={20} color={c.warning} />
+              <Text style={[type.label, { color: c.warning }]}>{t('Month {n} in a row saving', { n: streak.months })}</Text>
             </View>
           )}
         </View>
       )}
+
+      {scale && <Ruler scale={scale} />}
 
       <View style={[s.intention, { backgroundColor: c.surface }]}>
         <Feather name="wind" size={20} color={c.primary} />
@@ -134,14 +123,49 @@ export function LeftoversHero({ leftovers, monthLeft, streak, milestones, result
   );
 }
 
+/** One bar split by dotted lines (a month each at first); its end moves up as the pile grows. Numbers only, the unit is the title. */
+function Ruler({ scale }: { scale: WealthScale }) {
+  const fill = useTween(scale.ratio * 100, motion.slow);
+  const parts = Array.from({ length: scale.count }, (_, i) => i);
+  return (
+    <View style={{ gap: spacing.sm }}>
+      <Text style={[type.body, { color: c.textMuted }]}>{scale.unit === 'months' ? t('Months of spending covered by your wealth') : t('Years of spending covered by your wealth')}</Text>
+      <View style={s.track}>
+        <View style={[s.fill, { width: `${fill}%` }]} />
+        <View style={s.lines}>
+          {parts.map((i) => (
+            <View key={i} style={s.part}>
+              {i < scale.count - 1 && (
+                <View style={s.dots}>
+                  {[0, 1, 2, 3].map((d) => <View key={d} style={s.dot} />)}
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
+      </View>
+      <View style={s.labels}>
+        {parts.map((i) => (
+          <Text key={i} style={[type.label, { color: c.textMuted, flex: 1, textAlign: 'right' }]}>{scaleTick(scale, i + 1)}</Text>
+        ))}
+      </View>
+      <Text style={[type.body, { color: c.textMuted }]}>{t('{amount} to reach {time}', { amount: formatMoney(scale.missing), time: scaleEnd(scale) })}</Text>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
+  track: { height: 16, borderRadius: 8, overflow: 'hidden', backgroundColor: c.surfaceAlt },
+  fill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: c.primary },
+  lines: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, flexDirection: 'row' },
+  part: { flex: 1, alignItems: 'flex-end' },
+  dots: { position: 'absolute', right: -1, top: 0, bottom: 0, justifyContent: 'space-evenly' },
+  dot: { width: 2, height: 2, borderRadius: 1, backgroundColor: c.card },
+  labels: { flexDirection: 'row' },
   card: { gap: spacing.md },
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 44, minWidth: 44, paddingHorizontal: spacing.md, borderRadius: radius.pill, justifyContent: 'center' },
-  gain: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: spacing.sm, paddingHorizontal: spacing.md, minHeight: 44, borderRadius: radius.pill },
-  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  badge: { width: 44, height: 44, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  gain: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, minHeight: 44, borderRadius: radius.pill },
   party: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, minHeight: 44, borderRadius: radius.control },
   intention: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderRadius: radius.control },
-  progress: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
 });
