@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from 'react';
-import { Platform } from 'react-native';
 import { dict as auth } from './dict/auth';
 import { dict as dashboard } from './dict/dashboard';
 import { dict as forms } from './dict/forms';
@@ -33,6 +32,9 @@ const emit = () => {
   listeners.forEach((l) => l());
 };
 
+// no react-native import here: the seed script runs this module in plain Node
+const isWeb = typeof document !== 'undefined';
+
 export const getLanguage = () => language;
 export const getCurrency = () => currency;
 export const getLocale = () => LOCALES[language];
@@ -40,7 +42,7 @@ export const getLocale = () => LOCALES[language];
 export function setLanguage(next: Lang) {
   if (next === language) return;
   language = next;
-  if (Platform.OS === 'web' && typeof document !== 'undefined') document.documentElement.lang = next;
+  if (isWeb) document.documentElement.lang = next;
   emit();
 }
 
@@ -119,7 +121,7 @@ const KEY = 'ctrlcash:prefs';
 
 export function loadCachedPrefs(): { language?: Lang; currency?: string } {
   try {
-    if (Platform.OS !== 'web') return {};
+    if (!isWeb) return {};
     const raw = window.localStorage.getItem(KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
@@ -129,7 +131,7 @@ export function loadCachedPrefs(): { language?: Lang; currency?: string } {
 
 export function saveCachedPrefs(p: { language: Lang; currency: string }) {
   try {
-    if (Platform.OS === 'web') window.localStorage.setItem(KEY, JSON.stringify(p));
+    if (isWeb) window.localStorage.setItem(KEY, JSON.stringify(p));
   } catch {
     // private window: nothing is remembered
   }
@@ -141,5 +143,5 @@ export function saveCachedPrefs(p: { language: Lang; currency: string }) {
   const first: Lang = cached.language && SHIPPED.includes(cached.language) ? cached.language : deviceLanguage();
   language = first;
   if (cached.currency) currency = cached.currency;
-  if (Platform.OS === 'web' && typeof document !== 'undefined') document.documentElement.lang = first;
+  if (isWeb) document.documentElement.lang = first;
 }
