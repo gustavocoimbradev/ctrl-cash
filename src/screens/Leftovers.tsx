@@ -1,9 +1,9 @@
 import { Feather } from '@expo/vector-icons';
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '../components/Card';
 import { Money } from '../components/Motion';
-import { CoverGoal, MonthResult, coverLabel, coverTicks, dailyIntention, isRecordMonth } from '../domain/abundance';
+import { CoverGoal, MonthResult, coverLabel, coverTicks, dailyIntention, tickText, isRecordMonth } from '../domain/abundance';
 import { formatMoney } from '../domain/money';
 import { colors as c, radius, spacing, type } from '../theme';
 import { t } from '../i18n';
@@ -70,35 +70,61 @@ export function LeftoversHero({ leftovers, monthLeft, streak, cover, results }: 
 }
 
 /**
- * What the pile covers (blue) and the next goal, with a bar between them and dotted lines for every stage. Reaching a goal
- * moves it up (1, 3, 6, 12, 18, 24 months, then years).
+ * The bar toward the next goal. What the pile covers rides above the end of the blue and points at it; under the bar every
+ * dotted stage has its own subtle value, the last one being the goal. Reaching a goal moves it up (1, 3, 6, 12, 18, 24
+ * months, then years).
  */
 function CoverBar({ cover }: { cover: CoverGoal }) {
+  const [w, setW] = useState(0);
+  const [bw, setBw] = useState(0);
   const covered = coverLabel(cover.months);
   const goal = coverLabel(cover.goal);
+  const ratio = Math.min(cover.months / cover.goal, 1);
   const ticks = coverTicks(cover.goal);
+  const x = ratio * w;
+  // the label follows the end of the blue, kept inside the card; the arrow always points at the exact spot
+  const left = Math.max(0, Math.min(x - bw / 2, w - bw));
+  const at = (f: number) => `${f * 100}%` as `${number}%`;
   return (
-    <View style={{ gap: spacing.sm }} accessible accessibilityLabel={`${covered} → ${goal}`}>
-      {/* the values sit outside the bar: what is covered on the left (blue), the goal on the right */}
-      <View style={s.values}>
-        <Text style={[type.title, { color: c.primary }]} numberOfLines={1}>{covered}</Text>
-        <Text style={[type.title, { color: c.text }]} numberOfLines={1}>{goal}</Text>
+    <View onLayout={(e) => setW(e.nativeEvent.layout.width)} accessible accessibilityLabel={`${covered} → ${goal}`}>
+      <View style={s.callout}>
+        {w > 0 && (
+          <>
+            <View onLayout={(e) => setBw(e.nativeEvent.layout.width)} style={[s.bubble, { left, opacity: bw > 0 ? 1 : 0 }]}>
+              <Text style={[type.label, { color: c.onPrimary }]} numberOfLines={1}>{covered}</Text>
+            </View>
+            <View style={[s.arrow, { left: Math.max(0, Math.min(x - 6, w - 12)) }]} />
+          </>
+        )}
       </View>
       <View style={s.track}>
-        <View style={[s.fill, { width: `${Math.min(cover.months / cover.goal, 1) * 100}%` }]} />
+        <View style={[s.fill, { width: at(ratio) }]} />
         {/* dotted lines: each stage reached (over the blue) and each one still to reach (over the gray) */}
-        {ticks.map((f) => (
-          <View key={f} style={[s.mark, { left: `${f * 100}%` as `${number}%` }]}>
-            {[0, 1, 2].map((d) => <View key={d} style={[s.dot, { backgroundColor: f * cover.goal <= cover.months + 1e-9 ? 'rgba(255,255,255,0.9)' : 'rgba(15,27,51,0.35)' }]} />)}
+        {ticks.map((tk) => (
+          <View key={tk.at} style={[s.mark, { left: at(tk.at) }]}>
+            {[0, 1, 2].map((d) => <View key={d} style={[s.dot, { backgroundColor: tk.months <= cover.months + 1e-9 ? 'rgba(255,255,255,0.9)' : 'rgba(15,27,51,0.35)' }]} />)}
           </View>
         ))}
+      </View>
+      <View style={s.labels}>
+        {ticks.map((tk) => (
+          <View key={tk.at} style={[s.at, { left: at(tk.at) }]}>
+            <Text style={[type.body, s.tickText]}>{tickText(tk.months, cover.goal)}</Text>
+          </View>
+        ))}
+        <Text style={[type.body, s.tickText, { position: 'absolute', right: 0, top: 0, textAlign: 'right', width: 120 }]} numberOfLines={1}>{goal}</Text>
       </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  values: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
+  callout: { height: 40 },
+  bubble: { position: 'absolute', top: 0, paddingHorizontal: spacing.md, minHeight: 32, borderRadius: radius.pill, backgroundColor: c.primary, justifyContent: 'center' },
+  arrow: { position: 'absolute', top: 32, width: 0, height: 0, borderLeftWidth: 6, borderRightWidth: 6, borderTopWidth: 6, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: c.primary },
+  labels: { height: 28, marginTop: spacing.xs },
+  at: { position: 'absolute', top: 0, width: 0, alignItems: 'center' },
+  tickText: { color: c.textMuted, opacity: 0.8, width: 48, textAlign: 'center' },
   track: { flexDirection: 'row', height: 16, borderRadius: 8, overflow: 'hidden', backgroundColor: c.surfaceAlt },
   fill: { backgroundColor: c.primary },
   mark: { position: 'absolute', top: 0, bottom: 0, width: 2, marginLeft: -1, justifyContent: 'space-evenly', alignItems: 'center' },

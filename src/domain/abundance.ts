@@ -86,16 +86,31 @@ export function coverLabel(months: number): string {
   return n === 1 ? t('1 month') : t('{n} months', { n });
 }
 
-/** Distances between two dotted lines, in months: days at first, then months, then years. */
-const TICK_STEPS = [1 / 30, 2 / 30, 5 / 30, 1, 2, 3, 6, 12, 24, 60, 120, 240, 600];
+/** Distances between two dotted lines, in months: days, months or years, depending on how far the goal is. */
+function tickSteps(goal: number): number[] {
+  if (goal <= 1) return [1 / 30, 2 / 30, 5 / 30];
+  if (goal <= 24) return [1, 2, 3, 6];
+  return [12, 24, 60, 120, 240, 600];
+}
 
-/**
- * Where the dotted lines go on the bar, as fractions of its width (excluding the ends): one per stage (a day, a month or
- * a year, whichever keeps them to about 12), each a stage reached or still to reach.
- */
-export function coverTicks(goal: number): number[] {
-  const step = TICK_STEPS.find((x) => goal / x <= 12) ?? goal / 12;
-  const out: number[] = [];
-  for (let k = 1; k * step < goal - 1e-9; k++) out.push((k * step) / goal);
+export interface CoverTick {
+  /** where it falls on the bar, 0 to 1 (excluding the ends) */
+  at: number;
+  /** the stage it stands for, in months */
+  months: number;
+}
+
+/** Dotted lines on the bar, one per stage (a few days, a month or a year, at most 12), each reached or still to reach. */
+export function coverTicks(goal: number): CoverTick[] {
+  const steps = tickSteps(goal);
+  const step = steps.find((x) => goal / x <= 12) ?? steps[steps.length - 1]!;
+  const out: CoverTick[] = [];
+  for (let k = 1; k * step < goal - 1e-9; k++) out.push({ at: (k * step) / goal, months: k * step });
   return out;
+}
+
+/** The small subtle value under a dotted line: days with "d" for a one-month goal, otherwise the plain number (months, or years for long goals). */
+export function tickText(months: number, goal: number): string {
+  if (goal <= 1) return t('{n}d', { n: Math.round(months * 30) });
+  return String(goal > 24 ? Math.round(months / 12) : Math.round(months));
 }
