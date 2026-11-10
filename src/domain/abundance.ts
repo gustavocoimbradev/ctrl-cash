@@ -62,17 +62,20 @@ export function dailyIntention(dayNumber: number): string {
   return t(AFFIRMATIONS[i]);
 }
 
-/** What the pile covers, in months of average spending, and the goal: always double, so the bar always sits at half and the goal keeps moving up. */
+/** What the pile covers, in months of average spending, and the next goal on the way up. */
 export interface CoverGoal {
   months: number;
   goal: number;
 }
 
-/** One week is the smallest goal (an empty pile still has something to reach). Without spending there is nothing to compare. */
+/** The goals, in months: 1, 3, 6, 12, 18, 24 and then one year at a time (3 years, 4 years...). Reaching one moves to the next. */
+const GOALS = [1, 3, 6, 12, 18, 24];
+
+/** Without spending to measure there is nothing to compare. */
 export function coverGoal(leftovers: number, avgExpense: number): CoverGoal | null {
   if (avgExpense <= 0) return null;
   const months = Math.max(leftovers, 0) / avgExpense;
-  return { months, goal: Math.max(months * 2, 7 / 30) };
+  return { months, goal: GOALS.find((g) => months < g) ?? (Math.floor(months / 12) + 1) * 12 };
 }
 
 /** Whole numbers only: days under a month, then "1 month", "5 months", and years from two years on ("3 years"). */
@@ -84,7 +87,7 @@ export function coverLabel(months: number): string {
 }
 
 /** Distances between two dotted lines, in months: days at first, then months, then years. */
-const TICK_STEPS = [1 / 30, 2 / 30, 5 / 30, 10 / 30, 15 / 30, 1, 2, 3, 6, 12, 24, 60, 120, 240, 600];
+const TICK_STEPS = [1 / 30, 2 / 30, 5 / 30, 1, 2, 3, 6, 12, 24, 60, 120, 240, 600];
 
 /**
  * Where the dotted lines go on the bar, as fractions of its width (excluding the ends): one per stage (a day, a month or

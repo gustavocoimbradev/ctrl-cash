@@ -70,8 +70,8 @@ export function LeftoversHero({ leftovers, monthLeft, streak, cover, results }: 
 }
 
 /**
- * What the pile covers, in the blue half of the bar, and the goal in the other half. The goal is always double what is
- * covered, so the bar always sits at half and the goal moves up as the pile grows.
+ * What the pile covers (blue) and the next goal, with a bar between them and dotted lines for every stage. Reaching a goal
+ * moves it up (1, 3, 6, 12, 18, 24 months, then years).
  */
 function CoverBar({ cover }: { cover: CoverGoal }) {
   const covered = coverLabel(cover.months);
@@ -79,14 +79,13 @@ function CoverBar({ cover }: { cover: CoverGoal }) {
   const ticks = coverTicks(cover.goal);
   return (
     <View style={{ gap: spacing.sm }} accessible accessibilityLabel={`${covered} → ${goal}`}>
-      {/* the values sit outside the bar: what is covered where the blue ends, the goal at the end */}
+      {/* the values sit outside the bar: what is covered on the left (blue), the goal on the right */}
       <View style={s.values}>
-        <Text style={[type.title, { color: c.primary, flex: 1, textAlign: 'right' }]} numberOfLines={1}>{covered}</Text>
-        <Text style={[type.title, { color: c.text, flex: 1, textAlign: 'right' }]} numberOfLines={1}>{goal}</Text>
+        <Text style={[type.title, { color: c.primary }]} numberOfLines={1}>{covered}</Text>
+        <Text style={[type.title, { color: c.text }]} numberOfLines={1}>{goal}</Text>
       </View>
       <View style={s.track}>
-        <View style={s.fill} />
-        <View style={s.rest} />
+        <View style={[s.fill, { width: `${Math.min(cover.months / cover.goal, 1) * 100}%` }]} />
         {/* dotted lines: each stage reached (over the blue) and each one still to reach (over the gray) */}
         {ticks.map((f) => (
           <View key={f} style={[s.mark, { left: `${f * 100}%` as `${number}%` }]}>
@@ -99,10 +98,9 @@ function CoverBar({ cover }: { cover: CoverGoal }) {
 }
 
 const s = StyleSheet.create({
-  values: { flexDirection: 'row' },
+  values: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
   track: { flexDirection: 'row', height: 16, borderRadius: 8, overflow: 'hidden', backgroundColor: c.surfaceAlt },
-  fill: { flex: 1, backgroundColor: c.primary, overflow: 'hidden' },
-  rest: { flex: 1 },
+  fill: { backgroundColor: c.primary },
   mark: { position: 'absolute', top: 0, bottom: 0, width: 2, marginLeft: -1, justifyContent: 'space-evenly', alignItems: 'center' },
   dot: { width: 2, height: 2, borderRadius: 1 },
   card: { gap: spacing.md },
