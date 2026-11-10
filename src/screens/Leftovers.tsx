@@ -4,7 +4,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '../components/Card';
 import { Money } from '../components/Motion';
 import { motion, useTween } from '../theme/motion';
-import { MilestoneProgress, MonthResult, WealthScale, dailyIntention, isRecordMonth, milestoneName, scaleEnd, scaleTick } from '../domain/abundance';
+import { LevelProgress, MonthResult, dailyIntention, isRecordMonth, levelLabel, levelName } from '../domain/abundance';
 import { formatMoney } from '../domain/money';
 import { formatRunway } from '../domain/wealth';
 import { colors as c, radius, spacing, type } from '../theme';
@@ -18,10 +18,8 @@ interface Props {
   monthIncome: number;
   /** months in a row with something left over, and whether the current month has not got there yet */
   streak: { months: number; open: boolean };
-  /** the milestones (only to celebrate a new one) */
-  milestones: MilestoneProgress | null;
-  /** the ruler under the pile */
-  scale: WealthScale | null;
+  /** where the pile stands between two levels of months of spending covered */
+  level: LevelProgress | null;
   /** the last months, newest first (index 0 = current), for records and the best streak */
   results: MonthResult[];
 }
@@ -69,18 +67,17 @@ function useCelebration(reached: number): { celebrate: boolean; dismiss: () => v
 }
 
 /** The first thing on the screen: the pile of leftovers, this month's gain, the streak and the next milestone. Mostly visual. */
-export function LeftoversHero({ leftovers, monthLeft, streak, milestones, scale, results }: Props) {
+export function LeftoversHero({ leftovers, monthLeft, streak, level, results }: Props) {
   const gain = monthLeft > 0;
   const record = isRecordMonth(results);
-  const party = useCelebration(milestones?.reached.length ?? 0);
-  const lastReached = milestones?.reached[milestones.reached.length - 1];
+  const party = useCelebration(level?.reached ?? 0);
   const day = Math.floor(Date.now() / 86400000);
   return (
     <Card style={s.card}>
-      {party.celebrate && lastReached && (
+      {party.celebrate && level && (
         <Pressable accessibilityRole="button" accessibilityLabel={t('Dismiss')} onPress={party.dismiss} style={[s.party, { backgroundColor: c.primary }]}>
-          <Feather name={lastReached.icon} size={24} color={c.onPrimary} />
-          <Text style={[type.label, { color: c.onPrimary, flex: 1 }]}>{milestoneName(lastReached)}</Text>
+          <Feather name="award" size={24} color={c.onPrimary} />
+          <Text style={[type.label, { color: c.onPrimary, flex: 1 }]}>{levelName(level.from)}</Text>
           <Feather name="x" size={20} color={c.onPrimary} />
         </Pressable>
       )}
@@ -114,7 +111,7 @@ export function LeftoversHero({ leftovers, monthLeft, streak, milestones, scale,
         </View>
       )}
 
-      {scale && <Ruler scale={scale} />}
+      {level && <LevelBar level={level} />}
 
       <View style={[s.intention, { backgroundColor: c.surface }]}>
         <Feather name="wind" size={20} color={c.primary} />
@@ -124,44 +121,31 @@ export function LeftoversHero({ leftovers, monthLeft, streak, milestones, scale,
   );
 }
 
-/** One bar split by dotted lines (a month each at first); its end moves up as the pile grows. Numbers only, the unit is the title. */
-function Ruler({ scale }: { scale: WealthScale }) {
-  const fill = useTween(scale.ratio * 100, motion.slow);
-  // only what is still ahead: the lines (and numbers) the pile has not reached yet; the end is the right edge
-  const ahead = Array.from({ length: scale.count - 1 }, (_, i) => i + 1).filter((i) => scale.step * i > scale.months);
-  const pos = (i: number) => `${((scale.step * i) / scale.target) * 100}%` as `${number}%`;
+/**
+ * The progress to the next level: what the pile covers now (left), the next goal (right) and a bar between the last level
+ * reached and that goal, with the percentage inside. The goal is always close, and moves up when it is reached.
+ */
+function LevelBar({ level }: { level: LevelProgress }) {
+  const fill = useTween(level.ratio * 100, motion.slow);
+  const pct = Math.round(level.ratio * 100);
   return (
-    <View style={{ gap: spacing.sm }}>
+    <View style={{ gap: spacing.sm }} accessible accessibilityLabel={`${formatRunway(level.months)} → ${levelLabel(level.to)}, ${pct}%`}>
       <View style={s.ends}>
-        <Text style={[type.title, { color: c.primary }]}>{formatRunway(scale.months)}</Text>
-        <Text style={[type.title, { color: c.text }]}>{scaleEnd(scale)}</Text>
+        <Text style={[type.title, { color: c.primary }]}>{formatRunway(level.months)}</Text>
+        <Text style={[type.title, { color: c.text }]}>{levelLabel(level.to)}</Text>
       </View>
       <View style={s.track}>
-        <View style={[s.fill, { width: `${fill}%` }]} />
-        {ahead.map((i) => (
-          <View key={i} style={[s.mark, { left: pos(i) }]}>
-            {[0, 1, 2, 3].map((d) => <View key={d} style={s.dot} />)}
-          </View>
-        ))}
-      </View>
-      <View style={s.labels}>
-        {ahead.map((i) => (
-          <View key={i} style={[s.at, { left: pos(i) }]}>
-            <Text style={[type.label, { color: c.textMuted, width: 56, textAlign: 'center' }]}>{scaleTick(scale, i)}</Text>
-          </View>
-        ))}
+        <View style={[s.fill, { width: `${Math.max(fill, 6)}%` }]}>
+          {pct >= 15 && <Text style={[type.label, { color: c.onPrimary }]}>{pct}%</Text>}
+        </View>
       </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  track: { height: 16, borderRadius: 8, overflow: 'hidden', backgroundColor: c.surfaceAlt },
-  fill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: c.primary },
-  mark: { position: 'absolute', top: 0, bottom: 0, width: 2, marginLeft: -1, justifyContent: 'space-evenly', alignItems: 'center' },
-  at: { position: 'absolute', top: 0, width: 0, alignItems: 'center' },
-  dot: { width: 2, height: 2, borderRadius: 1, backgroundColor: c.card },
-  labels: { height: 24 },
+  track: { height: 28, borderRadius: 14, overflow: 'hidden', backgroundColor: c.surfaceAlt },
+  fill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: c.primary, borderRadius: 14, alignItems: 'flex-end', justifyContent: 'center', paddingRight: spacing.md },
   ends: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.md },
   card: { gap: spacing.md },
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

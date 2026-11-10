@@ -1,10 +1,9 @@
 import { t } from '../i18n';
-import { formatMoney } from './money';
 import { formatRunway } from './wealth';
 
 /**
  * The abundance view: what is LEFT OVER (the balance that stays in the account) is the star. Everything here only
- * looks at leftovers growing: how much was kept, for how many months in a row, and how close the next milestone is.
+ * looks at leftovers growing: how much was kept, for how many months in a row, and how close the next level is.
  */
 
 /** Income and expenses of one month (cards netted as in `monthTotals`), cents. */
@@ -63,92 +62,51 @@ export function dailyIntention(dayNumber: number): string {
   return t(AFFIRMATIONS[i]);
 }
 
-/** Milestones, in months of average spending covered by the leftovers. */
-export interface Milestone {
-  id: string;
-  /** how many months of spending the leftovers cover */
-  months: number;
-  icon: 'sunrise' | 'sun' | 'umbrella' | 'shield' | 'award' | 'star' | 'zap';
-}
+/**
+ * Levels, in months of average spending the leftovers cover: 1 week, half a month, then a month at a time up to 6, then
+ * 9, 12, 18, 24, 36, 48, 60 and a year at a time after that. The bar always runs from the level just reached to the next
+ * one, so there is always a close goal to chase.
+ */
+const LEVELS = [7 / 30, 0.5, 1, 2, 3, 4, 5, 6, 9, 12, 18, 24, 36, 48, 60];
 
-export const MILESTONES: Milestone[] = [
-  { id: 'week', months: 7 / 30, icon: 'sunrise' },
-  { id: 'month', months: 1, icon: 'sun' },
-  { id: 'quarter', months: 3, icon: 'umbrella' },
-  { id: 'half', months: 6, icon: 'shield' },
-  { id: 'year', months: 12, icon: 'award' },
-  { id: 'two', months: 24, icon: 'star' },
-  { id: 'five', months: 60, icon: 'zap' },
-];
-
-export interface MilestoneProgress {
-  /** milestones already reached, in order */
-  reached: Milestone[];
-  /** the next one; null when all are reached */
-  next: Milestone | null;
-  /** progress between the last reached milestone (or zero) and the next one, 0 to 1 */
-  ratio: number;
-  /** cents still missing for the next one */
-  missing: number;
-}
-
-/** Where the leftovers stand among the milestones. Without spending to measure there is nothing to compare. */
-export function milestoneProgress(leftovers: number, avgExpense: number): MilestoneProgress | null {
-  if (avgExpense <= 0) return null;
-  const months = Math.max(leftovers, 0) / avgExpense;
-  const reached = MILESTONES.filter((m) => months >= m.months);
-  const last = MILESTONES[MILESTONES.length - 1]!;
-  // past the last fixed milestone the goal keeps moving: one more every 5 years of spending covered (10, 15, 20...)
-  const beyond = months >= last.months ? (Math.floor(months / 60) + 1) * 60 : 0;
-  const next = beyond ? { id: `y${beyond / 12}`, months: beyond, icon: last.icon } : (MILESTONES.find((m) => months < m.months) ?? null);
-  if (!next) return { reached, next, ratio: 1, missing: 0 };
-  const from = beyond ? beyond - 60 : reached.length ? reached[reached.length - 1].months : 0;
-  return { reached, next, ratio: (months - from) / (next.months - from), missing: Math.max(Math.round(next.months * avgExpense - Math.max(leftovers, 0)), 0) };
-}
-
-/** "1 week", "1 month", "3 months", "1 year" for a milestone. */
-export function milestoneName(m: Milestone): string {
-  if (m.id === 'week') return t('1 week of spending');
-  return t('{time} of spending', { time: formatRunway(m.months) });
-}
-
-/** The ruler under the pile: how many months (or years) of spending it covers, on a scale whose end moves up as it grows. */
-export interface WealthScale {
-  /** the end of the scale, in months of spending */
-  target: number;
-  /** distance between two dotted lines, in months */
-  step: number;
-  /** how many parts the scale is split into */
-  count: number;
-  unit: 'months' | 'years';
+export interface LevelProgress {
   /** months of spending the pile covers now */
   months: number;
-  /** how much of the scale is filled, 0 to 1 */
+  /** the level just reached (0 before the first) and the next one, in months */
+  from: number;
+  to: number;
+  /** how far along from `from` to `to`, 0 to 1 */
   ratio: number;
-  /** cents still missing for the end of the scale */
-  missing: number;
+  /** how many levels have been reached (to celebrate a new one) */
+  reached: number;
 }
 
-/** 6 months first (a line per month), then 12, 24, 60 and then every 5 years, so there is always a next end. */
-export function wealthScale(leftovers: number, avgExpense: number): WealthScale | null {
+/** Where the pile stands between two levels. Without spending to measure there is nothing to compare. */
+export function levelProgress(leftovers: number, avgExpense: number): LevelProgress | null {
   if (avgExpense <= 0) return null;
-  const pile = Math.max(leftovers, 0);
-  const months = pile / avgExpense;
-  // the end always leaves room ahead: the bar never gets stuck at its last bit (the scale moves up at 75%)
-  const target = [6, 12, 24, 60].find((x) => months < x * 0.75) ?? (Math.floor(months / 45) + 1) * 60;
-  const step = target <= 6 ? 1 : target <= 12 ? 3 : target <= 24 ? 6 : target <= 60 ? 12 : target / 5;
-  return { target, step, count: Math.round(target / step), unit: target <= 24 ? 'months' : 'years', months, ratio: Math.min(months / target, 1), missing: Math.max(Math.round(target * avgExpense - pile), 0) };
+  const months = Math.max(leftovers, 0) / avgExpense;
+  let from = 0;
+  let to: number;
+  let reached = LEVELS.filter((l) => months >= l).length;
+  if (months < LEVELS[LEVELS.length - 1]!) {
+    to = LEVELS[reached]!;
+    from = reached ? LEVELS[reached - 1]! : 0;
+  } else {
+    from = Math.floor(months / 12) * 12;
+    to = from + 12;
+    reached = LEVELS.length + (from - 60) / 12;
+  }
+  return { months, from, to, ratio: (months - from) / (to - from), reached };
 }
 
-/** The number written under the `i`-th dotted line (1-based): months, or years once the scale is that long. */
-export function scaleTick(sc: WealthScale, i: number): number {
-  const m = sc.step * i;
-  return sc.unit === 'years' ? m / 12 : m;
+/** "7 days", "1 month", "5 months", "3 years": a level written for people. */
+export function levelLabel(months: number): string {
+  if (months < 1) return formatRunway(months);
+  if (months >= 12 && months % 12 === 0) return months === 12 ? t('1 year') : t('{n} years', { n: months / 12 });
+  return months === 1 ? t('1 month') : t('{n} months', { n: months });
 }
 
-/** "6 months", "1 year", "10 years": the end of the scale. */
-export function scaleEnd(sc: WealthScale): string {
-  if (sc.unit === 'months') return sc.target === 1 ? t('1 month') : t('{n} months', { n: sc.target });
-  const years = sc.target / 12;
-  return years === 1 ? t('1 year') : t('{n} years', { n: years });
+/** "5 months of spending": the level a new celebration names. */
+export function levelName(months: number): string {
+  return t('{time} of spending', { time: levelLabel(months) });
 }

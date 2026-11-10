@@ -47,7 +47,6 @@ export const dict: Dict = {
     "Your expenses are ahead of your income": "Suas despesas estão acima da sua renda",
     "Your cushion is just starting": "Sua reserva de segurança está começando",
     "You could live {time} without income. Every month you leave something over, it grows.": "Você viveria {time} sem renda. A cada mês que sobra algo, ele cresce.",
-    "1 week of spending": "1 semana de gastos",
     "{time} of spending": "{time} de gastos",
   },
   es: {
@@ -95,7 +94,6 @@ export const dict: Dict = {
     "Your expenses are ahead of your income": "Tus gastos están por encima de tus ingresos",
     "Your cushion is just starting": "Tu colchón está empezando",
     "You could live {time} without income. Every month you leave something over, it grows.": "Podrías vivir {time} sin ingresos. Cada mes que te sobra algo, crece.",
-    "1 week of spending": "1 semana de gastos",
     "{time} of spending": "{time} de gastos",
   },
   de: {
@@ -143,7 +141,6 @@ export const dict: Dict = {
     "Your expenses are ahead of your income": "Deine Ausgaben liegen über deinen Einnahmen",
     "Your cushion is just starting": "Dein Polster fängt gerade an",
     "You could live {time} without income. Every month you leave something over, it grows.": "Du könntest {time} ohne Einkommen leben. Jeden Monat, in dem etwas übrig bleibt, wächst es.",
-    "1 week of spending": "1 Woche Ausgaben",
     "{time} of spending": "{time} Ausgaben",
   },
   fr: {
@@ -191,7 +188,6 @@ export const dict: Dict = {
     "Your expenses are ahead of your income": "Vos dépenses dépassent vos revenus",
     "Your cushion is just starting": "Votre coussin commence tout juste",
     "You could live {time} without income. Every month you leave something over, it grows.": "Vous pourriez vivre {time} sans revenu. Chaque mois où il reste quelque chose, il grandit.",
-    "1 week of spending": "1 semaine de dépenses",
     "{time} of spending": "{time} de dépenses",
   },
   it: {
@@ -239,7 +235,6 @@ export const dict: Dict = {
     "Your expenses are ahead of your income": "Le tue spese superano le tue entrate",
     "Your cushion is just starting": "Il tuo cuscinetto sta iniziando",
     "You could live {time} without income. Every month you leave something over, it grows.": "Potresti vivere {time} senza reddito. Ogni mese in cui ti avanza qualcosa, cresce.",
-    "1 week of spending": "1 settimana di spese",
     "{time} of spending": "{time} di spese",
   },
 };
